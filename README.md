@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StellarBig
 
-## Getting Started
+Peer-to-peer OTC escrow settlement on Stellar Testnet.
 
-First, run the development server:
+Two parties negotiate a trade via an RFQ/quote flow, then settle atomically through a Soroban smart contract. No counterparty trust required.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## MVP scope
+
+**In scope**
+- Post RFQs (asset pair, amount, expiry)
+- Submit and accept quotes
+- Create deals
+- Lock funds into Soroban escrow
+- Atomic settlement once both sides deposited
+- Refund after expiry if trade did not complete
+- Freighter wallet integration
+- Stellar Testnet only
+
+**Out of scope**
+- Mainnet
+- Fiat / payment rails
+- KYC / identity
+- Dispute resolution
+- Market maker automation
+- Partial fills
+- Multi-chain
+- Mobile app
+
+## Monorepo structure
+
+```
+apps/web/              Next.js frontend (TypeScript + Tailwind)
+contracts/rfq_escrow/  Soroban Rust smart contract
+packages/stellar/      Shared Stellar SDK helpers
+supabase/migrations/   PostgreSQL schema migrations
+docs/                  Product specs and diagrams
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Running the web app
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# From the repo root
+npm run dev
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Or directly
+cd apps/web
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+## Environment variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Copy `.env.local.example` to `apps/web/.env.local` and fill in:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_STELLAR_NETWORK=TESTNET
+NEXT_PUBLIC_HORIZON_URL=https://horizon-testnet.stellar.org
+NEXT_PUBLIC_CONTRACT_ID=
+```
