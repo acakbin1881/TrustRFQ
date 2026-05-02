@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const ASSETS = ["XLM", "USDC", "AQUA"] as const;
+const ASSETS = ["XLM", "USDC", "EURC"] as const;
 const EXPIRIES = [
   { label: "1 hour", value: "1h" },
   { label: "4 hours", value: "4h" },
@@ -54,7 +54,10 @@ export default function NewRfqPage() {
         </Link>
         <h1 className="text-2xl font-bold text-white mt-3">New RFQ</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Post a request for quote. Counterparties can respond with offers.
+          Post a private request for quote. Selected makers submit firm quotes. Quotes are visible only to you.
+        </p>
+        <p className="text-xs text-amber-400 mt-2 bg-amber-950/40 border border-amber-900/40 rounded-lg px-3 py-2 inline-block">
+          Private RFQ · This is not a public auction · Makers cannot see competing quotes
         </p>
       </div>
 
@@ -117,7 +120,7 @@ export default function NewRfqPage() {
             </div>
             <div className="flex-1">
               <label className="text-xs text-slate-400 block mb-1">
-                Minimum amount
+                Minimum receive amount
               </label>
               <input
                 type="number"
@@ -129,6 +132,7 @@ export default function NewRfqPage() {
                 onChange={(e) => set("buyAmount", e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
               />
+              <p className="text-xs text-slate-600 mt-1">Hard floor — quotes below this amount are invalid.</p>
             </div>
           </div>
         </div>
@@ -156,16 +160,17 @@ export default function NewRfqPage() {
           </div>
           <div>
             <label className="text-xs text-slate-400 block mb-1">
-              Counterparty address{" "}
-              <span className="text-slate-600">(optional)</span>
+              Invited maker address{" "}
+              <span className="text-slate-600">(optional — leave blank to allow any maker)</span>
             </label>
             <input
               type="text"
-              placeholder="G… (leave blank for open RFQ)"
+              placeholder="G…"
               value={form.counterparty}
               onChange={(e) => set("counterparty", e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono"
             />
+            <p className="text-xs text-slate-600 mt-1">Invited makers submit private firm quotes. They cannot see each other&apos;s quotes.</p>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   MOCK_RFQS,
+  CURRENT_USER_ADDRESS,
   STATUS_LABEL,
   STATUS_COLOR,
   fmt,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/mock-data";
 
 function RfqCard({ rfq }: { rfq: Rfq }) {
+  const isCreator = rfq.creatorAddress === CURRENT_USER_ADDRESS;
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between gap-4">
       <div className="flex flex-col gap-1 min-w-0">
@@ -26,6 +28,9 @@ function RfqCard({ rfq }: { rfq: Rfq }) {
           <span className="font-mono truncate max-w-[180px]">
             {rfq.creatorAddress.slice(0, 8)}…{rfq.creatorAddress.slice(-4)}
           </span>
+          {isCreator && (
+            <span className="text-amber-500">your RFQ</span>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">
@@ -38,7 +43,7 @@ function RfqCard({ rfq }: { rfq: Rfq }) {
           href={`/rfqs/${rfq.id}`}
           className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
         >
-          View →
+          {isCreator ? "Review quotes →" : "Submit quote →"}
         </Link>
       </div>
     </div>

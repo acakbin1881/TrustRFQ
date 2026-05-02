@@ -9,41 +9,273 @@ import {
   DEAL_ID_FOR_RFQ,
   STATUS_LABEL,
   STATUS_COLOR,
+  CURRENT_USER_ADDRESS,
   fmt,
+  isExpired,
   type Quote,
+  type Rfq,
 } from "@/lib/mock-data";
+
+let _nextMockQuoteId = 0;
 
 function QuoteRow({
   quote,
+  rfq,
   onAccept,
   canAccept,
 }: {
   quote: Quote;
+  rfq: Rfq;
   onAccept: (q: Quote) => void;
   canAccept: boolean;
 }) {
+  const isValid = quote.quoteAmount >= rfq.buyAmount;
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex items-center justify-between gap-4">
+    <div
+      className={`rounded-lg p-4 flex items-center justify-between gap-4 border ${
+        isValid ? "bg-slate-800 border-slate-700" : "bg-red-950/30 border-red-900/50"
+      }`}
+    >
       <div className="flex flex-col gap-1">
-        <span className="text-white font-semibold">
-          {quote.quoteAmount.toLocaleString()} USDC
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`font-semibold ${isValid ? "text-white" : "text-red-300"}`}>
+            {quote.quoteAmount.toLocaleString()} {rfq.buyAsset}
+          </span>
+          {!isValid && (
+            <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full font-medium">
+              Below minimum
+            </span>
+          )}
+        </div>
         <span className="text-xs text-slate-500 font-mono">
-          {quote.takerAddress.slice(0, 8)}…{quote.takerAddress.slice(-4)}
+          {quote.makerAddress.slice(0, 8)}…{quote.makerAddress.slice(-4)}
         </span>
-        <span className="text-xs text-slate-600">
-          Quote expires {fmt(quote.expiresAt)}
-        </span>
+        <span className="text-xs text-slate-600">Quote expires {fmt(quote.expiresAt)}</span>
       </div>
-      {canAccept && (
-        <button
-          onClick={() => onAccept(quote)}
-          className="bg-green-700 hover:bg-green-600 text-white text-sm px-4 py-1.5 rounded-lg font-medium transition-colors shrink-0"
-        >
-          Accept quote
-        </button>
-      )}
+      <div className="shrink-0">
+        {isValid && canAccept ? (
+          <button
+            onClick={() => onAccept(quote)}
+            className="bg-green-700 hover:bg-green-600 text-white text-sm px-4 py-1.5 rounded-lg font-medium transition-colors"
+          >
+            Accept quote
+          </button>
+        ) : !isValid ? (
+          <span className="text-red-400 text-xs">Cannot accept</span>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+// Shown to the RFQ creator: full quote list, accept buttons, below-minimum grouping.
+function CreatorView({
+  rfq,
+  quotes,
+  accepting,
+  onAccept,
+}: {
+  rfq: Rfq;
+  quotes: Quote[];
+  accepting: string | null;
+  onAccept: (q: Quote) => void;
+}) {
+  const isOpen = rfq.status === "open" && !isExpired(rfq.expiresAt);
+  const validQuotes = quotes.filter((q) => q.quoteAmount >= rfq.buyAmount);
+  const invalidQuotes = quotes.filter((q) => q.quoteAmount < rfq.buyAmount);
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
+          Submitted quotes — RFQ creator view
+        </h2>
+        <p className="text-xs text-slate-600 mt-0.5">
+          Only you can see submitted quotes.
+        </p>
+      </div>
+
+      {quotes.length === 0 && (
+        <p className="text-slate-500 text-sm">No quotes submitted yet.</p>
+      )}
+
+      {validQuotes.map((q) => (
+        <QuoteRow
+          key={q.id}
+          quote={q}
+          rfq={rfq}
+          canAccept={isOpen && accepting === null}
+          onAccept={onAccept}
+        />
+      ))}
+
+      {invalidQuotes.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-slate-600 uppercase tracking-widest">
+            Below minimum — cannot be accepted ({invalidQuotes.length})
+          </p>
+          {invalidQuotes.map((q) => (
+            <QuoteRow key={q.id} quote={q} rfq={rfq} canAccept={false} onAccept={onAccept} />
+          ))}
+        </div>
+      )}
+
+      {accepting && (
+        <p className="text-green-400 text-sm text-center">
+          Quote accepted — creating escrow deal…
+        </p>
+      )}
+
+      {isOpen && (
+        <p className="text-xs text-slate-600 border-t border-slate-800 pt-4">
+          You manually select one valid quote. The best quote does not automatically win.
+          Accepting a quote closes this RFQ and creates an escrow deal.
+        </p>
+      )}
+    </section>
+  );
+}
+
+// Shown to makers: quote submission form only. No competing quotes are visible.
+function MakerView({ rfq }: { rfq: Rfq }) {
+  const [myQuote, setMyQuote] = useState<Quote | null>(null);
+  const [form, setForm] = useState({ amount: "", address: "" });
+  const [formError, setFormError] = useState("");
+  const isOpen = rfq.status === "open" && !isExpired(rfq.expiresAt);
+
+  function submitQuote(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError("");
+    const amount = parseFloat(form.amount);
+    if (amount < rfq.buyAmount) {
+      setFormError(
+        `Quote must be at least ${rfq.buyAmount.toLocaleString()} ${rfq.buyAsset} (the minimum receive amount). Quotes below the minimum cannot be accepted.`
+      );
+      return;
+    }
+    setMyQuote({
+      id: `quote-new-${++_nextMockQuoteId}`,
+      rfqId: rfq.id,
+      makerAddress: form.address || CURRENT_USER_ADDRESS,
+      quoteAmount: amount,
+      status: "pending",
+      expiresAt: new Date(new Date().getTime() + 12 * 3_600_000).toISOString(),
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  if (!isOpen) {
+    return (
+      <section className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
+            Maker quote view
+          </h2>
+          <p className="text-xs text-slate-600 mt-0.5">
+            This RFQ is no longer accepting quotes.
+          </p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <p className="text-slate-300 text-sm font-medium">
+            Quote submission is closed.
+          </p>
+          <p className="text-slate-500 text-xs mt-1">
+            Makers cannot request or submit quotes after an RFQ is closed, cancelled, or expired.
+          </p>
+        </div>
+      </section>
+    );
+  }
+  if (myQuote) {
+    return (
+      <section className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
+            Maker quote view
+          </h2>
+        </div>
+        <div className="bg-slate-900 border border-green-900 rounded-xl p-5 flex flex-col gap-2">
+          <p className="text-green-400 text-sm font-medium">Quote submitted.</p>
+          <p className="text-white font-semibold">
+            {myQuote.quoteAmount.toLocaleString()} {rfq.buyAsset}
+          </p>
+          <p className="text-xs text-slate-500">Expires {fmt(myQuote.expiresAt)}</p>
+          <p className="text-xs text-slate-600 mt-1">
+            Competing quotes are hidden. The RFQ creator will notify you if your quote is accepted.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
+          Maker quote view
+        </h2>
+        <p className="text-xs text-slate-600 mt-0.5">
+          Submit a firm quote. Competing quotes are not visible to you.
+        </p>
+      </div>
+
+      <form
+        onSubmit={submitQuote}
+        className="bg-slate-900 border border-blue-900 rounded-xl p-5 flex flex-col gap-4"
+      >
+        <div>
+          <h3 className="text-sm font-semibold text-white">Submit a firm quote</h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Makers cannot see competing quotes. Your quote is firm until expiry.
+          </p>
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">
+            Amount you will deliver ({rfq.buyAsset})
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            required
+            placeholder={`Minimum ${rfq.buyAmount.toLocaleString()}`}
+            value={form.amount}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, amount: e.target.value }));
+              setFormError("");
+            }}
+            className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+          />
+          <p className="text-xs text-slate-600 mt-1">
+            Quotes below {rfq.buyAmount.toLocaleString()} {rfq.buyAsset} are below the minimum and
+            cannot be accepted.
+          </p>
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">
+            Your address <span className="text-slate-600">(mock)</span>
+          </label>
+          <input
+            type="text"
+            placeholder="G…"
+            value={form.address}
+            onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+            className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono"
+          />
+        </div>
+        {formError && (
+          <p className="text-red-400 text-xs bg-red-950/40 border border-red-900/40 rounded-lg px-3 py-2">
+            {formError}
+          </p>
+        )}
+        <button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg transition-colors text-sm"
+        >
+          Submit quote
+        </button>
+      </form>
+    </section>
   );
 }
 
@@ -55,10 +287,9 @@ export default function RfqDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const rfq = MOCK_RFQS.find((r) => r.id === id);
+  const isCreator = rfq?.creatorAddress === CURRENT_USER_ADDRESS;
 
-  const [quotes, setQuotes] = useState<Quote[]>(MOCK_QUOTES[id] ?? []);
-  const [showForm, setShowForm] = useState(false);
-  const [quoteForm, setQuoteForm] = useState({ amount: "", address: "" });
+  const [quotes] = useState<Quote[]>(MOCK_QUOTES[id] ?? []);
   const [accepting, setAccepting] = useState<string | null>(null);
 
   if (!rfq) {
@@ -72,32 +303,15 @@ export default function RfqDetailPage({
     );
   }
 
-  function submitQuote(e: React.FormEvent) {
-    e.preventDefault();
-    const newQ: Quote = {
-      id: `quote-${Date.now()}`,
-      rfqId: id,
-      takerAddress: quoteForm.address || "GNEWX7UVMRX6NVPJQ5FZGD2NBZJF4S5M3KGDQR7VWPJL8T9YNDM2ZZ",
-      quoteAmount: parseFloat(quoteForm.amount),
-      status: "pending",
-      expiresAt: new Date(Date.now() + 12 * 3_600_000).toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-    setQuotes((q) => [...q, newQ]);
-    setQuoteForm({ amount: "", address: "" });
-    setShowForm(false);
-  }
-
   function acceptQuote(quote: Quote) {
     setAccepting(quote.id);
     const dealId = DEAL_ID_FOR_RFQ[id] ?? `deal-${id}`;
     setTimeout(() => router.push(`/deals/${dealId}`), 600);
   }
 
-  const isOpen = rfq.status === "open";
-
   return (
     <div className="flex flex-col gap-8">
+      {/* Header */}
       <div>
         <Link href="/rfqs" className="text-slate-500 hover:text-slate-300 text-sm">
           ← Back to RFQs
@@ -105,7 +319,7 @@ export default function RfqDetailPage({
         <div className="flex items-start justify-between mt-3 gap-4">
           <h1 className="text-2xl font-bold text-white">
             {rfq.sellAmount.toLocaleString()} {rfq.sellAsset} →{" "}
-            {rfq.buyAmount.toLocaleString()} {rfq.buyAsset}
+            min {rfq.buyAmount.toLocaleString()} {rfq.buyAsset}
           </h1>
           <span
             className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 mt-1 ${STATUS_COLOR[rfq.status]}`}
@@ -113,12 +327,15 @@ export default function RfqDetailPage({
             {STATUS_LABEL[rfq.status]}
           </span>
         </div>
+        <p className="text-xs text-amber-400 mt-2 bg-amber-950/40 border border-amber-900/40 rounded-lg px-3 py-2 inline-block">
+          Private RFQ · Quotes are visible only to the RFQ creator · Not a public auction
+        </p>
       </div>
 
-      {/* RFQ details */}
+      {/* RFQ terms */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 grid grid-cols-2 gap-4 text-sm">
         <div>
-          <p className="text-slate-500 text-xs mb-1">Maker</p>
+          <p className="text-slate-500 text-xs mb-1">RFQ creator</p>
           <p className="text-white font-mono text-xs">
             {rfq.creatorAddress.slice(0, 12)}…{rfq.creatorAddress.slice(-6)}
           </p>
@@ -134,104 +351,25 @@ export default function RfqDetailPage({
           </p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs mb-1">Wants minimum</p>
+          <p className="text-slate-500 text-xs mb-1">Minimum receive amount</p>
           <p className="text-white font-semibold">
             {rfq.buyAmount.toLocaleString()} {rfq.buyAsset}
           </p>
+          <p className="text-slate-500 text-xs mt-0.5">Hard floor — quotes below this are invalid</p>
         </div>
       </div>
 
-      {/* Quotes */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
-            Quotes ({quotes.length})
-          </h2>
-          {isOpen && (
-            <button
-              onClick={() => setShowForm((s) => !s)}
-              className="text-sm text-blue-400 hover:text-blue-300"
-            >
-              {showForm ? "Cancel" : "+ Submit quote"}
-            </button>
-          )}
-        </div>
-
-        {showForm && (
-          <form
-            onSubmit={submitQuote}
-            className="bg-slate-900 border border-blue-900 rounded-xl p-5 flex flex-col gap-4"
-          >
-            <h3 className="text-sm font-semibold text-white">Your quote</h3>
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">
-                Amount you will pay ({rfq.buyAsset})
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                required
-                placeholder={`Min ${rfq.buyAmount}`}
-                value={quoteForm.amount}
-                onChange={(e) =>
-                  setQuoteForm((f) => ({ ...f, amount: e.target.value }))
-                }
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">
-                Your address <span className="text-slate-600">(mock)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="G…"
-                value={quoteForm.address}
-                onChange={(e) =>
-                  setQuoteForm((f) => ({ ...f, address: e.target.value }))
-                }
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono"
-              />
-            </div>
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg transition-colors text-sm"
-            >
-              Submit quote
-            </button>
-          </form>
-        )}
-
-        {quotes.length === 0 && (
-          <p className="text-slate-500 text-sm">
-            No quotes yet.{" "}
-            {isOpen && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="text-blue-400 hover:underline"
-              >
-                Be the first.
-              </button>
-            )}
-          </p>
-        )}
-
-        {quotes.map((q) => (
-          <QuoteRow
-            key={q.id}
-            quote={q}
-            canAccept={isOpen && accepting === null}
-            onAccept={acceptQuote}
-          />
-        ))}
-
-        {accepting && (
-          <p className="text-green-400 text-sm text-center">
-            Quote accepted — creating deal…
-          </p>
-        )}
-      </section>
+      {/* Role-based view: creator sees quotes + accept, maker sees submission form only */}
+      {isCreator ? (
+        <CreatorView
+          rfq={rfq}
+          quotes={quotes}
+          accepting={accepting}
+          onAccept={acceptQuote}
+        />
+      ) : (
+        <MakerView rfq={rfq} />
+      )}
     </div>
   );
 }

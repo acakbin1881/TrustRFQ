@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "Stop": {
+      "type": "command",
+      "command": "bash scripts/docs-gate.sh"
+    }
+  }
+}

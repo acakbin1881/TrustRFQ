@@ -48,3 +48,24 @@ Or from the root:
 ```bash
 npm run dev
 ```
+
+## Documentation maintenance rule
+
+Every time you change files under `apps/`, `contracts/`, or `packages/`, you must also update:
+
+- `docs/03-CURRENT-STATE.md` — reflect what now works and what is still mocked
+- `docs/04-NEXT-TASK.md` — update next steps if they changed
+
+Only update `docs/01-MILESTONES.md` when a milestone status changes.
+Only update `docs/02-DECISIONS.md` when an architecture or product decision changes.
+
+## Definition of Done
+
+A task is not complete until:
+1. Build passes (`npm run build` in `apps/web`)
+2. Lint passes (`npm run lint` in `apps/web`)
+3. `docs/03-CURRENT-STATE.md` is accurate
+4. `docs/04-NEXT-TASK.md` is accurate
+
+The Stop hook (`scripts/docs-gate.sh`) enforces rules 3 and 4 automatically.
+Run it manually at any time: `bash scripts/docs-gate.sh`
