@@ -3,7 +3,7 @@ import "./globals.css";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "StellarOTC — Testnet",
+  title: "StellarBig — Testnet",
   description: "Peer-to-peer OTC escrow settlement on Stellar Testnet",
 };
 
@@ -17,7 +17,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <nav className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <span className="font-bold text-white text-lg">StellarOTC</span>
+            <span className="font-bold text-white text-lg">StellarBig</span>
             <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-medium">
               TESTNET
             </span>
@@ -41,7 +41,7 @@ export default function RootLayout({
           {children}
         </main>
         <footer className="border-t border-slate-800 px-6 py-4 text-center text-xs text-slate-600">
-          StellarOTC MVP · Testnet only · No real funds
+          StellarBig MVP · Testnet only · No real funds
         </footer>
       </body>
     </html>

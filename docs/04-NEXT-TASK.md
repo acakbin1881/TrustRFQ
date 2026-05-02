@@ -1,20 +1,28 @@
-# Next Task
+﻿# Next Task
 
 Last updated: 2026-05-01
 
 ---
 
-## After Milestone 1 is complete
+## Immediate next step
 
-Next milestone is **Milestone 2 — Supabase schema + persistence**.
+Create a clean checkpoint/commit for **Milestone 1 complete**.
 
-Do not start it yet. Wait for Milestone 1 to be fully signed off.
+Suggested commit message:
+
+```txt
+Complete milestone 1 private RFQ mock flow
+```
+
+Before committing, stop the local dev server if you want to run the production build, because Windows may lock generated `.next` files while `localhost:3000` is running.
 
 ---
 
-## Milestone 2 scope (preview)
+## Milestone 2 scope
 
-Replace frontend-only mock state with real Supabase persistence. Keep the product model from Milestone 1 unchanged.
+Next milestone is **Milestone 2 — Supabase schema + persistence**.
+
+Goal: replace frontend-only mock state with real Supabase persistence while keeping the Milestone 1 product model unchanged.
 
 Planned deliverables:
 - `supabase/migrations/001_initial_schema.sql`
@@ -33,10 +41,17 @@ Out of scope for M2:
 - Stellar SDK
 - Soroban contract
 - Real on-chain settlement
-- Authentication beyond what Supabase MVP requires
+- Production authentication beyond what is strictly needed for the Supabase MVP
 
 ---
 
-## Remaining milestones
+## Product model to preserve
 
-See `01-MILESTONES.md` for M3–M6 scope.
+- Private RFQ, not public auction
+- RFQ creator sees submitted quotes
+- Makers cannot see competing quotes
+- RFQ creator manually accepts one valid quote
+- Accepted quote creates one bilateral escrow deal
+- RFQ creator funds the RFQ sell side
+- Quote maker funds the quoted receive side
+- Settlement is atomic once both sides are funded

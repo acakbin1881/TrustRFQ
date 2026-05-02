@@ -9,7 +9,7 @@ const steps = [
   {
     n: "2",
     title: "Receive quotes",
-    desc: "Counterparties submit quotes. You review and accept the best one.",
+    desc: "Counterparties submit private firm quotes. You manually accept one valid quote.",
   },
   {
     n: "3",
@@ -19,7 +19,7 @@ const steps = [
   {
     n: "4",
     title: "Atomic settlement",
-    desc: "Once both sides funded, the swap executes atomically on-chain.",
+    desc: "Once both sides are funded, settlement executes atomically on-chain.",
   },
 ];
 
@@ -85,7 +85,7 @@ export default function Home() {
       <section className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-sm text-slate-400">
         <span className="text-slate-300 font-medium">Scope: </span>
         Testnet only · No mainnet · No fiat · No KYC · No dispute resolution ·
-        XLM and USDC only
+        XLM, USDC, and EURC examples only
       </section>
     </div>
   );

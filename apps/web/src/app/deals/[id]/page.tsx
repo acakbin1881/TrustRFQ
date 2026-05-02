@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { use, useState } from "react";
 import Link from "next/link";
@@ -19,10 +19,10 @@ function Step({
 }) {
   const icon =
     status === "done"
-      ? "✓"
+      ? "done"
       : status === "active"
-        ? "●"
-        : "○";
+        ? "active"
+        : "pending";
   const iconColor =
     status === "done"
       ? "text-green-400"
@@ -94,18 +94,18 @@ export default function DealPage({
           href="/rfqs"
           className="text-blue-400 hover:underline text-sm mt-2 block"
         >
-          ← Back to RFQs
+          Back to RFQs
         </Link>
       </div>
     );
   }
 
-  function markMakerFunded() {
-    setDeal((d) => d && { ...d, makerDeposited: true });
+  function markRfqCreatorFunded() {
+    setDeal((d) => d && { ...d, takerDeposited: true });
   }
 
-  function markTakerFunded() {
-    setDeal((d) => d && { ...d, takerDeposited: true });
+  function markQuoteMakerFunded() {
+    setDeal((d) => d && { ...d, makerDeposited: true });
   }
 
   function settle() {
@@ -124,15 +124,17 @@ export default function DealPage({
     setDeal((d) => d && { ...d, status: "refunded" as DealStatus });
   }
 
-  const bothFunded = deal.makerDeposited && deal.takerDeposited;
+  const rfqCreatorDeposited = deal.takerDeposited;
+  const quoteMakerDeposited = deal.makerDeposited;
+  const bothFunded = rfqCreatorDeposited && quoteMakerDeposited;
   const isSettled = deal.status === "settled";
   const isRefunded = deal.status === "refunded";
   const isExpired = new Date(deal.expiresAt) < new Date();
 
   // derive step statuses
   const s1: StepStatus = "done"; // quote accepted = always done on deal page
-  const s2: StepStatus = deal.makerDeposited ? "done" : isSettled || isRefunded ? "pending" : "active";
-  const s3: StepStatus = deal.takerDeposited ? "done" : deal.makerDeposited && !isSettled && !isRefunded ? "active" : "pending";
+  const s2: StepStatus = rfqCreatorDeposited ? "done" : isSettled || isRefunded ? "pending" : "active";
+  const s3: StepStatus = quoteMakerDeposited ? "done" : rfqCreatorDeposited && !isSettled && !isRefunded ? "active" : "pending";
   const s4: StepStatus = isSettled ? "done" : bothFunded && !isRefunded ? "active" : "pending";
   const s5: StepStatus = isSettled ? "done" : isRefunded ? "done" : "pending";
 
@@ -140,7 +142,7 @@ export default function DealPage({
     <div className="flex flex-col gap-8">
       <div>
         <Link href="/rfqs" className="text-slate-500 hover:text-slate-300 text-sm">
-          ← Back to RFQs
+          Back to RFQs
         </Link>
         <div className="flex items-center justify-between mt-3 gap-4">
           <h1 className="text-2xl font-bold text-white">
@@ -164,25 +166,25 @@ export default function DealPage({
       {/* Deal terms */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 grid grid-cols-2 gap-4 text-sm">
         <div>
-          <p className="text-slate-500 text-xs mb-1">Maker (seller)</p>
+          <p className="text-slate-500 text-xs mb-1">RFQ creator</p>
           <p className="text-white font-mono text-xs">
-            {deal.makerAddress.slice(0, 10)}…{deal.makerAddress.slice(-4)}
+            {deal.takerAddress.slice(0, 10)}...{deal.takerAddress.slice(-4)}
           </p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs mb-1">Taker (buyer)</p>
+          <p className="text-slate-500 text-xs mb-1">Quote maker</p>
           <p className="text-white font-mono text-xs">
-            {deal.takerAddress.slice(0, 10)}…{deal.takerAddress.slice(-4)}
+            {deal.makerAddress.slice(0, 10)}...{deal.makerAddress.slice(-4)}
           </p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs mb-1">Maker sends</p>
+          <p className="text-slate-500 text-xs mb-1">RFQ creator sends</p>
           <p className="text-white font-semibold">
             {deal.sellAmount.toLocaleString()} {deal.sellAsset}
           </p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs mb-1">Taker sends</p>
+          <p className="text-slate-500 text-xs mb-1">Quote maker sends</p>
           <p className="text-white font-semibold">
             {deal.buyAmount.toLocaleString()} {deal.buyAsset}
           </p>
@@ -214,36 +216,36 @@ export default function DealPage({
             status={s1}
           />
           <Step
-            label="Maker deposits"
+            label="RFQ creator deposits"
             sub={`${deal.sellAmount.toLocaleString()} ${deal.sellAsset} locked in escrow`}
             status={s2}
             action={
-              !deal.makerDeposited && !isSettled && !isRefunded ? (
-                <ActionBtn onClick={markMakerFunded}>
-                  Mark maker funded (mock)
+              !rfqCreatorDeposited && !isSettled && !isRefunded ? (
+                <ActionBtn onClick={markRfqCreatorFunded}>
+                  Mark RFQ creator funded (mock)
                 </ActionBtn>
-              ) : deal.makerDeposited ? (
-                <span className="text-green-400 text-xs">Funds locked ✓</span>
+              ) : rfqCreatorDeposited ? (
+                <span className="text-green-400 text-xs">Funds locked</span>
               ) : null
             }
           />
           <Step
-            label="Taker deposits"
+            label="Quote maker deposits"
             sub={`${deal.buyAmount.toLocaleString()} ${deal.buyAsset} locked in escrow`}
             status={s3}
             action={
-              !deal.takerDeposited && !isSettled && !isRefunded ? (
-                <ActionBtn onClick={markTakerFunded}>
-                  Mark taker funded (mock)
+              !quoteMakerDeposited && !isSettled && !isRefunded ? (
+                <ActionBtn onClick={markQuoteMakerFunded}>
+                  Mark quote maker funded (mock)
                 </ActionBtn>
-              ) : deal.takerDeposited ? (
-                <span className="text-green-400 text-xs">Funds locked ✓</span>
+              ) : quoteMakerDeposited ? (
+                <span className="text-green-400 text-xs">Funds locked</span>
               ) : null
             }
           />
           <Step
             label="Ready to settle"
-            sub="Both sides funded. Atomic swap available."
+            sub="Both sides funded. Atomic settlement available."
             status={s4}
             action={
               bothFunded && !isSettled && !isRefunded ? (
@@ -256,7 +258,7 @@ export default function DealPage({
           <Step
             label={
               isSettled
-                ? "Settled ✓"
+                ? "Settled"
                 : isRefunded
                   ? "Refunded"
                   : isExpired
@@ -287,8 +289,8 @@ export default function DealPage({
       {isSettled && (
         <div className="bg-green-900/30 border border-green-800 rounded-xl p-5 text-center">
           <p className="text-green-300 font-semibold">
-            Swap complete. Maker received {deal.buyAmount.toLocaleString()}{" "}
-            {deal.buyAsset}. Taker received {deal.sellAmount.toLocaleString()}{" "}
+            Settlement complete. RFQ creator received {deal.buyAmount.toLocaleString()}{" "}
+            {deal.buyAsset}. Quote maker received {deal.sellAmount.toLocaleString()}{" "}
             {deal.sellAsset}.
           </p>
         </div>
