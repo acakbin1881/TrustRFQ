@@ -14,21 +14,21 @@ Last updated: 2026-05-04
 - Minimum receive amount is a hard floor. Below-minimum quotes cannot be submitted or accepted.
 - Closed or expired RFQs cannot receive quotes.
 - Expired quotes cannot be accepted.
-- Supabase Milestone 2 foundation is now in place:
-  - Initial schema migration exists.
-  - Supabase client helper exists.
-  - Repository helpers exist for RFQs, quotes, deals, and escrow events.
-  - `.env.local.example` documents required Supabase and Stellar testnet variables.
-- Pages now use repository helpers. If Supabase env vars are configured, they read/write Supabase. If not, they fall back to the Milestone 1 mock data.
-- Deal page can load a deal through the repository and persist mock/Supabase status transitions for funding, settlement, and refund.
+- Supabase is connected and confirmed working:
+  - Supabase project live at `vzitlzzbdnnxigexopdj.supabase.co`
+  - Migration `001_initial_schema.sql` applied — all 4 tables exist with RLS policies.
+  - `apps/web/.env.local` configured with real project credentials.
+  - RFQ creation writes to Supabase confirmed via browser + dashboard check.
+- Pages use repository helpers with automatic mock fallback when env vars are absent.
+- Deal page loads deals through the repository and persists status transitions (funding, settlement, refund).
 
 ---
 
 ## What is still mocked
 
-- `CURRENT_USER_ADDRESS` is still a mock identity.
-- There is no real authentication or wallet identity yet.
-- Funding, settlement, and refund buttons are still UI/testnet-prep actions, not real Stellar transactions.
+- `CURRENT_USER_ADDRESS` is still a mock identity — no real wallet auth yet.
+- Quote submission and deal creation via real multi-user flow not yet confirmed (Vercel deployment pending for multi-user testing).
+- Funding, settlement, and refund buttons are UI-only — not real Stellar transactions.
 - No Freighter wallet integration.
 - No Stellar SDK transaction building.
 - No Soroban escrow contract calls.
@@ -38,12 +38,13 @@ Last updated: 2026-05-04
 
 ## Verification
 
-- `npm.cmd run lint` passes.
-- `npm.cmd run build` passes.
+- `npm run lint` passes.
+- `npm run build` passes.
+- RFQ create → Supabase write confirmed locally.
 
 ---
 
 ## Milestone status
 
 - Milestone 1: Complete.
-- Milestone 2: In progress. First persistence slice is implemented; next step is to connect a real Supabase project and run the migration.
+- Milestone 2: In progress. Supabase connected and RFQ writes confirmed. Vercel deployment in progress for multi-user quote/deal testing.

@@ -71,7 +71,7 @@ Acceptance criteria:
 
 ## Milestone 2 — Supabase schema + persistence
 
-**Status:** Not started  
+**Status:** In progress  
 **Scope:** Replace frontend-only mock state with real Supabase persistence.
 
 Goal:
