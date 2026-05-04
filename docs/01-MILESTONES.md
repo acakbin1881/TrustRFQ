@@ -1,6 +1,6 @@
-﻿# Milestones
+# Milestones
 
-## Milestone 1 â€” Clickable mock MVP flow + correct private RFQ mechanism
+## Milestone 1 — Clickable mock MVP flow + correct private RFQ mechanism
 
 **Status:** Complete  
 **Scope:** Frontend-only prototype. No blockchain, no database, no wallet.
@@ -56,7 +56,7 @@ Acceptance criteria:
 - `npm run build` passes
 - `npm run lint` passes if available
 - User can navigate the full flow:
-  - Home â†’ RFQs â†’ New RFQ â†’ RFQ Detail â†’ Submit Quote â†’ Accept Quote â†’ Deal Page
+  - Home → RFQs → New RFQ → RFQ Detail → Submit Quote → Accept Quote → Deal Page
 - UI clearly says this is private RFQ, not public bidding
 - No language implies auction, bidding, outbidding, or automatic best-price winner
 - Below-minimum quotes cannot be accepted
@@ -69,7 +69,7 @@ Acceptance criteria:
 
 ---
 
-## Milestone 2 â€” Supabase schema + persistence
+## Milestone 2 — Supabase schema + persistence
 
 **Status:** Not started  
 **Scope:** Replace frontend-only mock state with real Supabase persistence.
@@ -78,20 +78,20 @@ Goal:
 Persist RFQs, quotes, deals, and escrow events in Supabase while keeping the product model from Milestone 1 unchanged.
 
 Planned deliverables:
-- `supabase/migrations/001_initial_schema.sql`
+- `supabase/migrations/001_initial_schema.sql` (done)
 - Tables:
   - `rfqs`
   - `quotes`
   - `deals`
   - `escrow_events`
-- Basic RLS policies
-- `apps/web/src/lib/supabase.ts`
-- Supabase read/write helpers
-- RFQ creation writes to database
-- Quote submission writes to database
-- Accepting a quote creates a deal in database
-- Pages read from Supabase instead of mock data
-- `.env.local.example`
+- Basic RLS policies (done for testnet MVP)
+- `apps/web/src/lib/supabase.ts` (done)
+- Supabase read/write helpers (first slice done in `apps/web/src/lib/rfq-repository.ts`)
+- RFQ creation writes to database when Supabase env vars are configured; otherwise mock fallback
+- Quote submission writes to database when Supabase env vars are configured; otherwise mock fallback
+- Accepting a quote creates a deal in database when Supabase env vars are configured; otherwise mock fallback
+- RFQ list, RFQ detail, and deal pages read through repository helpers with Supabase/mock fallback
+- `.env.local.example` (done)
 
 Out of scope:
 - Freighter wallet
@@ -102,7 +102,7 @@ Out of scope:
 
 ---
 
-## Milestone 3 â€” Soroban escrow contract
+## Milestone 3 — Soroban escrow contract
 
 **Status:** Not started  
 **Scope:** Write and test the escrow contract for accepted deals.
@@ -138,7 +138,7 @@ Out of scope:
 
 ---
 
-## Milestone 4 â€” Freighter + Stellar Testnet integration
+## Milestone 4 — Freighter + Stellar Testnet integration
 
 **Status:** Not started  
 **Scope:** Connect wallet and build real testnet transactions.
@@ -167,13 +167,13 @@ Out of scope:
 
 ---
 
-## Milestone 5 â€” End-to-end testnet demo
+## Milestone 5 — End-to-end testnet demo
 
 **Status:** Not started  
 **Scope:** Connect frontend, Supabase, Freighter, and Soroban into one working demo.
 
 Goal:
-Run the full RFQ â†’ quote â†’ accepted deal â†’ escrow settlement flow on Stellar testnet.
+Run the full RFQ → quote → accepted deal → escrow settlement flow on Stellar testnet.
 
 Planned deliverables:
 - RFQ created in frontend and stored in Supabase
@@ -190,7 +190,7 @@ Planned deliverables:
 
 ---
 
-## Milestone 6 â€” Polish, validation, and testnet deploy
+## Milestone 6 — Polish, validation, and testnet deploy
 
 **Status:** Not started  
 **Scope:** Harden UX, deploy the demo, and prepare validation materials.
