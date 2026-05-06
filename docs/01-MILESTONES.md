@@ -71,7 +71,7 @@ Acceptance criteria:
 
 ## Milestone 2 — Supabase schema + persistence
 
-**Status:** In progress  
+**Status:** Complete  
 **Scope:** Replace frontend-only mock state with real Supabase persistence and test the backend RFQ lifecycle.
 
 Goal:
@@ -102,6 +102,8 @@ Acceptance criteria:
 - RFQ creator can see submitted quotes; makers cannot see competing quotes
 - RFQ creator can accept one valid, non-expired quote
 - Accepting a quote closes the RFQ, rejects non-selected quotes, creates a `deals` row, and creates an `escrow_events` row
+- Deal funding and settlement status changes record escrow events
+- Expired open RFQs are synchronized to `expired`
 - Closed or expired RFQs reject new quotes
 - Below-minimum and expired quotes cannot be accepted
 - `npm.cmd run lint` passes
@@ -116,90 +118,102 @@ Out of scope:
 
 ---
 
-## Milestone 3 — Soroban escrow contract
+## Milestone 3 - Stellar XLM/USDC bilateral escrow settlement
 
 **Status:** Not started  
-**Scope:** Write and test the escrow contract for accepted deals.
+**Scope:** Design and build the Stellar-only escrow settlement path for XLM/USDC accepted RFQ deals.
 
 Goal:
-Create the testnet escrow contract that can hold both sides of an accepted RFQ deal and settle or refund.
+Create the core StellarBig settlement engine for XLM/USDC pairs: both counterparties fund escrow on Stellar, then the system releases both legs according to the accepted deal terms.
+
+This milestone is only for Stellar-chain assets and only for the XLM/USDC pair. Do not add fiat, BTC, non-Stellar assets, order books, AMMs, or public bidding.
 
 Planned deliverables:
-- `contracts/rfq_escrow/src/lib.rs`
-- Contract state machine:
-  - Created
-  - MakerFunded
-  - TakerFunded
+- XLM/USDC-only deal path after quote acceptance
+- Escrow state model:
+  - DealCreated
+  - RfqCreatorFunded
+  - QuoteMakerFunded
   - ReadyToSettle
   - Settled
   - Refunded
   - Expired
-- Contract functions:
-  - `initialize_deal()`
-  - `fund_maker_side()`
-  - `fund_taker_side()`
-  - `settle()`
-  - `refund_after_expiry()`
-  - `get_deal()`
-- Unit tests with Soroban test utilities
-- WASM build
-- Testnet deployment plan
+- Funding rules:
+  - RFQ creator funds the XLM side when selling XLM for USDC
+  - Quote maker funds the USDC side
+  - Settlement is not available until both sides are funded
+- Settlement rules:
+  - XLM releases to quote maker
+  - USDC releases to RFQ creator
+  - If expiry passes before both sides are funded, deposits are refundable to original depositors
+- Supabase support for escrow contract IDs, transaction hashes, and on-chain status references
+- Clear UI distinction between mocked backend-state buttons and real Stellar funding/settlement actions
+- Testnet-only implementation plan
+
+Acceptance criteria:
+- Only XLM/USDC pair is supported in this milestone
+- Accepted RFQ deal can move into escrow funding state
+- Both sides must fund before settlement
+- Settlement releases each asset to the opposite party
+- Refund returns each side's own deposit after expiry
+- Supabase records funding, settlement, refund, and tx references
+- `npm.cmd run lint` passes
+- `npm.cmd run build` passes
 
 Out of scope:
-- Frontend wallet integration
-- Production security audit
-- Mainnet deployment
+- Trustless Work P2P escrow use case
+- Fiat rails
+- BTC or non-Stellar assets
+- Mainnet
+- Production auth/RLS hardening
+- General multi-asset escrow beyond XLM/USDC
 
 ---
 
-## Milestone 4 — Freighter + Stellar Testnet integration
+## Milestone 4 - Trustless Work P2P escrow use case
 
 **Status:** Not started  
-**Scope:** Connect wallet and build real testnet transactions.
+**Scope:** Add a separate Trustless Work P2P/OTC-style escrow flow after the core XLM/USDC Stellar settlement path is planned.
 
 Goal:
-Allow users to connect Freighter and interact with the Soroban escrow contract on Stellar testnet.
+Use Trustless Work for the use case it fits best: one-sided Stellar stablecoin escrow with conditional release, inspired by the Trustless Work P2P exchanges and OTC desks model.
+
+This is separate from the XLM/USDC bilateral settlement path. Trustless Work P2P escrow should not be treated as a replacement for the two-sided XLM/USDC escrow unless their platform explicitly supports that model.
 
 Planned deliverables:
-- `apps/web/src/lib/stellar.ts`
-- Wallet connect/disconnect
-- Testnet network checks
-- Transaction helpers:
-  - initialize escrow
-  - fund maker side
-  - fund taker side
-  - settle
-  - refund after expiry
-- Store transaction hashes in Supabase
-- Display explorer links
+- Trustless Work feasibility confirmation for the chosen P2P use case
+- One-sided USDC or EURC escrow flow on Stellar
+- Supabase fields/tables for Trustless Work escrow IDs, statuses, and tx hashes
+- UI path for creating, funding, releasing, or refunding a Trustless Work escrow
+- Documentation explaining how this differs from XLM/USDC bilateral settlement
 
 Out of scope:
+- Replacing the XLM/USDC bilateral settlement engine without explicit feasibility proof
+- Fiat rails
+- BTC/non-Stellar assets
 - Mainnet
-- Fiat
-- KYC
-- Multi-chain
 
 ---
 
-## Milestone 5 — End-to-end testnet demo
+## Milestone 5 - End-to-end testnet demo
 
 **Status:** Not started  
-**Scope:** Connect frontend, Supabase, Freighter, and Soroban into one working demo.
+**Scope:** Connect frontend, Supabase, wallet signing, and the chosen escrow path into one working demo.
 
 Goal:
-Run the full RFQ → quote → accepted deal → escrow settlement flow on Stellar testnet.
+Run the full RFQ -> quote -> accepted deal -> escrow funding -> settlement/refund flow on Stellar testnet.
 
 Planned deliverables:
 - RFQ created in frontend and stored in Supabase
 - Maker submits quote
 - RFQ creator accepts quote
 - Deal is created
-- Escrow contract initialized
-- Maker funds escrow
-- Taker funds escrow
-- Contract settles atomically
-- Supabase updates after each on-chain event
-- UI shows final settled status
+- Escrow is initialized
+- RFQ creator funds escrow
+- Quote maker funds escrow
+- Escrow settles or refunds according to state
+- Supabase updates after each escrow event
+- UI shows final settled/refunded status
 - E2E walkthrough with two testnet accounts
 
 ---

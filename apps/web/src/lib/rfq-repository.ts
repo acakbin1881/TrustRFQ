@@ -116,6 +116,20 @@ function assertOpenRfq(rfq: Rfq) {
   }
 }
 
+async function syncExpiredRfqRows(rows: RfqRow[]): Promise<RfqRow[]> {
+  const expiredIds = rows
+    .filter((row) => row.status === "open" && isExpired(row.expires_at))
+    .map((row) => row.id);
+
+  if (expiredIds.length === 0) return rows;
+
+  const supabase = getSupabaseBrowserClient();
+  await supabase.from("rfqs").update({ status: "expired" }).in("id", expiredIds).throwOnError();
+
+  const expiredSet = new Set(expiredIds);
+  return rows.map((row) => (expiredSet.has(row.id) ? { ...row, status: "expired" } : row));
+}
+
 export async function listRfqs(): Promise<Rfq[]> {
   if (!isSupabaseConfigured) return MOCK_RFQS;
 
@@ -126,7 +140,8 @@ export async function listRfqs(): Promise<Rfq[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data.map(mapRfq);
+  const syncedRows = await syncExpiredRfqRows(data);
+  return syncedRows.map(mapRfq);
 }
 
 export async function getRfq(id: string): Promise<Rfq | null> {
@@ -138,7 +153,10 @@ export async function getRfq(id: string): Promise<Rfq | null> {
   const { data, error } = await supabase.from("rfqs").select("*").eq("id", id).maybeSingle();
 
   if (error) throw error;
-  return data ? mapRfq(data) : null;
+  if (!data) return null;
+
+  const [syncedRow] = await syncExpiredRfqRows([data]);
+  return mapRfq(syncedRow);
 }
 
 export async function createRfq(input: CreateRfqInput): Promise<Rfq> {
@@ -327,6 +345,15 @@ export async function updateDealStatus(id: string, status: DealStatus): Promise<
   const { data, error } = await supabase.from("deals").update(patch).eq("id", id).select("*").single();
 
   if (error) throw error;
+
+  if (status === "settled" || status === "refunded") {
+    await recordEscrowEvent({
+      deal_id: id,
+      event_type: status,
+      metadata: { status },
+    });
+  }
+
   return mapDeal(data);
 }
 

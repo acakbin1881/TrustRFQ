@@ -115,6 +115,8 @@ The identity layer is only for backend-flow testing. Real wallet transaction sig
     - non-selected quotes changed to `rejected`
     - one `deals` row was created
     - one `escrow_events` row was created with `event_type = deal_created`
+    - funding actions create `rfq_creator_funded` and `quote_maker_funded` events
+    - settlement creates a `settled` event
 10. Switch to **Maker A** or **Maker B** and try submitting a new quote on the closed RFQ. Confirm it is blocked.
 11. Run `npm run lint`.
 12. Run `npm run build`.
@@ -174,8 +176,10 @@ Milestone 2 can be considered complete when:
 - Non-selected quotes are rejected.
 - A deal row is created.
 - A `deal_created` escrow event is recorded.
+- Funding actions record `rfq_creator_funded` and `quote_maker_funded` escrow events.
+- Settlement records a `settled` escrow event.
+- Expired open RFQs are synchronized to `expired`.
 - Closed or expired RFQs reject new quotes.
 - Below-minimum and expired quotes cannot be accepted.
 - `npm.cmd run lint` passes.
 - `npm.cmd run build` passes.
-
