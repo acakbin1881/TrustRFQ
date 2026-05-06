@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CURRENT_USER_ADDRESS, type AssetCode } from "@/lib/mock-data";
+import { type AssetCode } from "@/lib/mock-data";
 import { createRfq } from "@/lib/rfq-repository";
+import { useCurrentIdentity } from "@/lib/identity";
 
 const ASSETS = ["XLM", "USDC", "EURC"] as const;
 const EXPIRIES = [
@@ -21,6 +22,7 @@ function expiryDate(value: string) {
 
 export default function NewRfqPage() {
   const router = useRouter();
+  const [currentAddress] = useCurrentIdentity();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -51,7 +53,7 @@ export default function NewRfqPage() {
     setSubmitting(true);
     try {
       await createRfq({
-        creatorAddress: CURRENT_USER_ADDRESS,
+        creatorAddress: currentAddress,
         sellAsset: form.sellAsset,
         sellAmount,
         buyAsset: form.buyAsset,

@@ -1,27 +1,29 @@
 # Next Task
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 ---
 
 ## Immediate next step
 
-Deploy to Vercel and run multi-user smoke test for Milestone 2.
+Smoke test the full Milestone 2 backend flow using the identity switcher.
 
-Supabase is already connected and RFQ writes are confirmed. The remaining M2 tests require two different user identities (creator + maker), which is only possible with Vercel deployment and two separate browsers/devices.
+The identity switcher is now in the nav. All pages use the selected identity for role detection. A single browser is enough to test creator and maker roles by switching identity.
+
+Use `docs/05-M2-SUPABASE-TESTING.md` as the operator checklist for Supabase table checks and pass criteria.
 
 Steps:
-1. Deploy to Vercel with environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_STELLAR_NETWORK=TESTNET`
-   - `NEXT_PUBLIC_HORIZON_URL=https://horizon-testnet.stellar.org`
-2. Smoke test from two different devices/browsers:
-   - Device A: create RFQ → confirm row in `rfqs` table
-   - Device B: submit quote on that RFQ → confirm row in `quotes` table
-   - Device A: accept the quote → confirm rows in `deals` and `escrow_events` tables
-   - Verify closed RFQ rejects new quotes
-3. If all pass: update docs and commit M2 as complete.
+1. Start `npm run dev` (or use Vercel deployment).
+2. Set identity to **RFQ Creator** and create a new RFQ. Confirm the row appears in the `rfqs` Supabase table.
+3. Set identity to **Maker A** and open that RFQ. Confirm maker view is shown (submit quote form, no competing quotes). Submit a quote. Confirm the row appears in the `quotes` table.
+4. Set identity back to **RFQ Creator** and open the same RFQ. Confirm creator view is shown (submitted quotes list). Accept the quote. Confirm:
+   - Row in `deals` table.
+   - Row in `escrow_events` table (event type `deal_created`).
+   - Non-selected quotes have status `rejected`.
+   - RFQ status is `closed`.
+5. Try submitting a new quote as Maker B on the now-closed RFQ. Confirm it is blocked.
+6. Run `npm run lint` and `npm run build`.
+7. If all pass: update docs and commit M2 as complete.
 
 ---
 
@@ -40,8 +42,8 @@ Steps:
 
 ## Still out of scope
 
-- Freighter wallet.
-- Stellar SDK.
+- Real wallet transaction signing.
+- Stellar SDK transaction building.
 - Soroban contract.
 - Real on-chain settlement.
 - Production auth.

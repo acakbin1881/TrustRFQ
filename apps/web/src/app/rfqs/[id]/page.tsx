@@ -4,7 +4,6 @@ import { use, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  CURRENT_USER_ADDRESS,
   STATUS_COLOR,
   STATUS_LABEL,
   fmt,
@@ -12,6 +11,7 @@ import {
   type Quote,
   type Rfq,
 } from "@/lib/mock-data";
+import { useCurrentIdentity } from "@/lib/identity";
 import {
   acceptQuote as persistAcceptQuote,
   deriveRfqStatus,
@@ -139,7 +139,7 @@ function CreatorView({
   );
 }
 
-function MakerView({ rfq }: { rfq: Rfq }) {
+function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) {
   const [myQuote, setMyQuote] = useState<Quote | null>(null);
   const [form, setForm] = useState({ amount: "", address: "" });
   const [formError, setFormError] = useState("");
@@ -161,7 +161,7 @@ function MakerView({ rfq }: { rfq: Rfq }) {
     try {
       const quote = await persistQuote({
         rfqId: rfq.id,
-        makerAddress: form.address.trim() || CURRENT_USER_ADDRESS,
+        makerAddress: form.address.trim() || currentAddress,
         quoteAmount: amount,
         expiresAt: new Date(Date.now() + 12 * 3_600_000).toISOString(),
       });
@@ -235,6 +235,7 @@ function MakerView({ rfq }: { rfq: Rfq }) {
 export default function RfqDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const [currentAddress] = useCurrentIdentity();
   const [rfq, setRfq] = useState<Rfq | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,7 +297,7 @@ export default function RfqDetailPage({ params }: { params: Promise<{ id: string
     );
   }
 
-  const isCreator = rfq.creatorAddress === CURRENT_USER_ADDRESS;
+  const isCreator = rfq.creatorAddress === currentAddress;
   const status = deriveRfqStatus(rfq);
 
   return (
@@ -339,7 +340,7 @@ export default function RfqDetailPage({ params }: { params: Promise<{ id: string
       {isCreator ? (
         <CreatorView rfq={rfq} quotes={quotes} accepting={accepting} error={acceptError} onAccept={acceptQuote} />
       ) : (
-        <MakerView rfq={rfq} />
+        <MakerView rfq={rfq} currentAddress={currentAddress} />
       )}
     </div>
   );

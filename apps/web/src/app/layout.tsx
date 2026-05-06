@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
+import { IdentitySelector } from "@/components/IdentitySelector";
 
 export const metadata: Metadata = {
   title: "StellarBig — Testnet",
@@ -22,7 +23,8 @@ export default function RootLayout({
               TESTNET
             </span>
           </Link>
-          <div className="flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-4 text-sm">
+            <IdentitySelector />
             <Link
               href="/rfqs"
               className="text-slate-400 hover:text-white transition-colors"

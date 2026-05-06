@@ -72,10 +72,12 @@ Acceptance criteria:
 ## Milestone 2 — Supabase schema + persistence
 
 **Status:** In progress  
-**Scope:** Replace frontend-only mock state with real Supabase persistence.
+**Scope:** Replace frontend-only mock state with real Supabase persistence and test the backend RFQ lifecycle.
 
 Goal:
 Persist RFQs, quotes, deals, and escrow events in Supabase while keeping the product model from Milestone 1 unchanged.
+
+This milestone tests the backend/application flow, not wallet or blockchain settlement. A temporary frontend identity layer may be used only to exercise creator and maker roles against real Supabase records. Different devices do not automatically mean different users until a real identity source exists.
 
 Planned deliverables:
 - `supabase/migrations/001_initial_schema.sql` (done)
@@ -87,18 +89,30 @@ Planned deliverables:
 - Basic RLS policies (done for testnet MVP)
 - `apps/web/src/lib/supabase.ts` (done)
 - Supabase read/write helpers (first slice done in `apps/web/src/lib/rfq-repository.ts`)
-- RFQ creation writes to database when Supabase env vars are configured; otherwise mock fallback
-- Quote submission writes to database when Supabase env vars are configured; otherwise mock fallback
-- Accepting a quote creates a deal in database when Supabase env vars are configured; otherwise mock fallback
+- RFQ creation writes to Supabase when env vars are configured; otherwise mock fallback
+- Quote submission writes to Supabase when env vars are configured; otherwise mock fallback
+- Accepting a quote closes the RFQ, rejects other quotes, creates a deal, and records an escrow event in Supabase
 - RFQ list, RFQ detail, and deal pages read through repository helpers with Supabase/mock fallback
+- Temporary creator/maker identity mechanism for testing role-based persistence before wallet/auth
 - `.env.local.example` (done)
 
+Acceptance criteria:
+- RFQ creation writes to the `rfqs` table
+- Maker quote submission writes to the `quotes` table
+- RFQ creator can see submitted quotes; makers cannot see competing quotes
+- RFQ creator can accept one valid, non-expired quote
+- Accepting a quote closes the RFQ, rejects non-selected quotes, creates a `deals` row, and creates an `escrow_events` row
+- Closed or expired RFQs reject new quotes
+- Below-minimum and expired quotes cannot be accepted
+- `npm.cmd run lint` passes
+- `npm.cmd run build` passes
+
 Out of scope:
-- Freighter wallet
-- Stellar SDK
+- Real wallet transaction signing
+- Stellar SDK transaction building
 - Soroban contract
 - Real on-chain settlement
-- Authentication beyond what is strictly needed for Supabase MVP
+- Production authentication beyond what is strictly needed for Supabase MVP
 
 ---
 

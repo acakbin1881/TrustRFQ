@@ -1,15 +1,13 @@
-﻿import Link from "next/link";
-import {
-  CURRENT_USER_ADDRESS,
-  STATUS_COLOR,
-  STATUS_LABEL,
-  fmt,
-  type Rfq,
-} from "@/lib/mock-data";
-import { deriveRfqStatus, listRfqs } from "@/lib/rfq-repository";
+"use client";
 
-function RfqCard({ rfq }: { rfq: Rfq }) {
-  const isCreator = rfq.creatorAddress === CURRENT_USER_ADDRESS;
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { STATUS_COLOR, STATUS_LABEL, fmt, type Rfq } from "@/lib/mock-data";
+import { deriveRfqStatus, listRfqs } from "@/lib/rfq-repository";
+import { useCurrentIdentity } from "@/lib/identity";
+
+function RfqCard({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) {
+  const isCreator = rfq.creatorAddress === currentAddress;
   const status = deriveRfqStatus(rfq);
 
   return (
@@ -50,8 +48,26 @@ function RfqCard({ rfq }: { rfq: Rfq }) {
   );
 }
 
-export default async function RfqsPage() {
-  const rfqs = await listRfqs();
+export default function RfqsPage() {
+  const [currentAddress] = useCurrentIdentity();
+  const [rfqs, setRfqs] = useState<Rfq[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    listRfqs().then((data) => {
+      if (active) {
+        setRfqs(data);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, []);
+
+  if (loading) {
+    return <p className="text-slate-400 text-center pt-20">Loading RFQs...</p>;
+  }
+
   const open = rfqs.filter((r) => deriveRfqStatus(r) === "open");
   const closed = rfqs.filter((r) => deriveRfqStatus(r) !== "open");
 
@@ -79,7 +95,7 @@ export default async function RfqsPage() {
         {open.length === 0 ? (
           <p className="text-slate-500 text-sm">No open RFQs.</p>
         ) : (
-          open.map((rfq) => <RfqCard key={rfq.id} rfq={rfq} />)
+          open.map((rfq) => <RfqCard key={rfq.id} rfq={rfq} currentAddress={currentAddress} />)
         )}
       </section>
 
@@ -89,7 +105,7 @@ export default async function RfqsPage() {
             Closed / Expired ({closed.length})
           </h2>
           {closed.map((rfq) => (
-            <RfqCard key={rfq.id} rfq={rfq} />
+            <RfqCard key={rfq.id} rfq={rfq} currentAddress={currentAddress} />
           ))}
         </section>
       )}
