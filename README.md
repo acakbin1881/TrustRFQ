@@ -1,4 +1,4 @@
-# StellarBig
+# Stellarotc
 
 Peer-to-peer OTC escrow settlement on Stellar Testnet.
 
