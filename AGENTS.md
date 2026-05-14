@@ -120,3 +120,13 @@ npm run dev
 ```
 
 On Windows, prefer `npm.cmd` for lint/build.
+## Claude specialized skills
+
+For design work, use specialized Claude skills instead of broad prompts:
+
+- `landing-page` for the TrustRFQ demo entry page and Mercury-inspired first viewport.
+- `design-system` for typography, color, surfaces, status, tables, timelines, proof cards, and component patterns.
+- `visual-polish-pass` after a UI slice is built.
+- `scope-audit` before accepting broad UI changes.
+
+Do not ask Claude to "make the whole app beautiful" in one pass. Give it one slice and the matching skill.

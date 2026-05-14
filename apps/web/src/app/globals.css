@@ -5,3 +5,43 @@ body {
   color: #f1f5f9;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
+
+/* ── Landing page animations ─────────────────────────────────────────────── */
+
+@keyframes lp-float-a {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes lp-float-c {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes lp-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.22; }
+}
+
+@keyframes lp-cell {
+  0%, 100% { opacity: 0; }
+  50%       { opacity: 1; }
+}
+
+.lp-float-a  { animation: lp-float-a 7s  ease-in-out infinite; }
+.lp-float-c  { animation: lp-float-c 6s  ease-in-out infinite 1s; }
+.lp-pulse    { animation: lp-pulse   2.5s ease-in-out infinite; }
+.lp-cell-1   { animation: lp-cell 4s   ease-in-out infinite; }
+.lp-cell-2   { animation: lp-cell 5s   ease-in-out infinite 1s; }
+.lp-cell-3   { animation: lp-cell 6s   ease-in-out infinite 2.5s; }
+.lp-cell-4   { animation: lp-cell 4.5s ease-in-out infinite 0.5s; }
+.lp-cell-5   { animation: lp-cell 5.5s ease-in-out infinite 1.5s; }
+.lp-cell-6   { animation: lp-cell 7s   ease-in-out infinite 3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-float-a, .lp-float-c, .lp-pulse,
+  .lp-cell-1, .lp-cell-2, .lp-cell-3,
+  .lp-cell-4, .lp-cell-5, .lp-cell-6 {
+    animation: none;
+  }
+}
