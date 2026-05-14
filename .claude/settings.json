@@ -1,4 +1,26 @@
 {
+  "defaultMode": "auto",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Write(./.env)",
+      "Write(./.env.*)"
+    ],
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(npm run dev)",
+      "Bash(npm run lint)",
+      "Bash(npm.cmd run lint)",
+      "Bash(npm run build)",
+      "Bash(npm.cmd run build)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run test *)"
+    ]
+  },
   "hooks": {
     "Stop": {
       "type": "command",

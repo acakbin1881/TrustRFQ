@@ -1,96 +1,85 @@
-# Milestone 3 XLM/USDC Escrow Plan
+# Trustless Work Escrow Integration Plan
 
-Last updated: 2026-05-05
+## Status
 
-## Decision
+Planned for the Boundless x Trustless Work hackathon.
 
-Milestone 3 starts with the core StellarBig settlement path, not the Trustless Work P2P use case.
+This file replaces the old M3-first mindset for the hackathon. The current priority is not to prove a custom Stellar/Soroban settlement path first. The current priority is to make TrustRFQ a clear Trustless Work application.
 
-M3 is only for Stellar-chain assets and only for the XLM/USDC pair.
+## Goal
 
-Trustless Work P2P escrow moves to Milestone 4 because its documented P2P/OTC pattern is a one-sided stablecoin escrow model. That may be useful later, but the first core StellarBig settlement goal is a two-sided XLM/USDC escrow path.
+Connect accepted RFQ deals to Trustless Work escrow primitives.
 
-## M3 Goal
+The product flow should remain:
 
-Build the settlement path for accepted XLM/USDC RFQ deals:
+```txt
+RFQ -> quote -> manual acceptance -> deal -> Trustless Work escrow -> viewer verification
+```
 
-1. RFQ creator creates an RFQ for XLM/USDC.
-2. Quote maker submits a USDC quote.
-3. RFQ creator accepts one valid quote.
-4. Deal is created in Supabase.
-5. RFQ creator funds the XLM side.
-6. Quote maker funds the USDC side.
-7. Settlement is available only after both sides are funded.
-8. Settlement releases:
-   - XLM to quote maker
-   - USDC to RFQ creator
-9. If expiry passes before completion, each depositor can recover their own deposited asset.
+## Why Trustless Work fits
 
-## Pair Scope
+Trustless Work provides non-custodial, milestone-based escrow primitives for stablecoins. TrustRFQ uses those primitives for a specific product: P2P OTC stablecoin deals where counterparties do not want to send first.
 
-Supported in M3:
+## Integration options to confirm
 
-- XLM -> USDC
-- USDC -> XLM if the deal terms require the reverse direction
+Before implementation, use official Trustless Work docs to choose the fastest reliable path:
 
-Do not generalize to every asset pair yet. Keep M3 focused on XLM/USDC so the escrow state machine and UX are easy to verify.
+- BackOffice dApp + Escrow Viewer for concept validation
+- Blocks SDK for prebuilt UI components
+- React SDK for custom frontend integration
+- REST API for direct integration
+- MCP/AI-native tooling if useful during development
 
-## Product Rules
+## Deal to escrow mapping
 
-- This is still private RFQ, not public bidding.
-- Makers cannot see competing quotes.
-- RFQ creator manually accepts one valid quote.
-- Accepted quote creates one bilateral deal.
-- Settlement is escrow-backed, not a promise to pay later.
-- Neither party should receive the other side's asset until both funding conditions are satisfied.
+An accepted RFQ deal should map into an escrow payload with:
 
-## Required Design Questions Before Coding
+- Maker/RFQ creator address
+- Taker/quote maker address
+- Asset and amount terms
+- Funding requirement
+- Unlock condition
+- Expiry/refund path
+- Escrow Viewer reference
 
-Answer these before implementation:
+Exact field names must come from the selected Trustless Work SDK/API docs.
 
-- Will M3 use a custom Soroban contract immediately, or first define a contract interface and keep UI mocked?
-- How will native XLM and issued USDC be represented in the contract interface?
-- What testnet USDC asset issuer/distributor will be used?
-- What exact deal fields need to be added to Supabase for escrow contract ID and transaction hashes?
-- Which deal page buttons become real wallet-signed actions?
-- How will the app prevent settlement before both deposits are confirmed?
-- How will expiry/refund be represented in Supabase and UI?
+## Supabase additions to consider
 
-## Expected Supabase Additions
+Do not add these until implementation is approved, but likely fields include:
 
-Likely additions to `deals` or a new escrow table:
-
-- `escrow_contract_id`
-- `escrow_network`
-- `rfq_creator_fund_tx_hash`
-- `quote_maker_fund_tx_hash`
-- `settle_tx_hash`
+- `trustless_work_escrow_id`
+- `trustless_work_status`
+- `escrow_viewer_url`
+- `escrow_created_at`
+- `escrow_last_synced_at`
+- `release_tx_hash`
 - `refund_tx_hash`
-- `onchain_status`
-- `escrow_initialized_at`
 
-Do not add these until the M3 implementation plan is approved.
+These may go on `deals` or a new escrow table depending on the final integration shape.
 
-## Out Of Scope
+## UI requirements
 
-- Trustless Work P2P escrow integration
-- Fiat rails
-- BTC or non-Stellar assets
-- Mainnet
-- Production auth/RLS hardening
-- Multi-asset support beyond XLM/USDC
-- Public order book or AMM behavior
+Deal page should eventually show:
 
-## M3 Completion Criteria
+- Accepted RFQ terms
+- Parties
+- Escrow status
+- Funding/release/refund state
+- Escrow id
+- Button/link to Escrow Viewer
 
-M3 is complete when:
+## Demo acceptance criteria
 
-- The XLM/USDC escrow path is designed and implemented for testnet.
-- Both sides must fund before settlement is possible.
-- Settlement releases XLM and USDC to the correct opposite parties.
-- Refund path returns each side's own deposit after expiry.
-- Supabase stores the required contract/status/tx references.
-- UI clearly shows funding, settlement, and refund states.
-- `npm.cmd run lint` passes.
-- `npm.cmd run build` passes.
-- A testnet walkthrough is documented.
+The hackathon demo is strong if:
+
+- The product is clearly TrustRFQ, not the old prototype name.
+- The RFQ flow remains understandable.
+- Accepted quote creates or references a Trustless Work escrow.
+- Escrow status is visible in the app.
+- Escrow Viewer verifies the state.
+- The unlock condition is clear.
+
+## Research reminder
+
+Update the problem and solution language after the GPT Deep Research pass. This file should eventually explain the exact user segment and why Trustless Work escrow solves their specific trust problem.

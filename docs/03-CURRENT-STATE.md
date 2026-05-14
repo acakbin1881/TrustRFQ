@@ -1,79 +1,65 @@
 # Current State
 
-Last updated: 2026-05-05
+Last updated: 2026-05-13
 
----
+## What works now
 
-## What works
+The TrustRFQ codebase currently contains the full RFQ technical prototype copied from the existing Stellar startup work.
 
-- Milestone 1 private RFQ mock flow is complete and committed.
-- Milestone 2 Supabase persistence flow is complete.
-- RFQ list, RFQ detail, new RFQ, and deal pages preserve the chosen model: private RFQ + bilateral escrow settlement.
-- Creator and maker views remain separated in the application model:
-  - RFQ creator can see submitted quotes and accept one valid quote.
-  - Quote makers can submit their own quote but cannot see competing quotes or accept quotes.
-- Minimum receive amount is a hard floor. Below-minimum quotes cannot be submitted or accepted.
-- Closed or expired RFQs cannot receive quotes.
-- Expired quotes cannot be accepted.
-- Supabase is connected and confirmed working:
-  - Supabase project live at `vzitlzzbdnnxigexopdj.supabase.co`
-  - Migration `001_initial_schema.sql` applied; all 4 tables exist with RLS policies.
-  - `apps/web/.env.local` configured with real project credentials.
-  - RFQ creation writes to Supabase confirmed via browser + dashboard check.
-- Full backend RFQ lifecycle is confirmed against Supabase:
-  - RFQ creation writes to `rfqs`.
-  - Maker quote submission writes to `quotes`.
-  - Quote acceptance closes the RFQ, accepts the selected quote, rejects non-selected quotes, creates a deal, and records `deal_created`.
-  - Funding and settlement status changes record escrow events.
-  - Expired open RFQs are synchronized to `expired`.
-  - Backend audit currently reports no consistency findings.
-- Pages use repository helpers with automatic mock fallback when env vars are absent.
-- Deal page loads deals through the repository and persists status transitions for backend-flow testing.
-- Mock identity switcher is in the nav bar:
-  - Three identities: RFQ Creator, Maker A, Maker B.
-  - Selection persists in localStorage across page navigations.
-  - Switching identity immediately changes creator/maker role detection across all pages.
-  - Creator view vs maker view on RFQ detail, `your RFQ` label on RFQ list, and creatorAddress on new RFQ all use the selected identity.
-  - Full creator -> maker flow can be tested in a single browser by switching identity.
+Working pieces:
 
----
+- Private RFQ flow
+- RFQ creation
+- RFQ list and detail pages
+- Private quote submission
+- Creator-only quote visibility
+- Manual quote acceptance
+- Deal creation
+- Deal lifecycle page
+- Supabase persistence
+- `rfqs`, `quotes`, `deals`, and `escrow_events` tables
+- Repository layer with Supabase/mock fallback
+- Mock identity selector for creator/maker testing
+- Backend-state funding, settlement, refund, and event recording
 
-## What is still temporary or mocked
+## What is still temporary
 
-- Identity is a mock switcher for testnet testing; no real wallet auth yet.
-- Funding, settlement, and refund buttons are backend-state tests only; they are not real Stellar transactions.
-- No real wallet transaction signing.
-- No Stellar SDK transaction building.
-- No Soroban escrow contract calls.
-- No Trustless Work integration.
+- Identity is a mock switcher, not wallet auth.
+- Funding and settlement buttons are backend-state tests, not Trustless Work actions yet.
+- Escrow events are persisted, but escrow is not yet connected to Trustless Work.
+- Existing Stellar/Soroban folders remain from the earlier technical path.
+- Some UI copy may still need to be updated to TrustRFQ and the hackathon story.
 
----
+## Hackathon direction
 
-## What Milestone 2 tested
+TrustRFQ should now move toward the Boundless x Trustless Work hackathon goal:
 
-Milestone 2 tested whether the off-chain backend flow works:
+1. Polish the UI.
+2. Keep the private RFQ flow intact.
+3. Connect accepted deals to Trustless Work escrow primitives.
+4. Show escrow state in-app.
+5. Link to the Trustless Work Escrow Viewer.
+6. Prepare submission docs and demo.
 
-- RFQs persist in Supabase.
-- Quotes persist in Supabase.
-- Creator/maker role rules are enforced in the app flow.
-- Accepting a quote closes one RFQ, rejects other quotes, creates one deal, and records escrow events.
-- Deal state transitions record funding and settlement events.
+## What must not change accidentally
 
-Milestone 2 did not test real wallet signing or real on-chain settlement.
+- Do not turn RFQs into public auctions.
+- Do not expose competing quotes to makers.
+- Do not auto-select a winner.
+- Do not turn the app into an AMM/swap UI.
+- Do not replace the product with a generic escrow builder.
 
----
+## Verification status
 
-## Verification
+Previous technical prototype status indicated lint/build and Supabase flow were working. Re-run checks after any code changes:
 
-- `npm.cmd run lint` passes.
-- `npm.cmd run build` passes.
-- Full RFQ -> quote -> accept -> deal -> escrow events flow confirmed against Supabase.
-- Backend audit counts: 7 RFQs, 6 quotes, 4 deals, 16 escrow events, 0 consistency findings.
+```powershell
+npm.cmd run lint
+npm.cmd run build
+```
 
----
+No code was changed by this documentation update.
 
-## Milestone status
+## Research reminder
 
-- Milestone 1: Complete.
-- Milestone 2: Complete.
-- Next: Milestone 3 planning for Stellar-only XLM/USDC bilateral escrow settlement. Trustless Work P2P escrow is moved to Milestone 4.
+The user will provide GPT Deep Research material. Update this file when the final problem statement, target user, and market evidence are ready.
