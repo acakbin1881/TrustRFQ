@@ -82,7 +82,7 @@ export default function RfqsPage() {
         </div>
         <Link
           href="/rfqs/new"
-          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="bg-teal-400 hover:bg-teal-300 text-slate-950 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
         >
           + New RFQ
         </Link>

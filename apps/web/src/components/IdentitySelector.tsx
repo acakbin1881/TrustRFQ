@@ -7,11 +7,11 @@ export function IdentitySelector() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-slate-500 hidden sm:block">Acting as:</span>
+      <span className="text-xs text-gray-500 hidden sm:block">Acting as:</span>
       <select
         value={address}
         onChange={(e) => switchIdentity(e.target.value)}
-        className="bg-slate-800 border border-slate-700 text-slate-200 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-blue-500"
+        className="bg-white border border-gray-200 text-gray-700 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-gray-400"
       >
         {MOCK_IDENTITIES.map((identity) => (
           <option key={identity.address} value={identity.address}>

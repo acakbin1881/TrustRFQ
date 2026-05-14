@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MANDATORY: Read these files before doing anything
+
+At the start of every session, before writing or changing any code, read:
+
+1. `docs/03-CURRENT-STATE.md` — what is actually built right now
+2. `docs/04-NEXT-TASK.md` — what the next task is; do not work on anything not listed here
+3. `docs/07-DESIGN-SYSTEM.md` — color, typography, spacing, component rules; follow strictly
+4. The relevant skill file in `.claude/skills/` for the task at hand
+
+Do not assume you know the current state. Do not start coding before reading these.
+
+## MANDATORY: Scope discipline
+
+Do only what the user explicitly asks. If the user says "work on the landing page", touch only `apps/web/src/app/page.tsx` and shared CSS if strictly necessary. Do not refactor other pages, fix other bugs, or add features that were not requested.
+
 ## Commands
 
 Run from repo root on Windows:

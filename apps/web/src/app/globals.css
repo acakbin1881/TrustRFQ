@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 body {
-  background: #020617;
-  color: #f1f5f9;
+  background: #ffffff;
+  color: #111827;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -11,6 +11,11 @@ body {
 @keyframes lp-float-a {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-8px); }
+}
+
+@keyframes lp-float-b {
+  0%, 100% { transform: translateY(-4px); }
+  50%       { transform: translateY(7px); }
 }
 
 @keyframes lp-float-c {
@@ -29,6 +34,7 @@ body {
 }
 
 .lp-float-a  { animation: lp-float-a 7s  ease-in-out infinite; }
+.lp-float-b  { animation: lp-float-b 9s  ease-in-out infinite 2s; }
 .lp-float-c  { animation: lp-float-c 6s  ease-in-out infinite 1s; }
 .lp-pulse    { animation: lp-pulse   2.5s ease-in-out infinite; }
 .lp-cell-1   { animation: lp-cell 4s   ease-in-out infinite; }
@@ -39,7 +45,7 @@ body {
 .lp-cell-6   { animation: lp-cell 7s   ease-in-out infinite 3s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-float-a, .lp-float-c, .lp-pulse,
+  .lp-float-a, .lp-float-b, .lp-float-c, .lp-pulse,
   .lp-cell-1, .lp-cell-2, .lp-cell-3,
   .lp-cell-4, .lp-cell-5, .lp-cell-6 {
     animation: none;

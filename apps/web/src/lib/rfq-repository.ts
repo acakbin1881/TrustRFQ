@@ -8,6 +8,8 @@ import {
   type AssetCode,
   type Deal,
   type DealStatus,
+  type EscrowStatus,
+  type MilestoneStatus,
   type Quote,
   type Rfq,
   type RfqStatus,
@@ -52,6 +54,19 @@ function toNumber(value: string | number) {
   return typeof value === "number" ? value : Number(value);
 }
 
+function toStringRecord(value: Json): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+  );
+}
+
+function toObjectRecord(value: Json): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
 function mapRfq(row: RfqRow): Rfq {
   return {
     id: row.id,
@@ -92,6 +107,13 @@ function mapDeal(row: DealRow): Deal {
     status: row.status,
     takerDeposited: row.rfq_creator_deposited,
     makerDeposited: row.quote_maker_deposited,
+    contractId: row.contract_id ?? undefined,
+    engagementId: row.engagement_id ?? undefined,
+    escrowStatus: row.escrow_status,
+    milestoneStatus: row.milestone_status,
+    trustlineAddress: row.trustline_address ?? undefined,
+    transactionHashes: toStringRecord(row.transaction_hashes),
+    twPayload: toObjectRecord(row.tw_payload),
     expiresAt: row.expires_at,
     createdAt: row.created_at,
     settledAt: row.settled_at ?? undefined,
@@ -287,6 +309,10 @@ export async function acceptQuote(rfq: Rfq, quote: Quote): Promise<Deal> {
       status: "pending_deposits",
       takerDeposited: false,
       makerDeposited: false,
+      escrowStatus: "not_initialized",
+      milestoneStatus: "none",
+      transactionHashes: {},
+      twPayload: {},
       expiresAt: rfq.expiresAt,
       createdAt: new Date().toISOString(),
     };
@@ -357,6 +383,49 @@ export async function updateDealStatus(id: string, status: DealStatus): Promise<
   return mapDeal(data);
 }
 
+export interface UpdateDealEscrowInput {
+  contractId?: string | null;
+  engagementId?: string | null;
+  escrowStatus?: EscrowStatus;
+  milestoneStatus?: MilestoneStatus;
+  trustlineAddress?: string | null;
+  transactionHashes?: Record<string, string>;
+  twPayload?: Record<string, unknown>;
+}
+
+export async function updateDealEscrow(id: string, input: UpdateDealEscrowInput): Promise<Deal> {
+  if (!isSupabaseConfigured) {
+    const deal = MOCK_DEALS[id];
+    if (!deal) throw new Error("Deal not found.");
+    return {
+      ...deal,
+      contractId: input.contractId ?? deal.contractId,
+      engagementId: input.engagementId ?? deal.engagementId,
+      escrowStatus: input.escrowStatus ?? deal.escrowStatus,
+      milestoneStatus: input.milestoneStatus ?? deal.milestoneStatus,
+      trustlineAddress: input.trustlineAddress ?? deal.trustlineAddress,
+      transactionHashes: input.transactionHashes ?? deal.transactionHashes,
+      twPayload: input.twPayload ?? deal.twPayload,
+    };
+  }
+
+  const supabase = getSupabaseBrowserClient();
+  const patch: Database["public"]["Tables"]["deals"]["Update"] = {};
+
+  if ("contractId" in input) patch.contract_id = input.contractId ?? null;
+  if ("engagementId" in input) patch.engagement_id = input.engagementId ?? null;
+  if (input.escrowStatus) patch.escrow_status = input.escrowStatus;
+  if (input.milestoneStatus) patch.milestone_status = input.milestoneStatus;
+  if ("trustlineAddress" in input) patch.trustline_address = input.trustlineAddress ?? null;
+  if (input.transactionHashes) patch.transaction_hashes = input.transactionHashes;
+  if (input.twPayload) patch.tw_payload = input.twPayload as Json;
+
+  const { data, error } = await supabase.from("deals").update(patch).eq("id", id).select("*").single();
+
+  if (error) throw error;
+  return mapDeal(data);
+}
+
 export async function updateDealDeposit(
   id: string,
   side: "rfq_creator" | "quote_maker"
@@ -388,6 +457,19 @@ export async function updateDealDeposit(
 
   return mapDeal(data);
 }
+export async function listDeals(): Promise<Deal[]> {
+  if (!isSupabaseConfigured) return Object.values(MOCK_DEALS);
+
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("deals")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data.map(mapDeal);
+}
+
 export async function listEscrowEvents(dealId: string): Promise<EscrowEvent[]> {
   if (!isSupabaseConfigured) return [];
 

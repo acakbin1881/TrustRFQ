@@ -71,6 +71,29 @@ export interface Database {
           status: "pending_deposits" | "settled" | "refunded";
           rfq_creator_deposited: boolean;
           quote_maker_deposited: boolean;
+          contract_id: string | null;
+          engagement_id: string | null;
+          escrow_status:
+            | "not_initialized"
+            | "initializing"
+            | "initialized"
+            | "funding"
+            | "funded"
+            | "settlement_sent"
+            | "approved"
+            | "releasing"
+            | "released"
+            | "disputed"
+            | "failed";
+          milestone_status:
+            | "none"
+            | "pending"
+            | "pending_approval"
+            | "approved"
+            | "rejected";
+          trustline_address: string | null;
+          transaction_hashes: Json;
+          tw_payload: Json;
           expires_at: string;
           settled_at: string | null;
           created_at: string;
@@ -89,6 +112,29 @@ export interface Database {
           status?: "pending_deposits" | "settled" | "refunded";
           rfq_creator_deposited?: boolean;
           quote_maker_deposited?: boolean;
+          contract_id?: string | null;
+          engagement_id?: string | null;
+          escrow_status?:
+            | "not_initialized"
+            | "initializing"
+            | "initialized"
+            | "funding"
+            | "funded"
+            | "settlement_sent"
+            | "approved"
+            | "releasing"
+            | "released"
+            | "disputed"
+            | "failed";
+          milestone_status?:
+            | "none"
+            | "pending"
+            | "pending_approval"
+            | "approved"
+            | "rejected";
+          trustline_address?: string | null;
+          transaction_hashes?: Json;
+          tw_payload?: Json;
           expires_at: string;
           settled_at?: string | null;
           created_at?: string;
@@ -107,7 +153,14 @@ export interface Database {
             | "quote_maker_funded"
             | "settled"
             | "refunded"
-            | "expired";
+            | "expired"
+            | "escrow_initialized"
+            | "escrow_funded"
+            | "settlement_sent"
+            | "milestone_approved"
+            | "funds_released"
+            | "dispute_started"
+            | "escrow_failed";
           actor_address: string | null;
           tx_hash: string | null;
           metadata: Json;
@@ -122,7 +175,14 @@ export interface Database {
             | "quote_maker_funded"
             | "settled"
             | "refunded"
-            | "expired";
+            | "expired"
+            | "escrow_initialized"
+            | "escrow_funded"
+            | "settlement_sent"
+            | "milestone_approved"
+            | "funds_released"
+            | "dispute_started"
+            | "escrow_failed";
           actor_address?: string | null;
           tx_hash?: string | null;
           metadata?: Json;

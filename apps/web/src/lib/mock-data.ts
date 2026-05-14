@@ -2,6 +2,19 @@ export type AssetCode = "XLM" | "USDC" | "EURC";
 export type RfqStatus = "open" | "closed" | "expired" | "cancelled";
 export type QuoteStatus = "pending" | "accepted" | "rejected";
 export type DealStatus = "pending_deposits" | "settled" | "refunded";
+export type EscrowStatus =
+  | "not_initialized"
+  | "initializing"
+  | "initialized"
+  | "funding"
+  | "funded"
+  | "settlement_sent"
+  | "approved"
+  | "releasing"
+  | "released"
+  | "disputed"
+  | "failed";
+export type MilestoneStatus = "none" | "pending" | "pending_approval" | "approved" | "rejected";
 
 export interface Rfq {
   id: string;
@@ -39,6 +52,13 @@ export interface Deal {
   status: DealStatus;
   takerDeposited: boolean;
   makerDeposited: boolean;
+  contractId?: string;
+  engagementId?: string;
+  escrowStatus: EscrowStatus;
+  milestoneStatus: MilestoneStatus;
+  trustlineAddress?: string;
+  transactionHashes: Record<string, string>;
+  twPayload: Record<string, unknown>;
   expiresAt: string;
   createdAt: string;
   settledAt?: string;
@@ -145,6 +165,10 @@ export const MOCK_DEALS: Record<string, Deal> = {
     status: "pending_deposits",
     takerDeposited: true,
     makerDeposited: false,
+    escrowStatus: "not_initialized",
+    milestoneStatus: "none",
+    transactionHashes: {},
+    twPayload: {},
     expiresAt: h(18),
     createdAt: h(-6),
   },
@@ -161,6 +185,10 @@ export const MOCK_DEALS: Record<string, Deal> = {
     status: "pending_deposits",
     takerDeposited: false,
     makerDeposited: false,
+    escrowStatus: "not_initialized",
+    milestoneStatus: "none",
+    transactionHashes: {},
+    twPayload: {},
     expiresAt: h(24),
     createdAt: h(0),
   },
@@ -177,6 +205,10 @@ export const MOCK_DEALS: Record<string, Deal> = {
     status: "pending_deposits",
     takerDeposited: false,
     makerDeposited: false,
+    escrowStatus: "not_initialized",
+    milestoneStatus: "none",
+    transactionHashes: {},
+    twPayload: {},
     expiresAt: h(48),
     createdAt: h(0),
   },

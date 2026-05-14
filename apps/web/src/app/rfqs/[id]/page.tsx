@@ -209,22 +209,22 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
         <p className="text-xs text-slate-600 mt-0.5">Submit a firm quote. Competing quotes are not visible to you.</p>
       </div>
 
-      <form onSubmit={submitQuote} className="bg-slate-900 border border-blue-900 rounded-xl p-5 flex flex-col gap-4">
+      <form onSubmit={submitQuote} className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Submit a firm quote</h3>
           <p className="text-xs text-slate-500 mt-1">Makers cannot see competing quotes. Your quote is firm until expiry.</p>
         </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Amount you will deliver ({rfq.buyAsset})</label>
-          <input type="number" min="0" step="any" required placeholder={`Minimum ${rfq.buyAmount.toLocaleString()}`} value={form.amount} onChange={(e) => { setForm((f) => ({ ...f, amount: e.target.value })); setFormError(""); }} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600" />
+          <input type="number" min="0" step="any" required placeholder={`Minimum ${rfq.buyAmount.toLocaleString()}`} value={form.amount} onChange={(e) => { setForm((f) => ({ ...f, amount: e.target.value })); setFormError(""); }} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 placeholder:text-slate-600" />
           <p className="text-xs text-slate-600 mt-1">Quotes below {rfq.buyAmount.toLocaleString()} {rfq.buyAsset} are below the minimum and cannot be accepted.</p>
         </div>
         <div>
           <label className="text-xs text-slate-400 block mb-1">Your address <span className="text-slate-600">(mock)</span></label>
-          <input type="text" placeholder="G..." value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono" />
+          <input type="text" placeholder="G..." value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 placeholder:text-slate-600 font-mono" />
         </div>
         {formError && <p className="text-red-400 text-xs bg-red-950/40 border border-red-900/40 rounded-lg px-3 py-2">{formError}</p>}
-        <button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 text-white font-medium py-2 rounded-lg transition-colors text-sm">
+        <button type="submit" disabled={submitting} className="bg-teal-400 hover:bg-teal-300 disabled:bg-slate-700 disabled:text-slate-400 text-slate-950 font-semibold py-2 rounded-lg transition-colors text-sm">
           {submitting ? "Submitting..." : "Submit quote"}
         </button>
       </form>

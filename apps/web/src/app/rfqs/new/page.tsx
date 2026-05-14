@@ -1,11 +1,31 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, useMemo, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { type AssetCode } from "@/lib/mock-data";
 import { createRfq } from "@/lib/rfq-repository";
 import { useCurrentIdentity } from "@/lib/identity";
+
+const COINGECKO_IDS: Record<AssetCode, string> = {
+  XLM: "stellar",
+  USDC: "usd-coin",
+  EURC: "euro-coin",
+};
+
+async function fetchPrices(): Promise<Record<AssetCode, number>> {
+  const ids = Object.values(COINGECKO_IDS).join(",");
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
+    { next: { revalidate: 60 } }
+  );
+  const data = await res.json();
+  return {
+    XLM:  data["stellar"]?.usd   ?? 0,
+    USDC: data["usd-coin"]?.usd  ?? 1,
+    EURC: data["euro-coin"]?.usd ?? 1,
+  };
+}
 
 const ASSETS = ["XLM", "USDC", "EURC"] as const;
 const EXPIRIES = [
@@ -26,6 +46,15 @@ export default function NewRfqPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [prices, setPrices] = useState<Record<AssetCode, number> | null>(null);
+  const [priceLoading, setPriceLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPrices()
+      .then(setPrices)
+      .catch(() => {})
+      .finally(() => setPriceLoading(false));
+  }, []);
   const [form, setForm] = useState({
     sellAsset: "XLM" as AssetCode,
     sellAmount: "",
@@ -38,6 +67,17 @@ export default function NewRfqPage() {
   function set(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  const oracleSuggestion = useMemo(() => {
+    if (!prices) return null;
+    const sellAmt = Number(form.sellAmount);
+    if (!sellAmt || sellAmt <= 0) return null;
+    const sellUsd = prices[form.sellAsset];
+    const buyUsd  = prices[form.buyAsset];
+    if (!sellUsd || !buyUsd) return null;
+    const raw = (sellAmt * sellUsd) / buyUsd;
+    return raw.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  }, [prices, form.sellAmount, form.sellAsset, form.buyAsset]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -73,8 +113,8 @@ export default function NewRfqPage() {
   if (submitted) {
     return (
       <div className="flex flex-col items-center gap-4 pt-16 text-center">
-        <div className="w-12 h-12 bg-green-900 rounded-full flex items-center justify-center text-green-400 text-2xl">
-          ok
+        <div className="w-12 h-12 bg-green-950 border border-green-800/60 rounded-full flex items-center justify-center text-green-400 text-xl font-bold">
+          ✓
         </div>
         <h2 className="text-xl font-bold text-white">RFQ created</h2>
         <p className="text-slate-400 text-sm">Redirecting to RFQ list...</p>
@@ -103,13 +143,13 @@ export default function NewRfqPage() {
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-xs text-slate-400 block mb-1">Asset</label>
-              <select value={form.sellAsset} onChange={(e) => set("sellAsset", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+              <select value={form.sellAsset} onChange={(e) => set("sellAsset", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
                 {ASSETS.map((asset) => <option key={asset} value={asset}>{asset}</option>)}
               </select>
             </div>
             <div className="flex-1">
               <label className="text-xs text-slate-400 block mb-1">Amount</label>
-              <input type="number" min="0" step="any" required placeholder="0" value={form.sellAmount} onChange={(e) => set("sellAmount", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600" />
+              <input type="number" min="0" step="any" required placeholder="0" value={form.sellAmount} onChange={(e) => set("sellAmount", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 placeholder:text-slate-600" />
             </div>
           </div>
         </div>
@@ -119,14 +159,33 @@ export default function NewRfqPage() {
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-xs text-slate-400 block mb-1">Asset</label>
-              <select value={form.buyAsset} onChange={(e) => set("buyAsset", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+              <select value={form.buyAsset} onChange={(e) => set("buyAsset", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
                 {ASSETS.map((asset) => <option key={asset} value={asset}>{asset}</option>)}
               </select>
             </div>
             <div className="flex-1">
               <label className="text-xs text-slate-400 block mb-1">Minimum receive amount</label>
-              <input type="number" min="0" step="any" required placeholder="0" value={form.buyAmount} onChange={(e) => set("buyAmount", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600" />
-              <p className="text-xs text-slate-600 mt-1">Hard floor - quotes below this amount are invalid.</p>
+              <input type="number" min="0" step="any" required placeholder="0" value={form.buyAmount} onChange={(e) => set("buyAmount", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 placeholder:text-slate-600" />
+              {priceLoading && (
+                <p className="text-xs text-slate-600 mt-1 animate-pulse">Fetching market price…</p>
+              )}
+              {!priceLoading && oracleSuggestion && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-xs text-slate-500">
+                    Market rate: <span className="text-teal-400 font-medium">~{oracleSuggestion} {form.buyAsset}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => set("buyAmount", oracleSuggestion.replace(/,/g, ""))}
+                    className="text-[11px] text-teal-400 hover:text-teal-300 border border-teal-800/60 hover:border-teal-700 rounded px-1.5 py-0.5 transition-colors"
+                  >
+                    Use
+                  </button>
+                </div>
+              )}
+              {!priceLoading && !oracleSuggestion && (
+                <p className="text-xs text-slate-600 mt-1">Hard floor — quotes below this amount are invalid.</p>
+              )}
             </div>
           </div>
         </div>
@@ -135,7 +194,7 @@ export default function NewRfqPage() {
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Settings</h2>
           <div>
             <label className="text-xs text-slate-400 block mb-1">RFQ expires in</label>
-            <select value={form.expiry} onChange={(e) => set("expiry", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+            <select value={form.expiry} onChange={(e) => set("expiry", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
               {EXPIRIES.map((expiry) => <option key={expiry.value} value={expiry.value}>{expiry.label}</option>)}
             </select>
           </div>
@@ -143,14 +202,14 @@ export default function NewRfqPage() {
             <label className="text-xs text-slate-400 block mb-1">
               Invited maker address <span className="text-slate-600">(optional - leave blank to allow any maker)</span>
             </label>
-            <input type="text" placeholder="G..." value={form.counterparty} onChange={(e) => set("counterparty", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono" />
+            <input type="text" placeholder="G..." value={form.counterparty} onChange={(e) => set("counterparty", e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 placeholder:text-slate-600 font-mono" />
             <p className="text-xs text-slate-600 mt-1">Invited makers submit private firm quotes. They cannot see each other&apos;s quotes.</p>
           </div>
         </div>
 
         {error && <p className="text-red-400 text-xs bg-red-950/40 border border-red-900/40 rounded-lg px-3 py-2">{error}</p>}
 
-        <button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 text-white font-semibold py-3 rounded-xl transition-colors">
+        <button type="submit" disabled={submitting} className="bg-teal-400 hover:bg-teal-300 disabled:bg-slate-700 disabled:text-slate-400 text-slate-950 font-semibold py-3 rounded-xl transition-colors">
           {submitting ? "Posting RFQ..." : "Post RFQ"}
         </button>
       </form>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
 import { IdentitySelector } from "@/components/IdentitySelector";
+import { TrustlessWorkProvider } from "@/components/TrustlessWorkProvider";
 
 export const metadata: Metadata = {
   title: "TrustRFQ — Private OTC Escrow",
@@ -15,14 +16,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-full flex flex-col">
-        <nav className="border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <body className="min-h-full flex flex-col overflow-x-hidden">
+        <nav className="border-b border-gray-100 bg-white px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-400/30 bg-teal-400/10 text-xs font-black text-teal-200">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-black text-gray-800">
               TQ
             </span>
-            <span className="font-semibold text-white text-base">TrustRFQ</span>
-            <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-medium">
+            <span className="font-semibold text-gray-900 text-base">TrustRFQ</span>
+            <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
               TESTNET
             </span>
           </Link>
@@ -33,30 +34,32 @@ export default function RootLayout({
             </div>
             <Link
               href="/rfqs"
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-gray-500 hover:text-gray-900 transition-colors"
             >
               RFQs
             </Link>
             <Link
-              href="/rfqs"
-              className="text-slate-400 hover:text-white transition-colors hidden sm:block"
+              href="/deals"
+              className="text-gray-500 hover:text-gray-900 transition-colors hidden sm:block"
             >
               Deals
             </Link>
             <Link
               href="/rfqs/new"
-              className="bg-teal-400 hover:bg-teal-300 text-slate-950 px-4 py-1.5 rounded-lg font-semibold transition-colors"
+              className="bg-gray-900 hover:bg-gray-700 text-white px-4 py-1.5 rounded-lg font-semibold transition-colors"
             >
               New RFQ
             </Link>
           </div>
         </nav>
 
-        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
+        <TrustlessWorkProvider>
+          <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            {children}
+          </main>
+        </TrustlessWorkProvider>
 
-        <footer className="border-t border-slate-800 px-6 py-4 text-center text-xs text-slate-600">
+        <footer className="border-t border-gray-100 bg-white px-6 py-4 text-center text-xs text-gray-400">
           TrustRFQ hackathon build – testnet/demo only – no real funds
         </footer>
       </body>
