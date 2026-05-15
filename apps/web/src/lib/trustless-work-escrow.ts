@@ -100,6 +100,25 @@ function roleOrFallback(address: string, fallback: string): string {
   return isValidStellarAddress(address) ? address : fallback;
 }
 
+function getStoredRole(deal: Deal, role: "serviceProvider" | "approver" | "releaseSigner"): string | undefined {
+  const payload = deal.twPayload.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
+
+  const roles = (payload as { roles?: unknown }).roles;
+  if (!roles || typeof roles !== "object" || Array.isArray(roles)) return undefined;
+
+  const value = (roles as Record<string, unknown>)[role];
+  return typeof value === "string" && isValidStellarAddress(value) ? value : undefined;
+}
+
+function assertConnectedRole(signer: string, requiredAddress: string, label: string) {
+  if (signer !== requiredAddress) {
+    throw new Error(
+      `${label} requires wallet ${requiredAddress}. Connected wallet is ${signer}. Switch Freighter to the wallet that initialized/funded this escrow.`
+    );
+  }
+}
+
 function getTrustlessWorkErrorMessage(error: unknown): string {
   if (!error || typeof error !== "object") {
     return error instanceof Error ? error.message : "Unknown Trustless Work error.";
@@ -397,11 +416,19 @@ export function useTrustlessWorkEscrow() {
       throw new Error("Contract ID is required before releasing escrow.");
     }
 
+    const serviceProvider =
+      getStoredRole(deal, "serviceProvider") ?? roleOrFallback(deal.takerAddress, signer);
+    const approver =
+      getStoredRole(deal, "approver") ?? roleOrFallback(deal.makerAddress, signer);
+    const releaseSigner =
+      getStoredRole(deal, "releaseSigner") ?? roleOrFallback(deal.makerAddress, signer);
+
+    assertConnectedRole(signer, serviceProvider, "Changing milestone status");
+    assertConnectedRole(signer, approver, "Approving the milestone");
+    assertConnectedRole(signer, releaseSigner, "Releasing funds");
+
     await updateDealEscrow(deal.id, { escrowStatus: "releasing" });
 
-    const serviceProvider = roleOrFallback(deal.takerAddress, signer);
-    const approver = roleOrFallback(deal.makerAddress, signer);
-    const releaseSigner = roleOrFallback(deal.makerAddress, signer);
     const txHashes: ReleaseTrustlessEscrowResult["txHashes"] = {};
 
     const changePayload: ChangeMilestoneStatusPayload = {
@@ -423,7 +450,7 @@ export function useTrustlessWorkEscrow() {
     } catch (error) {
       const message = getTrustlessWorkErrorMessage(error);
       await updateDealEscrow(deal.id, {
-        escrowStatus: "failed",
+        escrowStatus: "settlement_sent",
         twPayload: { ...deal.twPayload, releaseError: message, changePayload },
       });
       throw new Error(message);
@@ -447,7 +474,7 @@ export function useTrustlessWorkEscrow() {
     } catch (error) {
       const message = getTrustlessWorkErrorMessage(error);
       await updateDealEscrow(deal.id, {
-        escrowStatus: "failed",
+        escrowStatus: "settlement_sent",
         twPayload: { ...deal.twPayload, releaseError: message, changePayload, approvePayload },
       });
       throw new Error(message);
@@ -469,7 +496,7 @@ export function useTrustlessWorkEscrow() {
     } catch (error) {
       const message = getTrustlessWorkErrorMessage(error);
       await updateDealEscrow(deal.id, {
-        escrowStatus: "failed",
+        escrowStatus: "settlement_sent",
         twPayload: {
           ...deal.twPayload,
           releaseError: message,
