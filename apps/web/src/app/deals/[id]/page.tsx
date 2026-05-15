@@ -468,7 +468,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
   const contractId = deal.contractId ?? mockContractId(deal.id);
   const escrowAsset = getTrustlessWorkEscrowAsset(deal);
   const isTrustlessWorkDeal = Boolean(deal.contractId);
-  const escrowSideLabel = "USDC settlement leg";
+  const escrowSideLabel = "Locked by RFQ creator, released to quote maker after XLM is verified";
   const canAddEscrowAssetTrustline = escrowAsset.asset !== "XLM";
   const escrowAlreadyFunded =
     deal.escrowStatus === "funded" ||
@@ -564,11 +564,11 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
             status={t1}
           />
           <TimelineStep
-            label={isTrustlessWorkDeal ? "Escrow initialized" : "RFQ creator deposits"}
+            label={isTrustlessWorkDeal ? "USDC escrow initialized" : "RFQ creator locks USDC"}
             sub={
               isTrustlessWorkDeal
                 ? `Contract ID: ${contractId}`
-                : `${deal.sellAmount.toLocaleString()} ${deal.sellAsset}`
+                : `${deal.buyAmount.toLocaleString()} ${deal.buyAsset}`
             }
             status={t2}
           />
@@ -631,14 +631,14 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                 </p>
               </div>
               <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
-                <p className="text-white/40 mb-1">Trustless Work escrow locks</p>
+                <p className="text-white/40 mb-1">USDC locked in Trustless Work escrow</p>
                 <p className="text-white font-semibold">
                   {escrowAsset.amount.toLocaleString()} {escrowAsset.asset}
                 </p>
                 <p className="text-white/30 mt-0.5">{escrowSideLabel}</p>
               </div>
               <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
-                <p className="text-white/40 mb-1">Accepted XLM/USDC agreement</p>
+                <p className="text-white/40 mb-1">Accepted quote terms</p>
                 <p className="text-white/70">
                   {deal.sellAmount.toLocaleString()} {deal.sellAsset} for{" "}
                   {deal.buyAmount.toLocaleString()} {deal.buyAsset}
@@ -808,13 +808,13 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
               </p>
             </div>
             <div>
-              <p className="text-white/40 text-xs mb-1">RFQ creator sends</p>
+              <p className="text-white/40 text-xs mb-1">RFQ creator requests to sell</p>
               <p className="text-white font-semibold">
                 {deal.sellAmount.toLocaleString()} {deal.sellAsset}
               </p>
             </div>
             <div>
-              <p className="text-white/40 text-xs mb-1">Quote maker sends</p>
+              <p className="text-white/40 text-xs mb-1">Quote maker offers</p>
               <p className="text-white font-semibold">
                 {deal.buyAmount.toLocaleString()} {deal.buyAsset}
               </p>
