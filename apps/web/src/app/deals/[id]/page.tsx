@@ -3,14 +3,14 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt, type AssetCode, type Deal, type DealStatus } from "@/lib/mock-data";
-import { getDeal, updateDealDeposit, updateDealEscrow, updateDealStatus } from "@/lib/rfq-repository";
+import { getDeal, updateDealEscrow, updateDealStatus } from "@/lib/rfq-repository";
 import { getTrustlessWorkEscrowAsset, useTrustlessWorkEscrow } from "@/lib/trustless-work-escrow";
 import {
   addAssetTrustline,
   connectWallet,
   isValidStellarPublicKey,
-  sendNativePayment,
-  verifyNativePayment,
+  sendAssetPayment,
+  verifyAssetPayment,
 } from "@/lib/wallet";
 
 type StepStatus = "done" | "active" | "pending";
@@ -145,16 +145,16 @@ function NextActionCallout({
 
   if (deal.escrowStatus === "funded") {
     message = isQuoteMaker
-      ? `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Next: send ${deal.sellAmount.toLocaleString()} XLM to complete the settlement condition.`
-      : `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Waiting for quote maker to send ${deal.sellAmount.toLocaleString()} XLM.`;
+      ? `XLM escrow funded with ${escrowAsset.amount.toLocaleString()} XLM. Next: send ${deal.buyAmount.toLocaleString()} USDC to complete the settlement condition.`
+      : `XLM escrow funded with ${escrowAsset.amount.toLocaleString()} XLM. Waiting for quote maker to send ${deal.buyAmount.toLocaleString()} USDC.`;
   } else if (deal.escrowStatus === "settlement_sent") {
     message = isXlmSettlementMarkedComplete(deal)
-      ? `${deal.sellAmount.toLocaleString()} XLM condition marked complete. Next: quote maker approves the escrowed USDC release to their wallet.`
-      : `${deal.sellAmount.toLocaleString()} XLM settlement sent. Next: mark the settlement condition complete through Trustless Work.`;
+      ? `${deal.buyAmount.toLocaleString()} USDC condition marked complete. Next: quote maker approves the escrowed XLM release to their wallet.`
+      : `${deal.buyAmount.toLocaleString()} USDC settlement sent. Next: mark the settlement condition complete through Trustless Work.`;
   } else if (deal.escrowStatus === "funding") {
-    message = `Funding the USDC escrow with ${escrowAsset.amount.toLocaleString()} USDC.`;
+    message = `Funding the XLM escrow with ${escrowAsset.amount.toLocaleString()} XLM.`;
   } else if (deal.escrowStatus === "initialized") {
-    message = `Trustless Work escrow initialized. Next: fund ${escrowAsset.amount.toLocaleString()} USDC.`;
+    message = `Trustless Work escrow initialized. Next: fund ${escrowAsset.amount.toLocaleString()} XLM.`;
   } else if (deal.escrowStatus === "failed") {
     message = "Trustless Work escrow action failed. Fix the wallet/asset requirement and retry.";
   } else if (dealExpired) {
@@ -164,7 +164,7 @@ function NextActionCallout({
   } else if (!deal.takerDeposited) {
     message = `Waiting on RFQ creator — must deposit ${deal.sellAmount.toLocaleString()} ${deal.sellAsset} into escrow.`;
   } else {
-    message = `Waiting on quote maker — must deposit ${deal.buyAmount.toLocaleString()} ${deal.buyAsset} into escrow.`;
+    message = `Waiting on quote maker — must send ${deal.buyAmount.toLocaleString()} ${deal.buyAsset} to the RFQ creator.`;
   }
 
   return (
@@ -234,28 +234,6 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
       active = false;
     };
   }, [id]);
-
-  async function markRfqCreatorFunded() {
-    if (!deal) return;
-    setError("");
-    try {
-      const updated = await updateDealDeposit(deal.id, "rfq_creator");
-      setDeal((current) => current && { ...current, ...updated, takerDeposited: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not mark RFQ creator funded.");
-    }
-  }
-
-  async function markQuoteMakerFunded() {
-    if (!deal) return;
-    setError("");
-    try {
-      const updated = await updateDealDeposit(deal.id, "quote_maker");
-      setDeal((current) => current && { ...current, ...updated, makerDeposited: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not mark quote maker funded.");
-    }
-  }
 
   async function setStatus(status: DealStatus) {
     if (!deal) return;
@@ -362,43 +340,56 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
       const to = xlmDestination.trim();
       if (!isValidStellarPublicKey(to)) {
         throw new Error(
-          "Enter a valid Stellar testnet destination address for the XLM settlement."
+          "Enter a valid Stellar testnet destination address for the USDC settlement."
         );
       }
-      const txHash = await sendNativePayment({
+      const issuer = process.env.NEXT_PUBLIC_USDC_ISSUER_ADDRESS;
+      if (!issuer) {
+        throw new Error("NEXT_PUBLIC_USDC_ISSUER_ADDRESS is required before sending USDC.");
+      }
+      const txHash = await sendAssetPayment({
         from,
         to,
-        amount: deal.sellAmount,
+        amount: deal.buyAmount,
+        assetCode: "USDC",
+        issuer,
         memo: `TRFQ ${deal.id}`,
       });
-      const verified = await verifyNativePayment({ txHash, from, to, amount: deal.sellAmount });
+      const verified = await verifyAssetPayment({
+        txHash,
+        from,
+        to,
+        amount: deal.buyAmount,
+        assetCode: "USDC",
+        issuer,
+      });
       if (!verified) {
         throw new Error(
-          "XLM payment was submitted, but Horizon verification did not match the expected amount/destination."
+          "USDC payment was submitted, but Horizon verification did not match the expected amount/destination."
         );
       }
-      const nextHashes = { ...deal.transactionHashes, xlmSettlement: txHash };
+      const nextHashes = { ...deal.transactionHashes, usdcSettlement: txHash };
       const updated = await updateDealEscrow(deal.id, {
         escrowStatus: "settlement_sent",
         milestoneStatus: "pending_approval",
         transactionHashes: nextHashes,
         twPayload: {
           ...deal.twPayload,
-          xlmSettlement: {
-            amount: deal.sellAmount,
-            asset: deal.sellAsset,
+          usdcSettlement: {
+            amount: deal.buyAmount,
+            asset: deal.buyAsset,
             from,
             to,
             txHash,
             verified,
             markedAt: new Date().toISOString(),
-            mode: "stellar-payment",
+            mode: "stellar-issued-asset-payment",
           },
         },
       });
       setDeal(updated);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not send XLM settlement.";
+      const message = err instanceof Error ? err.message : "Could not send USDC settlement.";
       setError(message);
       setXlmSettlementError(message);
     } finally {
@@ -417,7 +408,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
       if (updated) setDeal(updated);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not mark XLM settlement complete."
+        err instanceof Error ? err.message : "Could not mark USDC settlement complete."
       );
     } finally {
       setReleasingEscrow(false);
@@ -435,7 +426,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
       if (updated) setDeal(updated);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not release escrowed USDC."
+        err instanceof Error ? err.message : "Could not release escrowed XLM."
       );
     } finally {
       setReleasingEscrow(false);
@@ -461,14 +452,13 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
   }
 
   const rfqCreatorDeposited = deal.takerDeposited;
-  const quoteMakerDeposited = deal.makerDeposited;
   const isSettled = deal.status === "settled";
   const isRefunded = deal.status === "refunded";
   const dealExpired = new Date(deal.expiresAt) < new Date();
   const contractId = deal.contractId ?? mockContractId(deal.id);
   const escrowAsset = getTrustlessWorkEscrowAsset(deal);
   const isTrustlessWorkDeal = Boolean(deal.contractId);
-  const escrowSideLabel = "Locked by RFQ creator, released to quote maker after XLM is verified";
+  const escrowSideLabel = "Locked by RFQ creator, released to quote maker after USDC is verified";
   const canAddEscrowAssetTrustline = escrowAsset.asset !== "XLM";
   const escrowAlreadyFunded =
     deal.escrowStatus === "funded" ||
@@ -564,7 +554,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
             status={t1}
           />
           <TimelineStep
-            label={isTrustlessWorkDeal ? "USDC escrow initialized" : "RFQ creator locks USDC"}
+            label={isTrustlessWorkDeal ? "XLM escrow initialized" : "RFQ creator locks XLM"}
             sub={
               isTrustlessWorkDeal
                 ? `Contract ID: ${contractId}`
@@ -573,13 +563,13 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
             status={t2}
           />
           <TimelineStep
-            label="USDC escrow funded"
-            sub={`${escrowAsset.amount.toLocaleString()} USDC locked`}
+            label="XLM escrow funded"
+            sub={`${escrowAsset.amount.toLocaleString()} XLM locked`}
             status={t3}
           />
           <TimelineStep
             label="Settlement condition"
-            sub={`${deal.sellAmount.toLocaleString()} XLM sent to counterparty`}
+            sub={`${deal.buyAmount.toLocaleString()} USDC sent to RFQ creator`}
             status={t4}
           />
           <TimelineStep
@@ -608,7 +598,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                 </p>
                 <p className="text-sm text-white/50">
                   {deal.contractId
-                    ? "USDC settlement escrow initialized on Trustless Work testnet."
+                    ? "XLM escrow initialized on Trustless Work testnet."
                     : "Initialize a Trustless Work escrow from this accepted XLM/USDC agreement."}
                 </p>
               </div>
@@ -631,7 +621,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                 </p>
               </div>
               <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
-                <p className="text-white/40 mb-1">USDC locked in Trustless Work escrow</p>
+                <p className="text-white/40 mb-1">XLM locked in Trustless Work escrow</p>
                 <p className="text-white font-semibold">
                   {escrowAsset.amount.toLocaleString()} {escrowAsset.asset}
                 </p>
@@ -666,17 +656,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
               )}
               {deal.contractId && !escrowAlreadyFunded && (
                 <ActionBtn onClick={fundTrustlessWorkEscrow} variant="success">
-                  {fundingEscrow ? "Funding escrow..." : "Fund escrow"}
-                </ActionBtn>
-              )}
-              {!isTrustlessWorkDeal && !rfqCreatorDeposited && !isSettled && !isRefunded && (
-                <ActionBtn onClick={markRfqCreatorFunded}>
-                  Record RFQ creator deposit (demo)
-                </ActionBtn>
-              )}
-              {!isTrustlessWorkDeal && rfqCreatorDeposited && !quoteMakerDeposited && !isSettled && !isRefunded && (
-                <ActionBtn onClick={markQuoteMakerFunded}>
-                  Record quote maker deposit (demo)
+                  {fundingEscrow ? "Funding XLM escrow..." : "Fund XLM escrow"}
                 </ActionBtn>
               )}
             </div>
@@ -685,31 +665,31 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
           {/* Next action callout */}
           <NextActionCallout deal={deal} walletAddress={walletAddress} />
 
-          {/* XLM settlement condition */}
+          {/* USDC settlement condition */}
           {escrowAlreadyFunded && !isSettled && !isRefunded && (
             <section className="bg-[#2a2a2a] border border-[#5c5151] rounded-xl p-5 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
-                    XLM settlement condition
+                    USDC settlement condition
                   </p>
                   <h2 className="text-xl font-bold text-white">
                     {xlmSettlementSent
-                      ? "XLM settlement verified"
+                      ? "USDC settlement verified"
                       : isQuoteMaker
-                      ? `Send ${deal.sellAmount.toLocaleString()} XLM`
+                      ? `Send ${deal.buyAmount.toLocaleString()} USDC`
                       : "Waiting for quote maker"}
                   </h2>
                   <p className="text-sm text-white/50 mt-1">
                     {xlmSettlementSent
-                      ? "TrustRFQ verified the XLM payment on Stellar. The USDC escrow can now move to release."
+                      ? "TrustRFQ verified the USDC payment on Stellar. The XLM escrow can now move to release."
                       : isQuoteMaker
-                      ? "The USDC side is funded in Trustless Work. Send the XLM leg from your wallet; TrustRFQ verifies the payment on Stellar before moving to release."
-                      : "The USDC side is funded in Trustless Work. The quote maker must send the XLM leg before release can continue."}
+                      ? "The RFQ creator's XLM is funded in Trustless Work. Send the USDC leg from your wallet; TrustRFQ verifies the payment on Stellar before moving to release."
+                      : "The RFQ creator's XLM is funded in Trustless Work. The quote maker must send the USDC leg before release can continue."}
                   </p>
                 </div>
                 <span className="text-[10px] bg-[#373232] text-white/60 border border-[#3f3b3b] px-2 py-1 rounded-full shrink-0">
-                  {xlmSettlementSent ? "XLM sent" : "Waiting for XLM"}
+                  {xlmSettlementSent ? "USDC sent" : "Waiting for USDC"}
                 </span>
               </div>
 
@@ -718,7 +698,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                   <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
                     <p className="text-white/40 mb-1">Amount to send</p>
                     <p className="text-white font-semibold">
-                      {deal.sellAmount.toLocaleString()} XLM
+                      {deal.buyAmount.toLocaleString()} USDC
                     </p>
                   </div>
                   <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
@@ -732,7 +712,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                     />
                     {!xlmDestination && (
                       <p className="text-white/30 mt-1">
-                        Connect the RFQ creator wallet first so TrustRFQ can prefill the XLM
+                        Connect the RFQ creator wallet first so TrustRFQ can prefill the USDC
                         destination address.
                       </p>
                     )}
@@ -753,18 +733,18 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
 
               {!xlmSettlementSent && isQuoteMaker ? (
                 <ActionBtn onClick={sendXlmSettlement} variant="success">
-                  {sendingXlm ? "Sending XLM..." : "Send XLM"}
+                  {sendingXlm ? "Sending USDC..." : "Send USDC"}
                 </ActionBtn>
               ) : !xlmSettlementSent && isRfqCreator ? (
                 <p className="text-sm text-white/50">
-                  Waiting for quote maker to send {deal.sellAmount.toLocaleString()} XLM.
+                  Waiting for quote maker to send {deal.buyAmount.toLocaleString()} USDC.
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
                   <p className="text-sm text-white/60">
                     {xlmConditionMarkedComplete
-                    ? "Trustless Work condition is marked complete. The quote maker can approve the USDC release to their wallet."
-                      : "XLM payment verified on Stellar. Mark the Trustless Work settlement condition complete before release."}
+                    ? "Trustless Work condition is marked complete. The quote maker can approve the XLM release to their wallet."
+                      : "USDC payment verified on Stellar. Mark the Trustless Work settlement condition complete before release."}
                   </p>
                   {deal.escrowStatus !== "released" && !xlmConditionMarkedComplete && canMarkSettlementComplete ? (
                     <ActionBtn onClick={markSettlementComplete} variant="success">
@@ -778,7 +758,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                     </p>
                   ) : deal.escrowStatus !== "released" && canApproveAndRelease ? (
                     <ActionBtn onClick={releaseEscrowedUsdc} variant="success">
-                      {releasingEscrow ? "Releasing USDC..." : "Approve USDC release"}
+                      {releasingEscrow ? "Releasing XLM..." : "Approve XLM release"}
                     </ActionBtn>
                   ) : deal.escrowStatus !== "released" ? (
                     <p className="text-sm text-white/50">

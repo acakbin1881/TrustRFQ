@@ -278,3 +278,127 @@ export async function verifyNativePayment({
 
   return false;
 }
+
+export async function sendAssetPayment({
+  from,
+  to,
+  amount,
+  assetCode,
+  issuer,
+  memo,
+}: {
+  from: string;
+  to: string;
+  amount: number;
+  assetCode: string;
+  issuer: string;
+  memo?: string;
+}): Promise<string> {
+  if (typeof window === "undefined") {
+    throw new Error("Payments can only be sent in the browser.");
+  }
+
+  if (!isValidStellarPublicKey(from)) {
+    throw new Error("Source wallet must be a valid Stellar testnet address.");
+  }
+
+  if (!isValidStellarPublicKey(to)) {
+    throw new Error("Destination must be a valid Stellar testnet address.");
+  }
+
+  if (!isValidStellarPublicKey(issuer)) {
+    throw new Error(`${assetCode} issuer must be a valid Stellar testnet address.`);
+  }
+
+  const horizonUrl =
+    process.env.NEXT_PUBLIC_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
+  const server = new Horizon.Server(horizonUrl);
+  const account = await loadTestnetAccount(server, from, "Source wallet");
+  await loadTestnetAccount(server, to, "Destination");
+  const asset = new Asset(assetCode, issuer);
+
+  let builder = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: Networks.TESTNET,
+  }).addOperation(
+    Operation.payment({
+      destination: to,
+      asset,
+      amount: amount.toString(),
+    })
+  );
+
+  if (memo) {
+    const { Memo } = await import("@stellar/stellar-sdk");
+    builder = builder.addMemo(Memo.text(memo.slice(0, 28)));
+  }
+
+  const transaction = builder.setTimeout(180).build();
+  const signedXdr = await signTransaction({
+    unsignedTransaction: transaction.toXDR(),
+    address: from,
+  });
+  const signedTransaction = TransactionBuilder.fromXDR(
+    signedXdr,
+    Networks.TESTNET
+  );
+  const result = await server.submitTransaction(signedTransaction);
+
+  return result.hash;
+}
+
+export async function verifyAssetPayment({
+  txHash,
+  from,
+  to,
+  amount,
+  assetCode,
+  issuer,
+}: {
+  txHash: string;
+  from: string;
+  to: string;
+  amount: number;
+  assetCode: string;
+  issuer: string;
+}): Promise<boolean> {
+  const horizonUrl =
+    process.env.NEXT_PUBLIC_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
+  const server = new Horizon.Server(horizonUrl);
+
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    try {
+      const operations = await server.operations().forTransaction(txHash).call();
+
+      return operations.records.some((operation) => {
+        const payment = operation as unknown as {
+          type?: string;
+          from?: string;
+          to?: string;
+          asset_type?: string;
+          asset_code?: string;
+          asset_issuer?: string;
+          amount?: string;
+        };
+
+        return (
+          payment.type === "payment" &&
+          payment.from === from &&
+          payment.to === to &&
+          payment.asset_type !== "native" &&
+          payment.asset_code === assetCode &&
+          payment.asset_issuer === issuer &&
+          Number(payment.amount) === amount
+        );
+      });
+    } catch (error) {
+      if (getErrorStatus(error) !== 404 || attempt === 8) {
+        throw error;
+      }
+
+      await wait(1000);
+    }
+  }
+
+  return false;
+}
