@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
+html {
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  scroll-padding-top: 52px;
+}
+
 body {
-  background: #ffffff;
-  color: #111827;
+  background: #1a1a1a;
+  color: #ffffff;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -43,6 +49,11 @@ body {
 .lp-cell-4   { animation: lp-cell 4.5s ease-in-out infinite 0.5s; }
 .lp-cell-5   { animation: lp-cell 5.5s ease-in-out infinite 1.5s; }
 .lp-cell-6   { animation: lp-cell 7s   ease-in-out infinite 3s; }
+
+.text-stroke {
+  -webkit-text-stroke: 1px #000000;
+  paint-order: stroke fill;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .lp-float-a, .lp-float-b, .lp-float-c, .lp-pulse,

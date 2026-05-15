@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-// @ts-ignore – ogl has no bundled types
 import { Renderer, Program, Mesh, Triangle } from "ogl";
 import "./Grainient.css";
 
@@ -227,11 +226,16 @@ export default function Grainient({
 
     const io = new IntersectionObserver(([entry]) => {
       isVisible = entry.isIntersecting;
-      isVisible ? tryStart() : tryStop();
+      if (isVisible) tryStart();
+      else tryStop();
     }, { threshold: 0 });
     io.observe(container);
 
-    const onVisibility = () => { isPageVisible = !document.hidden; isPageVisible ? tryStart() : tryStop(); };
+    const onVisibility = () => {
+      isPageVisible = !document.hidden;
+      if (isPageVisible) tryStart();
+      else tryStop();
+    };
     document.addEventListener("visibilitychange", onVisibility);
     tryStart();
 

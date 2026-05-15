@@ -20,6 +20,8 @@ import {
   submitQuote as persistQuote,
 } from "@/lib/rfq-repository";
 
+const inputCls = "w-full bg-[#373232] border border-[#3f3b3b] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5c5151] placeholder:text-white/20";
+
 function QuoteRow({
   quote,
   rfq,
@@ -38,45 +40,45 @@ function QuoteRow({
   return (
     <div
       className={`rounded-lg p-4 flex items-center justify-between gap-4 border ${
-        isValid ? "bg-slate-800 border-slate-700" : "bg-red-950/30 border-red-900/50"
+        isValid ? "bg-[#2a2a2a] border-[#373232]" : "bg-[#2a2a2a] border-[#3f3b3b] opacity-60"
       }`}
     >
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <span className={`font-semibold ${isValid ? "text-white" : "text-red-300"}`}>
+          <span className={`font-semibold ${isValid ? "text-white" : "text-white/50"}`}>
             {quote.quoteAmount.toLocaleString()} {rfq.buyAsset}
           </span>
           {belowMinimum && (
-            <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-[#373232] text-white/50 px-2 py-0.5 rounded-full font-medium border border-[#3f3b3b]">
               Below minimum
             </span>
           )}
           {expired && (
-            <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-[#373232] text-white/50 px-2 py-0.5 rounded-full font-medium border border-[#3f3b3b]">
               Expired
             </span>
           )}
           {quote.status !== "pending" && (
-            <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-[#373232] text-white/50 px-2 py-0.5 rounded-full font-medium border border-[#3f3b3b]">
               {quote.status}
             </span>
           )}
         </div>
-        <span className="text-xs text-slate-500 font-mono">
+        <span className="text-xs text-white/40 font-mono">
           {quote.makerAddress.slice(0, 8)}...{quote.makerAddress.slice(-4)}
         </span>
-        <span className="text-xs text-slate-600">Quote expires {fmt(quote.expiresAt)}</span>
+        <span className="text-xs text-white/30">Quote expires {fmt(quote.expiresAt)}</span>
       </div>
       <div className="shrink-0">
         {isValid && canAccept ? (
           <button
             onClick={() => onAccept(quote)}
-            className="bg-green-700 hover:bg-green-600 text-white text-sm px-4 py-1.5 rounded-lg font-medium transition-colors"
+            className="bg-[#5c5151] hover:bg-[#6a5e5e] text-white text-sm px-4 py-1.5 rounded-lg font-medium transition-colors"
           >
             Accept quote
           </button>
         ) : !isValid ? (
-          <span className="text-red-400 text-xs">Cannot accept</span>
+          <span className="text-white/30 text-xs">Cannot accept</span>
         ) : null}
       </div>
     </div>
@@ -104,13 +106,13 @@ function CreatorView({
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
-          Submitted quotes - RFQ creator view
+        <h2 className="text-sm font-semibold text-white/40 uppercase tracking-widest">
+          Submitted quotes — RFQ creator view
         </h2>
-        <p className="text-xs text-slate-600 mt-0.5">Only you can see submitted quotes.</p>
+        <p className="text-xs text-white/30 mt-0.5">Only you can see submitted quotes.</p>
       </div>
 
-      {quotes.length === 0 && <p className="text-slate-500 text-sm">No quotes submitted yet.</p>}
+      {quotes.length === 0 && <p className="text-white/40 text-sm">No quotes submitted yet.</p>}
 
       {validQuotes.map((quote) => (
         <QuoteRow key={quote.id} quote={quote} rfq={rfq} canAccept={isOpen && accepting === null} onAccept={onAccept} />
@@ -118,8 +120,8 @@ function CreatorView({
 
       {invalidQuotes.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs text-slate-600 uppercase tracking-widest">
-            Invalid or unavailable - cannot be accepted ({invalidQuotes.length})
+          <p className="text-xs text-white/30 uppercase tracking-widest">
+            Invalid or unavailable — cannot be accepted ({invalidQuotes.length})
           </p>
           {invalidQuotes.map((quote) => (
             <QuoteRow key={quote.id} quote={quote} rfq={rfq} canAccept={false} onAccept={onAccept} />
@@ -127,13 +129,16 @@ function CreatorView({
         </div>
       )}
 
-      {accepting && <p className="text-green-400 text-sm text-center">Quote accepted - creating escrow deal...</p>}
-      {error && <p className="text-red-400 text-xs bg-red-950/40 border border-red-900/40 rounded-lg px-3 py-2">{error}</p>}
+      {accepting && <p className="text-white/70 text-sm text-center">Quote accepted — creating escrow deal...</p>}
+      {error && <p className="text-white/80 text-xs bg-[#373232] border border-[#3f3b3b] rounded-lg px-3 py-2">{error}</p>}
 
       {isOpen && (
-        <p className="text-xs text-slate-600 border-t border-slate-800 pt-4">
-          You manually select one valid quote. The best quote does not automatically win. Accepting a quote closes this RFQ and creates an escrow deal.
-        </p>
+        <div className="text-xs text-white/30 border-t border-[#373232] pt-4 space-y-1">
+          <p>TrustRFQ only creates the XLM/USDC agreement here.</p>
+          <p className="text-white/60">
+            Accepting one quote closes this RFQ and hands the USDC settlement leg to Trustless Work escrow.
+          </p>
+        </div>
       )}
     </section>
   );
@@ -177,12 +182,12 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
     return (
       <section className="flex flex-col gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Maker quote view</h2>
-          <p className="text-xs text-slate-600 mt-0.5">This RFQ is no longer accepting quotes.</p>
+          <h2 className="text-sm font-semibold text-white/40 uppercase tracking-widest">Maker quote view</h2>
+          <p className="text-xs text-white/30 mt-0.5">This RFQ is no longer accepting quotes.</p>
         </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <p className="text-slate-300 text-sm font-medium">Quote submission is closed.</p>
-          <p className="text-slate-500 text-xs mt-1">Makers cannot request or submit quotes after an RFQ is closed, cancelled, or expired.</p>
+        <div className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-5">
+          <p className="text-white/80 text-sm font-medium">Quote submission is closed.</p>
+          <p className="text-white/40 text-xs mt-1">Makers cannot submit quotes after an RFQ is closed, cancelled, or expired.</p>
         </div>
       </section>
     );
@@ -191,12 +196,17 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
   if (myQuote) {
     return (
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Maker quote view</h2>
-        <div className="bg-slate-900 border border-green-900 rounded-xl p-5 flex flex-col gap-2">
-          <p className="text-green-400 text-sm font-medium">Quote submitted.</p>
+        <h2 className="text-sm font-semibold text-white/40 uppercase tracking-widest">Maker quote view</h2>
+        <div className="bg-[#2a2a2a] border border-[#5c5151] rounded-xl p-5 flex flex-col gap-2">
+          <p className="text-white/70 text-sm font-medium">Quote submitted.</p>
           <p className="text-white font-semibold">{myQuote.quoteAmount.toLocaleString()} {rfq.buyAsset}</p>
-          <p className="text-xs text-slate-500">Expires {fmt(myQuote.expiresAt)}</p>
-          <p className="text-xs text-slate-600 mt-1">Competing quotes are hidden. The RFQ creator will notify you if your quote is accepted.</p>
+          <p className="text-xs text-white/40">Expires {fmt(myQuote.expiresAt)}</p>
+          <p className="text-xs text-white/30 mt-1">
+            Competing quotes are hidden. Switch back to RFQ Creator to accept this quote.
+          </p>
+          <p className="text-xs text-white/60">
+            Trustless Work escrow starts only after the RFQ Creator accepts one quote.
+          </p>
         </div>
       </section>
     );
@@ -205,26 +215,26 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Maker quote view</h2>
-        <p className="text-xs text-slate-600 mt-0.5">Submit a firm quote. Competing quotes are not visible to you.</p>
+        <h2 className="text-sm font-semibold text-white/40 uppercase tracking-widest">Maker quote view</h2>
+        <p className="text-xs text-white/30 mt-0.5">Submit the USDC amount you will pay for this XLM RFQ. Competing quotes are hidden.</p>
       </div>
 
-      <form onSubmit={submitQuote} className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-4">
+      <form onSubmit={submitQuote} className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-5 flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Submit a firm quote</h3>
-          <p className="text-xs text-slate-500 mt-1">Makers cannot see competing quotes. Your quote is firm until expiry.</p>
+          <p className="text-xs text-white/40 mt-1">This quote is the USDC side of the XLM/USDC agreement. Trustless Work settlement starts only if it is accepted.</p>
         </div>
         <div>
-          <label className="text-xs text-slate-400 block mb-1">Amount you will deliver ({rfq.buyAsset})</label>
-          <input type="number" min="0" step="any" required placeholder={`Minimum ${rfq.buyAmount.toLocaleString()}`} value={form.amount} onChange={(e) => { setForm((f) => ({ ...f, amount: e.target.value })); setFormError(""); }} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 placeholder:text-slate-600" />
-          <p className="text-xs text-slate-600 mt-1">Quotes below {rfq.buyAmount.toLocaleString()} {rfq.buyAsset} are below the minimum and cannot be accepted.</p>
+          <label className="text-xs text-white/50 block mb-1">Amount you will deliver ({rfq.buyAsset})</label>
+          <input type="number" min="0" step="any" required placeholder={`Minimum ${rfq.buyAmount.toLocaleString()}`} value={form.amount} onChange={(e) => { setForm((f) => ({ ...f, amount: e.target.value })); setFormError(""); }} className={inputCls} />
+          <p className="text-xs text-white/30 mt-1">Quotes below {rfq.buyAmount.toLocaleString()} {rfq.buyAsset} are below the minimum and cannot be accepted.</p>
         </div>
         <div>
-          <label className="text-xs text-slate-400 block mb-1">Your address <span className="text-slate-600">(mock)</span></label>
-          <input type="text" placeholder="G..." value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 placeholder:text-slate-600 font-mono" />
+          <label className="text-xs text-white/50 block mb-1">Your address <span className="text-white/30">(mock)</span></label>
+          <input type="text" placeholder="G..." value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} className={`${inputCls} font-mono`} />
         </div>
-        {formError && <p className="text-red-400 text-xs bg-red-950/40 border border-red-900/40 rounded-lg px-3 py-2">{formError}</p>}
-        <button type="submit" disabled={submitting} className="bg-teal-400 hover:bg-teal-300 disabled:bg-slate-700 disabled:text-slate-400 text-slate-950 font-semibold py-2 rounded-lg transition-colors text-sm">
+        {formError && <p className="text-white/80 text-xs bg-[#373232] border border-[#3f3b3b] rounded-lg px-3 py-2">{formError}</p>}
+        <button type="submit" disabled={submitting} className="bg-white hover:bg-white/90 disabled:bg-[#373232] disabled:text-white/30 text-[#1a1a1a] font-semibold py-2 rounded-lg transition-colors text-sm">
           {submitting ? "Submitting..." : "Submit quote"}
         </button>
       </form>
@@ -281,18 +291,18 @@ export default function RfqDetailPage({ params }: { params: Promise<{ id: string
   }
 
   if (loading) {
-    return <p className="text-slate-400 text-center pt-20">Loading RFQ...</p>;
+    return <p className="text-white/40 text-center pt-20">Loading RFQ...</p>;
   }
 
   if (loadError) {
-    return <p className="text-red-400 text-center pt-20">{loadError}</p>;
+    return <p className="text-white/70 text-center pt-20">{loadError}</p>;
   }
 
   if (!rfq) {
     return (
       <div className="text-center pt-20">
-        <p className="text-slate-400">RFQ not found.</p>
-        <Link href="/rfqs" className="text-blue-400 hover:underline text-sm mt-2 block">Back to RFQs</Link>
+        <p className="text-white/40">RFQ not found.</p>
+        <Link href="/rfqs" className="text-white/60 hover:text-white text-sm mt-2 block transition-colors">Back to RFQs</Link>
       </div>
     );
   }
@@ -303,37 +313,37 @@ export default function RfqDetailPage({ params }: { params: Promise<{ id: string
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href="/rfqs" className="text-slate-500 hover:text-slate-300 text-sm">Back to RFQs</Link>
+        <Link href="/rfqs" className="text-white/40 hover:text-white/70 text-sm transition-colors">← Back to RFQs</Link>
         <div className="flex items-start justify-between mt-3 gap-4">
           <h1 className="text-2xl font-bold text-white">
-            {rfq.sellAmount.toLocaleString()} {rfq.sellAsset} -&gt; min {rfq.buyAmount.toLocaleString()} {rfq.buyAsset}
+            {rfq.sellAmount.toLocaleString()} {rfq.sellAsset} → min {rfq.buyAmount.toLocaleString()} {rfq.buyAsset}
           </h1>
           <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 mt-1 ${STATUS_COLOR[status]}`}>
             {STATUS_LABEL[status]}
           </span>
         </div>
-        <p className="text-xs text-amber-400 mt-2 bg-amber-950/40 border border-amber-900/40 rounded-lg px-3 py-2 inline-block">
-          Private RFQ - Quotes are visible only to the RFQ creator - Not a public auction
+        <p className="text-xs text-white/60 mt-2 bg-[#373232] border border-[#3f3b3b] rounded-lg px-3 py-2 inline-block">
+          XLM/USDC agreement — quotes are private; accepted quote becomes a Trustless Work USDC escrow
         </p>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 grid grid-cols-2 gap-4 text-sm">
+      <div className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-5 grid grid-cols-2 gap-4 text-sm">
         <div>
-          <p className="text-slate-500 text-xs mb-1">RFQ creator</p>
+          <p className="text-white/40 text-xs mb-1">RFQ creator</p>
           <p className="text-white font-mono text-xs">{rfq.creatorAddress.slice(0, 12)}...{rfq.creatorAddress.slice(-6)}</p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs mb-1">Expires</p>
+          <p className="text-white/40 text-xs mb-1">Expires</p>
           <p className="text-white">{fmt(rfq.expiresAt)}</p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs mb-1">Selling</p>
+          <p className="text-white/40 text-xs mb-1">Selling</p>
           <p className="text-white font-semibold">{rfq.sellAmount.toLocaleString()} {rfq.sellAsset}</p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs mb-1">Minimum receive amount</p>
+          <p className="text-white/40 text-xs mb-1">Minimum receive amount</p>
           <p className="text-white font-semibold">{rfq.buyAmount.toLocaleString()} {rfq.buyAsset}</p>
-          <p className="text-slate-500 text-xs mt-0.5">Hard floor - quotes below this are invalid</p>
+          <p className="text-white/40 text-xs mt-0.5">Hard floor — quotes below this are invalid</p>
         </div>
       </div>
 

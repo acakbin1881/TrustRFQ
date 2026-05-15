@@ -11,24 +11,24 @@ function RfqCard({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) 
   const status = deriveRfqStatus(rfq);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between gap-4">
+    <div className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-5 flex items-center justify-between gap-4">
       <div className="flex flex-col gap-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-white font-semibold text-lg">
             {rfq.sellAmount.toLocaleString()} {rfq.sellAsset}
           </span>
-          <span className="text-slate-500">-&gt;</span>
-          <span className="text-blue-300 font-semibold text-lg">
+          <span className="text-white/40">-&gt;</span>
+          <span className="text-white/80 font-semibold text-lg">
             {rfq.buyAmount.toLocaleString()} {rfq.buyAsset}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-500">
+        <div className="flex items-center gap-3 text-xs text-white/40">
           <span>Expires {fmt(rfq.expiresAt)}</span>
           <span>·</span>
           <span className="font-mono truncate max-w-[180px]">
             {rfq.creatorAddress.slice(0, 8)}...{rfq.creatorAddress.slice(-4)}
           </span>
-          {isCreator && <span className="text-amber-500">your RFQ</span>}
+          {isCreator && <span className="text-white/60">your RFQ</span>}
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">
@@ -39,9 +39,9 @@ function RfqCard({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) 
         </span>
         <Link
           href={`/rfqs/${rfq.id}`}
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
+          className="bg-[#373232] hover:bg-[#3f3b3b] text-white/80 hover:text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
         >
-          {isCreator ? "Review quotes ->" : "Submit quote ->"}
+          {isCreator ? "Review quotes ->" : "Submit private quote ->"}
         </Link>
       </div>
     </div>
@@ -65,7 +65,7 @@ export default function RfqsPage() {
   }, []);
 
   if (loading) {
-    return <p className="text-slate-400 text-center pt-20">Loading RFQs...</p>;
+    return <p className="text-white/40 text-center pt-20">Loading RFQs...</p>;
   }
 
   const open = rfqs.filter((r) => deriveRfqStatus(r) === "open");
@@ -76,24 +76,24 @@ export default function RfqsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">RFQs</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-white/50 text-sm mt-1">
             Open private requests for quotes
           </p>
         </div>
         <Link
           href="/rfqs/new"
-          className="bg-teal-400 hover:bg-teal-300 text-slate-950 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          className="bg-white hover:bg-white/90 text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
         >
           + New RFQ
         </Link>
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+        <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
           Open ({open.length})
         </h2>
         {open.length === 0 ? (
-          <p className="text-slate-500 text-sm">No open RFQs.</p>
+          <p className="text-white/40 text-sm">No open RFQs.</p>
         ) : (
           open.map((rfq) => <RfqCard key={rfq.id} rfq={rfq} currentAddress={currentAddress} />)
         )}
@@ -101,7 +101,7 @@ export default function RfqsPage() {
 
       {closed.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
             Closed / Expired ({closed.length})
           </h2>
           {closed.map((rfq) => (

@@ -235,8 +235,8 @@ export const STATUS_LABEL: Record<RfqStatus, string> = {
 };
 
 export const STATUS_COLOR: Record<RfqStatus, string> = {
-  open: "bg-green-900 text-green-300",
-  closed: "bg-slate-700 text-slate-300",
-  expired: "bg-red-900 text-red-300",
-  cancelled: "bg-red-900 text-red-300",
+  open: "bg-[#373232] text-white/70",
+  closed: "bg-[#2a2a2a] text-white/40",
+  expired: "bg-[#2a2a2a] text-white/30",
+  cancelled: "bg-[#2a2a2a] text-white/30",
 };

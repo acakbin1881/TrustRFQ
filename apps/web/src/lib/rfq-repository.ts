@@ -138,6 +138,12 @@ function assertOpenRfq(rfq: Rfq) {
   }
 }
 
+function assertSupportedPair(sellAsset: AssetCode, buyAsset: AssetCode) {
+  if (sellAsset !== "XLM" || buyAsset !== "USDC") {
+    throw new Error("TrustRFQ MVP only supports XLM/USDC agreements.");
+  }
+}
+
 async function syncExpiredRfqRows(rows: RfqRow[]): Promise<RfqRow[]> {
   const expiredIds = rows
     .filter((row) => row.status === "open" && isExpired(row.expires_at))
@@ -182,6 +188,8 @@ export async function getRfq(id: string): Promise<Rfq | null> {
 }
 
 export async function createRfq(input: CreateRfqInput): Promise<Rfq> {
+  assertSupportedPair(input.sellAsset, input.buyAsset);
+
   if (!isSupabaseConfigured) {
     return {
       id: `rfq-${Date.now()}`,
@@ -278,6 +286,7 @@ export async function getDeal(id: string): Promise<Deal | null> {
 
 export async function acceptQuote(rfq: Rfq, quote: Quote): Promise<Deal> {
   assertOpenRfq(rfq);
+  assertSupportedPair(rfq.sellAsset, rfq.buyAsset);
 
   if (quote.status !== "pending") {
     throw new Error("Only pending quotes can be accepted.");

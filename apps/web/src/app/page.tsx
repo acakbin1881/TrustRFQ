@@ -2,10 +2,9 @@ import Link from "next/link";
 import { Playfair_Display } from "next/font/google";
 import BorderGlow from "@/components/BorderGlow";
 import FadeContent from "@/components/FadeContent";
+import Grainient from "@/components/Grainient";
 
 const playfair = Playfair_Display({ subsets: ["latin"], weight: ["700"] });
-
-// ── Data ──────────────────────────────────────────────────────────────────────
 
 const CARDS = [
   {
@@ -47,80 +46,84 @@ const FEATURES = [
   },
 ];
 
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function Home() {
   return (
-    <div className="flex flex-col pb-28">
+    <div className="relative flex flex-col">
 
-      {/* ── 1. HERO ──────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center text-center min-h-[88vh] bg-white -mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden px-4">
-
-        {/* Grey halftone dot pattern — dense at edges, fades to clear at center */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: "radial-gradient(circle, #c8cbd0 1.5px, transparent 1.5px)",
-            backgroundSize: "28px 28px",
-            maskImage:
-              "radial-gradient(ellipse 85% 80% at 50% 50%, transparent 25%, rgba(0,0,0,0.5) 55%, black 80%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 85% 80% at 50% 50%, transparent 25%, rgba(0,0,0,0.5) 55%, black 80%)",
-          }}
+      {/* ── PAGE BACKGROUND ──────────────────────────────────────────────── */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <Grainient
+          color1="#fcfcfc"
+          color2="#535353"
+          color3="#aaaaaa"
+          timeSpeed={0.75}
+          colorBalance={0.34}
+          warpStrength={0}
+          warpFrequency={5.9}
+          warpSpeed={2.7}
+          warpAmplitude={50}
+          blendAngle={0}
+          blendSoftness={0.05}
+          rotationAmount={500}
+          noiseScale={2}
+          grainAmount={0.1}
+          grainScale={2}
+          grainAnimated={false}
+          contrast={1.5}
+          gamma={1}
+          saturation={1}
+          centerX={0}
+          centerY={0}
+          zoom={0.9}
         />
+      </div>
 
-        {/* Content */}
+      {/* ── SLIDE 1: HERO ────────────────────────────────────────────────── */}
+      <section
+        className="relative flex flex-col items-center justify-center text-center -mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden px-4"
+        style={{ height: "100vh", scrollSnapAlign: "start" }}
+      >
         <div className="relative z-10 flex flex-col items-center gap-7 max-w-4xl w-full">
-          <span className="inline-flex items-center gap-2 text-[11px] text-gray-500 border border-gray-200 bg-white/80 px-3 py-1.5 rounded-full tracking-wide font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 lp-pulse inline-block" />
-            Boundless × Trustless Work Hackathon
+          <span className="inline-flex items-center rounded-full bg-[#1a1a1a]/70 border border-[#3f3b3b] overflow-hidden text-[11px]">
+            <span className="bg-[#2a2a2a] text-white px-3 py-1.5 font-bold tracking-widest text-[10px]">NEW</span>
+            <span className="text-white/60 px-3 py-1.5 font-medium">Boundless × Trustless Work Hackathon</span>
           </span>
 
-          <h1
-            className={`${playfair.className} text-5xl sm:text-6xl lg:text-7xl text-gray-900 leading-[1.05] tracking-tight max-w-3xl`}
-          >
+          <h1 className={`${playfair.className} text-5xl sm:text-6xl lg:text-7xl text-white font-bold leading-[1.05] tracking-tight max-w-3xl text-stroke`}>
             Private OTC settlement<br />
             without sending first.
           </h1>
 
-          <p className="text-gray-500 text-xl max-w-xl leading-relaxed">
+          <p className="text-white/70 text-xl max-w-xl leading-relaxed text-stroke">
             Post a private RFQ. Receive firm quotes from invited counterparties.
             Accept one — the deal locks into escrow with on-chain proof.
           </p>
 
-          <div className="flex items-center gap-4 flex-wrap justify-center mt-2">
-            <Link
-              href="/rfqs"
-              className="bg-gray-900 hover:bg-gray-700 text-white font-semibold px-7 py-3 rounded-lg transition-colors text-sm"
-            >
+          <div className="flex items-center gap-3 flex-wrap justify-center mt-2">
+            <Link href="/rfqs" className="bg-white hover:bg-white/90 text-[#1a1a1a] font-bold px-8 py-3 rounded-full transition-colors text-sm">
               Browse RFQs
             </Link>
-            <Link
-              href="/rfqs/new"
-              className="border border-gray-300 hover:border-gray-400 bg-white text-gray-700 hover:text-gray-900 px-7 py-3 rounded-lg font-medium transition-colors text-sm"
-            >
+            <Link href="/rfqs/new" className="bg-[#2a2a2a]/70 hover:bg-[#373232] border border-[#3f3b3b] text-white/80 px-8 py-3 rounded-full font-medium transition-colors text-sm backdrop-blur-sm">
               Create RFQ
             </Link>
           </div>
         </div>
-
       </section>
 
-      {/* ── 2. DARK CARDS ────────────────────────────────────────────────── */}
+      {/* ── SLIDE 2: DARK CARDS ──────────────────────────────────────────── */}
       <section
-        className="bg-gray-800 py-24 px-6"
-        style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
+        className="bg-[#1a1a1a] flex items-center px-6"
+        style={{ width: "100vw", marginLeft: "calc(50% - 50vw)", height: "100vh", scrollSnapAlign: "start" }}
       >
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto w-full">
           <div className="grid md:grid-cols-3 gap-5">
             {CARDS.map(({ title, desc, href, cta }, i) => (
               <FadeContent key={title} blur duration={700} delay={i * 120} threshold={0.15}>
                 <BorderGlow
-                  backgroundColor="#1f2937"
+                  backgroundColor="#2a2a2a"
                   borderRadius={12}
-                  glowColor="174 60 60"
-                  colors={["#2dd4bf", "#f59e0b", "#38bdf8"]}
+                  glowColor="20 10 50"
+                  colors={["#5c5151", "#3f3b3b", "#5c5151"]}
                   glowIntensity={2}
                   glowRadius={55}
                   coneSpread={8}
@@ -130,11 +133,8 @@ export default function Home() {
                     <h3 className={`${playfair.className} text-white text-[1.35rem] font-bold leading-snug`}>
                       {title}
                     </h3>
-                    <p className="text-gray-400 text-sm leading-relaxed flex-1">{desc}</p>
-                    <Link
-                      href={href}
-                      className="text-amber-400 hover:text-amber-300 text-sm font-medium transition-colors flex items-center gap-1"
-                    >
+                    <p className="text-white/50 text-sm leading-relaxed flex-1">{desc}</p>
+                    <Link href={href} className="text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-1">
                       → {cta}
                     </Link>
                   </div>
@@ -145,56 +145,50 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 3. SLIPPAGE SECTION ──────────────────────────────────────────── */}
-      <section className="mt-32">
-        <div className="grid md:grid-cols-2 gap-16 items-center">
+      {/* ── SLIDE 3: SLIPPAGE + TW LOGO ─────────────────────────────────── */}
+      <section
+        className="flex items-center overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8"
+        style={{ height: "100vh", scrollSnapAlign: "start" }}
+      >
+        <div className="grid md:grid-cols-2 gap-12 items-center w-full max-w-4xl mx-auto">
 
-          {/* Left: wireframe globe visual */}
           <div className="flex items-center justify-center select-none">
-            <svg viewBox="0 0 420 420" className="w-full max-w-sm" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Concentric background rings */}
-              <circle cx="210" cy="210" r="205" stroke="#f3f4f6" strokeWidth="1" />
-              <circle cx="210" cy="210" r="178" stroke="#e5e7eb" strokeWidth="1" />
-              <circle cx="210" cy="210" r="151" stroke="#e5e7eb" strokeWidth="1" />
-              <circle cx="210" cy="210" r="124" stroke="#d1d5db" strokeWidth="1" />
-              <circle cx="210" cy="210" r="97"  stroke="#d1d5db" strokeWidth="1" />
-
-              {/* Globe outline */}
-              <circle cx="210" cy="210" r="88" stroke="#374151" strokeWidth="1.2" />
-
-              {/* Meridian curves */}
-              <ellipse cx="210" cy="210" rx="22"  ry="88" stroke="#374151" strokeWidth="0.9" />
-              <ellipse cx="210" cy="210" rx="50"  ry="88" stroke="#374151" strokeWidth="0.9" />
-              <ellipse cx="210" cy="210" rx="74"  ry="88" stroke="#374151" strokeWidth="0.9" />
-
-              {/* Latitude line (equator) */}
-              <ellipse cx="210" cy="210" rx="88" ry="22" stroke="#374151" strokeWidth="0.9" />
-
-              {/* Intersection dots */}
-              <circle cx="210" cy="122" r="3.5" fill="#111827" />
-              <circle cx="160" cy="155" r="2.5" fill="#111827" />
-              <circle cx="258" cy="200" r="2.5" fill="#111827" />
-              <circle cx="210" cy="298" r="3.5" fill="#111827" />
-              <circle cx="175" cy="240" r="2"   fill="#6b7280" />
-              <circle cx="248" cy="168" r="2"   fill="#6b7280" />
+            <svg width="0" height="0" style={{ position: "absolute" }}>
+              <defs>
+                <filter id="logo-outline" x="-5%" y="-5%" width="110%" height="110%">
+                  <feMorphology in="SourceAlpha" operator="dilate" radius="1" result="expanded" />
+                  <feFlood floodColor="#000000" result="color" />
+                  <feComposite in="color" in2="expanded" operator="in" result="outline" />
+                  <feMerge>
+                    <feMergeNode in="outline" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
             </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WT-M-0ce6EAJIaOeA18BjA9WqyfLWpgbybP.png"
+              alt="Trustless Work"
+              className="w-56 sm:w-72"
+              style={{ filter: "url(#logo-outline)" }}
+            />
           </div>
 
-          {/* Right: headline + feature list */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <FadeContent blur duration={700} threshold={0.15}>
               <BorderGlow
-                backgroundColor="#ffffff"
+                backgroundColor="#2a2a2a"
                 borderRadius={12}
-                glowColor="174 50 45"
-                colors={["#0d9488", "#3b82f6", "#8b5cf6"]}
+                glowColor="20 10 50"
+                colors={["#5c5151", "#3f3b3b", "#5c5151"]}
                 glowIntensity={1}
                 glowRadius={35}
                 coneSpread={8}
                 edgeSensitivity={20}
               >
-                <div className="px-6 py-6">
-                  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-[1.15] tracking-tight">
+                <div className="px-5 py-5">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white leading-[1.15] tracking-tight">
                     Stop losing value to slippage.<br />
                     Start trading at your price.
                   </h2>
@@ -202,24 +196,24 @@ export default function Home() {
               </BorderGlow>
             </FadeContent>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               {FEATURES.map(({ title, desc }, i) => (
                 <FadeContent key={title} blur duration={700} delay={i * 100} threshold={0.15}>
                   <BorderGlow
-                    backgroundColor="#ffffff"
+                    backgroundColor="#2a2a2a"
                     borderRadius={12}
-                    glowColor="174 50 45"
-                    colors={["#0d9488", "#3b82f6", "#8b5cf6"]}
+                    glowColor="20 10 50"
+                    colors={["#5c5151", "#3f3b3b", "#5c5151"]}
                     glowIntensity={1}
                     glowRadius={35}
                     coneSpread={8}
                     edgeSensitivity={20}
                   >
-                    <div className="px-5 py-4 flex gap-4 items-start">
-                      <span className="w-2 h-2 rounded-full bg-gray-900 mt-1.5 shrink-0" />
+                    <div className="px-4 py-3 flex gap-3 items-start">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white/40 mt-1.5 shrink-0" />
                       <div>
-                        <p className="text-gray-900 font-semibold text-sm leading-snug">{title}</p>
-                        <p className="text-gray-500 text-sm mt-1 leading-relaxed">{desc}</p>
+                        <p className="text-white font-semibold text-sm leading-snug">{title}</p>
+                        <p className="text-white/50 text-xs mt-0.5 leading-relaxed">{desc}</p>
                       </div>
                     </div>
                   </BorderGlow>
@@ -231,92 +225,86 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 4. LIVE DEAL PREVIEW ─────────────────────────────────────────── */}
-      <section className="mt-24">
-        <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold mb-8">
-          Live escrow state
-        </p>
-        <FadeContent blur duration={700} threshold={0.1}>
-        <BorderGlow
-          backgroundColor="#ffffff"
-          borderRadius={12}
-          glowColor="174 50 45"
-          colors={["#0d9488", "#3b82f6", "#8b5cf6"]}
-          glowIntensity={1}
-          glowRadius={35}
-          coneSpread={8}
-          edgeSensitivity={20}
-        >
-        <div className="overflow-hidden">
-          <div className="p-6 flex flex-col md:flex-row md:items-center gap-6">
-            {/* Trade terms */}
-            <div className="flex-1 flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400 font-mono">deal-rfq1</span>
-                <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">
-                  Escrow funded
-                </span>
-              </div>
-              <div className="flex items-center gap-8">
-                <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Buyer sends</p>
-                  <p className="text-gray-900 font-bold text-xl">250,000 XLM</p>
-                </div>
-                <span className="text-gray-300 text-xl">→</span>
-                <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Seller sends</p>
-                  <p className="text-gray-900 font-bold text-xl">51,200 USDC</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Escrow state + proof */}
-            <div className="flex-1 flex flex-col gap-3 md:border-l md:border-gray-200 md:pl-6">
-              <p className="text-xs text-gray-500">Next required action</p>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 lp-pulse shrink-0 inline-block" />
-                <span className="text-blue-600 text-sm font-medium">
-                  Seller must mark settlement sent
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Contract ID:</span>
-                <span className="text-teal-600 font-mono text-xs font-semibold">TRFQ-8F2A</span>
-              </div>
-              <span className="text-xs text-teal-600/80 hover:text-teal-500 w-fit cursor-pointer transition-colors">
-                View in Escrow Viewer →
-              </span>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-100 px-6 py-3 flex items-center justify-between">
-            <span className="text-xs text-gray-400">Stellar Testnet · Demo</span>
-            <Link
-              href="/deals/deal-rfq1"
-              className="text-sm text-teal-600 hover:text-teal-500 font-medium transition-colors"
+      {/* ── SLIDE 4: LIVE DEAL + CTA ─────────────────────────────────────── */}
+      <section
+        className="flex flex-col items-center justify-center overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 gap-8"
+        style={{ height: "100vh", scrollSnapAlign: "start" }}
+      >
+        <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
+          <p className="text-xs text-white/30 uppercase tracking-widest font-semibold">
+            Live escrow state
+          </p>
+          <FadeContent blur duration={700} threshold={0.1}>
+            <BorderGlow
+              backgroundColor="#2a2a2a"
+              borderRadius={12}
+              glowColor="20 10 50"
+              colors={["#5c5151", "#3f3b3b", "#5c5151"]}
+              glowIntensity={1}
+              glowRadius={35}
+              coneSpread={8}
+              edgeSensitivity={20}
             >
-              View full deal →
-            </Link>
-          </div>
-        </div>
-        </BorderGlow>
-        </FadeContent>
-      </section>
+              <div className="p-6 flex flex-col md:flex-row md:items-center gap-6">
+                <div className="flex-1 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-white/40 font-mono">deal-rfq1</span>
+                    <span className="text-[10px] bg-[#373232] text-white/70 border border-[#3f3b3b] px-2 py-0.5 rounded-full">
+                      Escrow funded
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-8">
+                    <div>
+                      <p className="text-xs text-white/40 mb-0.5">Buyer sends</p>
+                      <p className="text-white font-bold text-xl">250,000 XLM</p>
+                    </div>
+                    <span className="text-white/20 text-xl">→</span>
+                    <div>
+                      <p className="text-xs text-white/40 mb-0.5">Seller sends</p>
+                      <p className="text-white font-bold text-xl">51,200 USDC</p>
+                    </div>
+                  </div>
+                </div>
 
-      {/* ── 5. FINAL CTA ─────────────────────────────────────────────────── */}
-      <section className="mt-24 text-center flex flex-col items-center gap-5">
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight leading-[1.05]">
-          Start with a private RFQ.
-        </h2>
-        <p className="text-gray-500 text-lg max-w-sm leading-relaxed">
-          Define the terms, invite your counterparty, and let escrow handle the trust problem.
-        </p>
-        <Link
-          href="/rfqs/new"
-          className="bg-gray-900 hover:bg-gray-700 text-white font-semibold px-8 py-3.5 rounded-lg transition-colors text-sm"
-        >
-          Create RFQ
-        </Link>
+                <div className="flex-1 flex flex-col gap-3 md:border-l md:border-[#373232] md:pl-6">
+                  <p className="text-xs text-white/40">Next required action</p>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-white/60 lp-pulse shrink-0 inline-block" />
+                    <span className="text-white/80 text-sm font-medium">
+                      Seller must mark settlement sent
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/40">Contract ID:</span>
+                    <span className="text-white/70 font-mono text-xs font-semibold">TRFQ-8F2A</span>
+                  </div>
+                  <span className="text-xs text-white/50 hover:text-white/80 w-fit cursor-pointer transition-colors">
+                    View in Escrow Viewer →
+                  </span>
+                </div>
+              </div>
+
+              <div className="border-t border-[#373232] px-6 py-3 flex items-center justify-between">
+                <span className="text-xs text-white/30">Stellar Testnet · Demo</span>
+                <Link href="/deals/deal-rfq1" className="text-sm text-white/60 hover:text-white font-medium transition-colors">
+                  View full deal →
+                </Link>
+              </div>
+            </BorderGlow>
+          </FadeContent>
+        </div>
+
+        <div className="text-center flex flex-col items-center gap-4">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-[1.05]">
+            Start with a private RFQ.
+          </h2>
+          <p className="text-white/50 text-lg max-w-sm leading-relaxed">
+            Define the terms, invite your counterparty, and let escrow handle the trust problem.
+          </p>
+          <Link href="/rfqs/new" className="bg-white hover:bg-white/90 text-[#1a1a1a] font-bold px-8 py-3.5 rounded-full transition-colors text-sm">
+            Create RFQ
+          </Link>
+        </div>
       </section>
 
     </div>

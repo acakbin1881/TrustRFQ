@@ -64,7 +64,7 @@ export default function FadeContent({
       tl.kill();
       gsap.killTweensOf(el);
     };
-  }, []);
+  }, [blur, delay, duration, ease, initialOpacity, threshold]);
 
   return (
     <div ref={ref} className={className} style={style}>
