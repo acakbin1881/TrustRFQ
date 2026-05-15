@@ -31,6 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/rfqs" className="text-white/50 hover:text-white transition-colors">
               RFQs
             </Link>
+            <Link href="/deals" className="text-white/50 hover:text-white transition-colors">
+              Deals
+            </Link>
             <Link
               href="/rfqs/new"
               className="bg-[#5c5151] hover:bg-[#6a5e5e] text-white px-4 py-1.5 rounded-lg font-semibold transition-colors"
