@@ -148,9 +148,15 @@ function NextActionCallout({
       ? `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Waiting for RFQ creator to send ${deal.sellAmount.toLocaleString()} XLM.`
       : `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Next: send ${deal.sellAmount.toLocaleString()} XLM to complete the settlement condition.`;
   } else if (deal.escrowStatus === "settlement_sent") {
-    message = isXlmSettlementMarkedComplete(deal)
-      ? `${deal.sellAmount.toLocaleString()} XLM condition marked complete. Next: quote maker approves the escrowed USDC release to the RFQ creator.`
-      : `${deal.sellAmount.toLocaleString()} XLM settlement sent. Next: mark the settlement condition complete through Trustless Work.`;
+    if (isXlmSettlementMarkedComplete(deal)) {
+      message = isQuoteMaker
+        ? `${deal.sellAmount.toLocaleString()} XLM condition marked complete. Next: approve the escrowed USDC release to the RFQ creator.`
+        : `${deal.sellAmount.toLocaleString()} XLM condition marked complete. Waiting for quote maker to approve the USDC release.`;
+    } else {
+      message = isQuoteMaker
+        ? `${deal.sellAmount.toLocaleString()} XLM payment recorded. Waiting for RFQ creator to mark the Trustless Work condition complete.`
+        : `${deal.sellAmount.toLocaleString()} XLM payment recorded. Next: mark the settlement condition complete through Trustless Work.`;
+    }
   } else if (deal.escrowStatus === "funding") {
     message = `Funding the USDC escrow with ${escrowAsset.amount.toLocaleString()} USDC.`;
   } else if (deal.escrowStatus === "initialized") {
@@ -841,8 +847,9 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
           {isSettled && (
             <div className="bg-[#2a2a2a] border border-[#5c5151] rounded-xl p-5 text-center">
               <p className="text-white/80 font-semibold">
-                Settlement complete. Quote maker received {deal.buyAmount.toLocaleString()} USDC
-                through Trustless Work escrow for the accepted XLM/USDC agreement.
+                Settlement complete. RFQ creator received {deal.buyAmount.toLocaleString()} USDC
+                through Trustless Work escrow, and quote maker received{" "}
+                {deal.sellAmount.toLocaleString()} XLM.
               </p>
             </div>
           )}
