@@ -2,7 +2,6 @@
 
 html {
   scroll-snap-type: y proximity;
-  scroll-behavior: smooth;
   scroll-padding-top: 52px;
 }
 
