@@ -435,7 +435,6 @@ export function useTrustlessWorkEscrow() {
       contractId: deal.contractId,
       milestoneIndex: "0",
       newStatus: "completed",
-      newEvidence: deal.transactionHashes.xlmSettlement ?? "XLM settlement verified on Stellar.",
       serviceProvider,
     };
 
