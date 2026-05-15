@@ -18,7 +18,7 @@ import type {
   SendTransactionResponse,
 } from "@trustless-work/escrow/types";
 import type { AssetCode, Deal } from "./mock-data";
-import { recordEscrowEvent, updateDealEscrow } from "./rfq-repository";
+import { recordEscrowEvent, updateDealEscrow, updateDealStatus } from "./rfq-repository";
 import { signTransaction } from "./wallet";
 import { StrKey } from "@stellar/stellar-sdk";
 
@@ -523,6 +523,7 @@ export function useTrustlessWorkEscrow() {
         txHashes,
       },
     });
+    await updateDealStatus(deal.id, "settled");
 
     await recordEscrowEvent({
       deal_id: deal.id,
