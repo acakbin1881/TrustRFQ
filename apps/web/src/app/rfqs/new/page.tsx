@@ -146,7 +146,7 @@ export default function NewRfqPage() {
           Create a private XLM/USDC agreement request. Makers quote how much USDC they will pay for your XLM.
         </p>
         <p className="text-xs text-white/60 mt-2 bg-[#373232] border border-[#3f3b3b] rounded-lg px-3 py-2 inline-block">
-          XLM/USDC only — TrustRFQ sets the agreement, Trustless Work handles USDC escrow
+          XLM/USDC only - TrustRFQ sets the agreement, quote maker funds the Trustless Work USDC escrow
         </p>
       </div>
 
@@ -154,7 +154,7 @@ export default function NewRfqPage() {
         <div className={cardCls}>
           <h2 className={sectionTitleCls}>Creator wallet</h2>
           <p className="text-sm text-white/50">
-            This wallet becomes the RFQ creator/taker for the accepted deal.
+            This wallet becomes the RFQ creator for the accepted deal and receives USDC after the XLM settlement is verified.
           </p>
           <div className="flex items-center justify-between gap-3 rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
             <span className="text-xs text-white/60 font-mono break-all">

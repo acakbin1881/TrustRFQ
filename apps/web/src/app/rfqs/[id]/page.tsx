@@ -129,14 +129,14 @@ function CreatorView({
         </div>
       )}
 
-      {accepting && <p className="text-white/70 text-sm text-center">Quote accepted — creating escrow deal...</p>}
+      {accepting && <p className="text-white/70 text-sm text-center">Quote accepted - creating maker-funded USDC escrow deal...</p>}
       {error && <p className="text-white/80 text-xs bg-[#373232] border border-[#3f3b3b] rounded-lg px-3 py-2">{error}</p>}
 
       {isOpen && (
         <div className="text-xs text-white/30 border-t border-[#373232] pt-4 space-y-1">
           <p>TrustRFQ only creates the XLM/USDC agreement here.</p>
           <p className="text-white/60">
-            Accepting one quote closes this RFQ and hands the USDC settlement leg to Trustless Work escrow.
+            Accepting one quote closes this RFQ and creates a deal where the maker funds USDC into Trustless Work escrow before the creator sends XLM.
           </p>
         </div>
       )}
@@ -205,7 +205,7 @@ function MakerView({ rfq, walletAddress }: { rfq: Rfq; walletAddress: string }) 
             Competing quotes are hidden. The RFQ creator must connect their wallet to accept this quote.
           </p>
           <p className="text-xs text-white/60">
-            Trustless Work escrow starts only after the RFQ Creator accepts one quote.
+            Trustless Work escrow starts only after the RFQ creator accepts one quote. If accepted, your maker wallet funds USDC into escrow.
           </p>
         </div>
       </section>
@@ -222,7 +222,7 @@ function MakerView({ rfq, walletAddress }: { rfq: Rfq; walletAddress: string }) 
       <form onSubmit={submitQuote} className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-5 flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Submit a firm quote</h3>
-          <p className="text-xs text-white/40 mt-1">This quote is the USDC side of the XLM/USDC agreement. Trustless Work settlement starts only if it is accepted.</p>
+          <p className="text-xs text-white/40 mt-1">This quote is the maker-funded USDC side of the XLM/USDC agreement. If accepted, your wallet funds the USDC escrow before the creator sends XLM.</p>
         </div>
         <div>
           <label className="text-xs text-white/50 block mb-1">Amount you will deliver ({rfq.buyAsset})</label>
@@ -329,7 +329,7 @@ export default function RfqDetailPage({ params }: { params: Promise<{ id: string
           </span>
         </div>
         <p className="text-xs text-white/60 mt-2 bg-[#373232] border border-[#3f3b3b] rounded-lg px-3 py-2 inline-block">
-          XLM/USDC agreement — quotes are private; accepted quote becomes a Trustless Work USDC escrow
+          XLM/USDC agreement - quotes are private; accepted quote becomes a maker-funded Trustless Work USDC escrow
         </p>
       </div>
 

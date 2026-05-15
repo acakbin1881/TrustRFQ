@@ -114,7 +114,7 @@ function getStoredRole(deal: Deal, role: "serviceProvider" | "approver" | "relea
 function assertConnectedRole(signer: string, requiredAddress: string, label: string) {
   if (signer !== requiredAddress) {
     throw new Error(
-      `${label} requires wallet ${requiredAddress}. Connected wallet is ${signer}. Switch Freighter to the wallet that initialized/funded this escrow.`
+      `${label} requires wallet ${requiredAddress}. Connected wallet is ${signer}. Switch Freighter to the required role wallet.`
     );
   }
 }
@@ -154,7 +154,7 @@ function getTrustlessWorkErrorMessage(error: unknown): string {
 
 export function getTrustlessWorkEscrowAsset(deal: Deal): { asset: AssetCode; amount: number; side: "rfq_creator" | "quote_maker" } {
   if (deal.sellAsset !== "XLM" || deal.buyAsset !== "USDC") {
-    throw new Error("TrustRFQ MVP only supports XLM/USDC agreements with USDC escrow.");
+    throw new Error("TrustRFQ MVP supports XLM/USDC agreements only: maker funds USDC escrow, creator sends XLM after funding.");
   }
 
   return { asset: "USDC", amount: deal.buyAmount, side: "quote_maker" };
@@ -204,6 +204,9 @@ export function useTrustlessWorkEscrow() {
   const { sendTransaction } = useSendTransaction();
 
   async function initializeEscrow(deal: Deal, signer: string): Promise<InitializeTrustlessEscrowResult> {
+    const quoteMaker = roleOrFallback(deal.makerAddress, signer);
+    assertConnectedRole(signer, quoteMaker, "Initializing the maker-funded USDC escrow");
+
     await updateDealEscrow(deal.id, { escrowStatus: "initializing" });
 
     const payload = buildSingleReleaseEscrowPayload(deal, signer);
@@ -304,6 +307,10 @@ export function useTrustlessWorkEscrow() {
     if (!deal.contractId) {
       throw new Error("Contract ID is required before funding escrow.");
     }
+
+    const quoteMaker =
+      getStoredRole(deal, "approver") ?? roleOrFallback(deal.makerAddress, signer);
+    assertConnectedRole(signer, quoteMaker, "Funding the maker USDC escrow");
 
     await updateDealEscrow(deal.id, { escrowStatus: "funding" });
 
