@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { type AssetCode } from "@/lib/mock-data";
 import { createRfq } from "@/lib/rfq-repository";
-import { useCurrentIdentity } from "@/lib/identity";
+import { connectWallet } from "@/lib/wallet";
 
 const COINGECKO_IDS: Record<"XLM" | "USDC", string> = {
   XLM: "stellar",
@@ -46,7 +46,7 @@ const sectionTitleCls = "text-xs font-semibold text-white/40 uppercase tracking-
 
 export default function NewRfqPage() {
   const router = useRouter();
-  const [currentAddress] = useCurrentIdentity();
+  const [walletAddress, setWalletAddress] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -73,6 +73,13 @@ export default function NewRfqPage() {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  async function connectCreatorWallet() {
+    setError("");
+    const address = await connectWallet();
+    setWalletAddress(address);
+    return address;
+  }
+
   const oracleSuggestion = useMemo(() => {
     if (!prices) return null;
     const sellAmt = Number(form.sellAmount);
@@ -97,8 +104,9 @@ export default function NewRfqPage() {
 
     setSubmitting(true);
     try {
+      const creatorAddress = walletAddress || await connectCreatorWallet();
       await createRfq({
-        creatorAddress: currentAddress,
+        creatorAddress,
         sellAsset: "XLM",
         sellAmount,
         buyAsset: "USDC",
@@ -143,6 +151,25 @@ export default function NewRfqPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <div className={cardCls}>
+          <h2 className={sectionTitleCls}>Creator wallet</h2>
+          <p className="text-sm text-white/50">
+            This wallet becomes the RFQ creator/taker for the accepted deal.
+          </p>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
+            <span className="text-xs text-white/60 font-mono break-all">
+              {walletAddress || "No wallet connected"}
+            </span>
+            <button
+              type="button"
+              onClick={connectCreatorWallet}
+              className="shrink-0 bg-[#373232] hover:bg-[#3f3b3b] text-white/80 text-xs px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {walletAddress ? "Change" : "Connect"}
+            </button>
+          </div>
+        </div>
+
         <div className={cardCls}>
           <h2 className={sectionTitleCls}>You are selling</h2>
           <div className="flex gap-3">

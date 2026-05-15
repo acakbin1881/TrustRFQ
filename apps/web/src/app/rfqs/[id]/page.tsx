@@ -11,7 +11,7 @@ import {
   type Quote,
   type Rfq,
 } from "@/lib/mock-data";
-import { useCurrentIdentity } from "@/lib/identity";
+import { connectWallet } from "@/lib/wallet";
 import {
   acceptQuote as persistAcceptQuote,
   deriveRfqStatus,
@@ -144,9 +144,9 @@ function CreatorView({
   );
 }
 
-function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) {
+function MakerView({ rfq, walletAddress }: { rfq: Rfq; walletAddress: string }) {
   const [myQuote, setMyQuote] = useState<Quote | null>(null);
-  const [form, setForm] = useState({ amount: "", address: "" });
+  const [form, setForm] = useState({ amount: "" });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const isOpen = deriveRfqStatus(rfq) === "open";
@@ -166,7 +166,7 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
     try {
       const quote = await persistQuote({
         rfqId: rfq.id,
-        makerAddress: form.address.trim() || currentAddress,
+        makerAddress: walletAddress,
         quoteAmount: amount,
         expiresAt: new Date(Date.now() + 12 * 3_600_000).toISOString(),
       });
@@ -202,7 +202,7 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
           <p className="text-white font-semibold">{myQuote.quoteAmount.toLocaleString()} {rfq.buyAsset}</p>
           <p className="text-xs text-white/40">Expires {fmt(myQuote.expiresAt)}</p>
           <p className="text-xs text-white/30 mt-1">
-            Competing quotes are hidden. Switch back to RFQ Creator to accept this quote.
+            Competing quotes are hidden. The RFQ creator must connect their wallet to accept this quote.
           </p>
           <p className="text-xs text-white/60">
             Trustless Work escrow starts only after the RFQ Creator accepts one quote.
@@ -229,9 +229,9 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
           <input type="number" min="0" step="any" required placeholder={`Minimum ${rfq.buyAmount.toLocaleString()}`} value={form.amount} onChange={(e) => { setForm((f) => ({ ...f, amount: e.target.value })); setFormError(""); }} className={inputCls} />
           <p className="text-xs text-white/30 mt-1">Quotes below {rfq.buyAmount.toLocaleString()} {rfq.buyAsset} are below the minimum and cannot be accepted.</p>
         </div>
-        <div>
-          <label className="text-xs text-white/50 block mb-1">Your address <span className="text-white/30">(mock)</span></label>
-          <input type="text" placeholder="G..." value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} className={`${inputCls} font-mono`} />
+        <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
+          <p className="text-xs text-white/40 mb-1">Your maker wallet</p>
+          <p className="text-xs text-white/70 font-mono break-all">{walletAddress}</p>
         </div>
         {formError && <p className="text-white/80 text-xs bg-[#373232] border border-[#3f3b3b] rounded-lg px-3 py-2">{formError}</p>}
         <button type="submit" disabled={submitting} className="bg-white hover:bg-white/90 disabled:bg-[#373232] disabled:text-white/30 text-[#1a1a1a] font-semibold py-2 rounded-lg transition-colors text-sm">
@@ -245,13 +245,19 @@ function MakerView({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }
 export default function RfqDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [currentAddress] = useCurrentIdentity();
+  const [walletAddress, setWalletAddress] = useState("");
   const [rfq, setRfq] = useState<Rfq | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [accepting, setAccepting] = useState<string | null>(null);
   const [acceptError, setAcceptError] = useState("");
+
+  async function connectRoleWallet() {
+    setLoadError("");
+    const address = await connectWallet();
+    setWalletAddress(address);
+  }
 
   useEffect(() => {
     let active = true;
@@ -307,7 +313,7 @@ export default function RfqDetailPage({ params }: { params: Promise<{ id: string
     );
   }
 
-  const isCreator = rfq.creatorAddress === currentAddress;
+  const isCreator = walletAddress === rfq.creatorAddress;
   const status = deriveRfqStatus(rfq);
 
   return (
@@ -347,10 +353,26 @@ export default function RfqDetailPage({ params }: { params: Promise<{ id: string
         </div>
       </div>
 
-      {isCreator ? (
+      {!walletAddress ? (
+        <section className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-5 flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-white/40 uppercase tracking-widest">
+            Connect wallet
+          </h2>
+          <p className="text-sm text-white/50">
+            Your wallet address determines whether you see the RFQ creator view or the maker quote view.
+          </p>
+          <button
+            type="button"
+            onClick={connectRoleWallet}
+            className="bg-white hover:bg-white/90 text-[#1a1a1a] font-semibold px-4 py-2 rounded-lg transition-colors text-sm w-fit"
+          >
+            Connect wallet
+          </button>
+        </section>
+      ) : isCreator ? (
         <CreatorView rfq={rfq} quotes={quotes} accepting={accepting} error={acceptError} onAccept={acceptQuote} />
       ) : (
-        <MakerView rfq={rfq} currentAddress={currentAddress} />
+        <MakerView rfq={rfq} walletAddress={walletAddress} />
       )}
     </div>
   );

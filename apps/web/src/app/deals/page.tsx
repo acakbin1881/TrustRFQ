@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt, type Deal } from "@/lib/mock-data";
 import { listDeals } from "@/lib/rfq-repository";
+import { connectWallet } from "@/lib/wallet";
 
 function dealLabel(deal: Deal): string {
   if (deal.status === "settled") return "Settled";
@@ -57,6 +58,7 @@ function DealCard({ deal }: { deal: Deal }) {
 
 export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [walletAddress, setWalletAddress] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,30 +76,62 @@ export default function DealsPage() {
     return <p className="text-white/40 text-center pt-20">Loading deals...</p>;
   }
 
-  const active = deals.filter((d) => d.status === "pending_deposits");
-  const closed = deals.filter((d) => d.status !== "pending_deposits");
+  const visibleDeals = walletAddress
+    ? deals.filter((d) => d.takerAddress === walletAddress || d.makerAddress === walletAddress)
+    : [];
+  const active = visibleDeals.filter((d) => d.status === "pending_deposits");
+  const closed = visibleDeals.filter((d) => d.status !== "pending_deposits");
+
+  async function connectDealsWallet() {
+    const address = await connectWallet();
+    setWalletAddress(address);
+  }
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold text-white">Deals</h1>
         <p className="text-white/50 text-sm mt-1">
-          Escrow deals created from accepted quotes
+          Escrow deals created from accepted quotes. Connect your wallet to see deals where you are RFQ creator or quote maker.
         </p>
       </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
-          Active ({active.length})
-        </h2>
-        {active.length === 0 ? (
-          <p className="text-white/40 text-sm">No active deals.</p>
-        ) : (
-          active.map((deal) => <DealCard key={deal.id} deal={deal} />)
-        )}
-      </section>
+      {!walletAddress ? (
+        <section className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-5 flex flex-col gap-3">
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
+            Wallet required
+          </h2>
+          <p className="text-white/50 text-sm">
+            Deals are private to the two agreed counterparties. Your wallet address determines which deals are shown.
+          </p>
+          <button
+            type="button"
+            onClick={connectDealsWallet}
+            className="bg-white hover:bg-white/90 text-[#1a1a1a] font-semibold px-4 py-2 rounded-lg transition-colors text-sm w-fit"
+          >
+            Connect wallet
+          </button>
+        </section>
+      ) : (
+        <p className="text-xs text-white/40 font-mono bg-[#2a2a2a] border border-[#373232] rounded-lg px-3 py-2">
+          Showing deals for {walletAddress}
+        </p>
+      )}
 
-      {closed.length > 0 && (
+      {walletAddress && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
+            Active ({active.length})
+          </h2>
+          {active.length === 0 ? (
+            <p className="text-white/40 text-sm">No active deals.</p>
+          ) : (
+            active.map((deal) => <DealCard key={deal.id} deal={deal} />)
+          )}
+        </section>
+      )}
+
+      {walletAddress && closed.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
             Closed ({closed.length})

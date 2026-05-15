@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { STATUS_COLOR, STATUS_LABEL, fmt, type Rfq } from "@/lib/mock-data";
 import { deriveRfqStatus, listRfqs } from "@/lib/rfq-repository";
-import { useCurrentIdentity } from "@/lib/identity";
+import { connectWallet } from "@/lib/wallet";
 
-function RfqCard({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) {
-  const isCreator = rfq.creatorAddress === currentAddress;
+function RfqCard({ rfq, walletAddress }: { rfq: Rfq; walletAddress: string }) {
+  const isCreator = walletAddress === rfq.creatorAddress;
   const status = deriveRfqStatus(rfq);
 
   return (
@@ -41,7 +41,11 @@ function RfqCard({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) 
           href={`/rfqs/${rfq.id}`}
           className="bg-[#373232] hover:bg-[#3f3b3b] text-white/80 hover:text-white text-sm px-4 py-1.5 rounded-lg transition-colors"
         >
-          {isCreator ? "Review quotes ->" : "Submit private quote ->"}
+          {!walletAddress
+            ? "Open RFQ ->"
+            : isCreator
+            ? "Review quotes ->"
+            : "Submit private quote ->"}
         </Link>
       </div>
     </div>
@@ -49,7 +53,7 @@ function RfqCard({ rfq, currentAddress }: { rfq: Rfq; currentAddress: string }) 
 }
 
 export default function RfqsPage() {
-  const [currentAddress] = useCurrentIdentity();
+  const [walletAddress, setWalletAddress] = useState("");
   const [rfqs, setRfqs] = useState<Rfq[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +75,11 @@ export default function RfqsPage() {
   const open = rfqs.filter((r) => deriveRfqStatus(r) === "open");
   const closed = rfqs.filter((r) => deriveRfqStatus(r) !== "open");
 
+  async function connectRoleWallet() {
+    const address = await connectWallet();
+    setWalletAddress(address);
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -88,6 +97,26 @@ export default function RfqsPage() {
         </Link>
       </div>
 
+      <section className="bg-[#2a2a2a] border border-[#373232] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-white/40 uppercase tracking-widest">
+            Wallet role
+          </p>
+          <p className="text-sm text-white/50 mt-1">
+            {walletAddress
+              ? `Connected as ${walletAddress}`
+              : "Connect your wallet so RFQs open as creator or maker based on address."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={connectRoleWallet}
+          className="bg-[#373232] hover:bg-[#3f3b3b] text-white/80 text-sm px-4 py-2 rounded-lg transition-colors shrink-0"
+        >
+          {walletAddress ? "Change wallet" : "Connect wallet"}
+        </button>
+      </section>
+
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
           Open ({open.length})
@@ -95,7 +124,7 @@ export default function RfqsPage() {
         {open.length === 0 ? (
           <p className="text-white/40 text-sm">No open RFQs.</p>
         ) : (
-          open.map((rfq) => <RfqCard key={rfq.id} rfq={rfq} currentAddress={currentAddress} />)
+          open.map((rfq) => <RfqCard key={rfq.id} rfq={rfq} walletAddress={walletAddress} />)
         )}
       </section>
 
@@ -105,7 +134,7 @@ export default function RfqsPage() {
             Closed / Expired ({closed.length})
           </h2>
           {closed.map((rfq) => (
-            <RfqCard key={rfq.id} rfq={rfq} currentAddress={currentAddress} />
+            <RfqCard key={rfq.id} rfq={rfq} walletAddress={walletAddress} />
           ))}
         </section>
       )}
