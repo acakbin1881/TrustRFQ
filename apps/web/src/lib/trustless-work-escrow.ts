@@ -458,7 +458,6 @@ export function useTrustlessWorkEscrow() {
     const approvePayload: ApproveMilestonePayload = {
       contractId: deal.contractId,
       milestoneIndex: "0",
-      newEvidence: deal.transactionHashes.xlmSettlement ?? "XLM settlement verified on Stellar.",
       approver,
     };
 
