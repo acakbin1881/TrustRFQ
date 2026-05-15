@@ -643,11 +643,13 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                   Connect testnet wallet
                 </ActionBtn>
               )}
-              {walletAddress && !deal.contractId && canAddEscrowAssetTrustline && (
+              {walletAddress && !escrowAlreadyFunded && canAddEscrowAssetTrustline && (
                 <ActionBtn onClick={addEscrowAssetTrustline} variant="warning">
                   {addingUsdcTrustline
                     ? `Adding ${escrowAsset.asset} trustline...`
-                    : `Add ${escrowAsset.asset} trustline`}
+                    : isQuoteMaker
+                    ? `Add ${escrowAsset.asset} trustline to maker wallet`
+                    : `Add ${escrowAsset.asset} trustline to receive release`}
                 </ActionBtn>
               )}
               {!deal.contractId && isQuoteMaker && (
