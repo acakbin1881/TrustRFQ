@@ -148,6 +148,16 @@ export function isValidStellarPublicKey(address: string): boolean {
   return StrKey.isValidEd25519PublicKey(address);
 }
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const maybeResponse = (error as { response?: { status?: unknown } }).response;
+  return typeof maybeResponse?.status === "number" ? maybeResponse.status : undefined;
+}
+
 export async function sendNativePayment({
   from,
   to,
@@ -219,23 +229,36 @@ export async function verifyNativePayment({
   const horizonUrl =
     process.env.NEXT_PUBLIC_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
   const server = new Horizon.Server(horizonUrl);
-  const operations = await server.operations().forTransaction(txHash).call();
 
-  return operations.records.some((operation) => {
-    const payment = operation as unknown as {
-      type?: string;
-      from?: string;
-      to?: string;
-      asset_type?: string;
-      amount?: string;
-    };
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    try {
+      const operations = await server.operations().forTransaction(txHash).call();
 
-    return (
-      payment.type === "payment" &&
-      payment.from === from &&
-      payment.to === to &&
-      payment.asset_type === "native" &&
-      Number(payment.amount) === amount
-    );
-  });
+      return operations.records.some((operation) => {
+        const payment = operation as unknown as {
+          type?: string;
+          from?: string;
+          to?: string;
+          asset_type?: string;
+          amount?: string;
+        };
+
+        return (
+          payment.type === "payment" &&
+          payment.from === from &&
+          payment.to === to &&
+          payment.asset_type === "native" &&
+          Number(payment.amount) === amount
+        );
+      });
+    } catch (error) {
+      if (getErrorStatus(error) !== 404 || attempt === 8) {
+        throw error;
+      }
+
+      await wait(1000);
+    }
+  }
+
+  return false;
 }
