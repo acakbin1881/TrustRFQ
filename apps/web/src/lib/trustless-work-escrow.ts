@@ -63,21 +63,8 @@ function extractContractId(response: unknown): string | undefined {
 }
 
 function getTrustlineAddress(asset: AssetCode): string {
-  if (asset === "XLM") {
-    const issuer =
-      process.env.NEXT_PUBLIC_XLM_TRUSTLINE_ADDRESS ??
-      process.env.NEXT_PUBLIC_XLM_SAC_ADDRESS;
-    const envName = "NEXT_PUBLIC_XLM_TRUSTLINE_ADDRESS";
-
-    if (!issuer) {
-      throw new Error(`${envName} is required before initializing a ${asset} escrow.`);
-    }
-
-    return issuer;
-  }
-
   if (asset !== "USDC") {
-    throw new Error("TrustRFQ MVP escrows XLM or USDC only.");
+    throw new Error("TrustRFQ MVP escrows USDC only because Trustless Work requires an issued-asset trustline.");
   }
 
   const issuer = process.env.NEXT_PUBLIC_USDC_ISSUER_ADDRESS;
@@ -167,10 +154,10 @@ function getTrustlessWorkErrorMessage(error: unknown): string {
 
 export function getTrustlessWorkEscrowAsset(deal: Deal): { asset: AssetCode; amount: number; side: "rfq_creator" | "quote_maker" } {
   if (deal.sellAsset !== "XLM" || deal.buyAsset !== "USDC") {
-    throw new Error("TrustRFQ MVP only supports XLM/USDC agreements with XLM escrow.");
+    throw new Error("TrustRFQ MVP only supports XLM/USDC agreements with USDC escrow.");
   }
 
-  return { asset: "XLM", amount: deal.sellAmount, side: "rfq_creator" };
+  return { asset: "USDC", amount: deal.buyAmount, side: "quote_maker" };
 }
 
 function buildSingleReleaseEscrowPayload(deal: Deal, signer: string): InitializeSingleReleaseEscrowPayload {
@@ -178,13 +165,14 @@ function buildSingleReleaseEscrowPayload(deal: Deal, signer: string): Initialize
   const platformAddress = getPlatformAddress(signer);
   const escrowAsset = getTrustlessWorkEscrowAsset(deal);
   const trustlineAddress = getTrustlineAddress(escrowAsset.asset);
+  const rfqCreator = roleOrFallback(deal.takerAddress, signer);
   const quoteMaker = roleOrFallback(deal.makerAddress, platformAddress);
 
   return {
     signer,
     engagementId,
     title: `TrustRFQ ${deal.rfqId}`,
-    description: `Accepted XLM/USDC quote ${deal.quoteId}: ${deal.sellAmount} XLM for ${deal.buyAmount} USDC. Trustless Work escrows the RFQ creator's XLM and releases it to the quote maker after the USDC payment is verified.`,
+    description: `Accepted XLM/USDC quote ${deal.quoteId}: ${deal.sellAmount} XLM for ${deal.buyAmount} USDC. Trustless Work escrows the maker's USDC and releases it to the RFQ creator after the XLM payment is verified.`,
     amount: escrowAsset.amount,
     platformFee: getPlatformFee(),
     trustline: {
@@ -193,15 +181,15 @@ function buildSingleReleaseEscrowPayload(deal: Deal, signer: string): Initialize
     },
     roles: {
       approver: quoteMaker,
-      serviceProvider: quoteMaker,
+      serviceProvider: rfqCreator,
       platformAddress,
       releaseSigner: quoteMaker,
       disputeResolver: platformAddress,
-      receiver: quoteMaker,
+      receiver: rfqCreator,
     },
     milestones: [
       {
-        description: "USDC settlement for the accepted RFQ quote has been completed.",
+        description: "XLM settlement for the accepted RFQ quote has been completed.",
       },
     ],
   };
@@ -433,7 +421,7 @@ export function useTrustlessWorkEscrow() {
     const serviceProvider =
       getStoredRole(deal, "serviceProvider") ?? roleOrFallback(deal.takerAddress, signer);
 
-    assertConnectedRole(signer, serviceProvider, "Marking the USDC settlement condition complete");
+    assertConnectedRole(signer, serviceProvider, "Marking the XLM settlement condition complete");
 
     await updateDealEscrow(deal.id, { escrowStatus: "releasing" });
 
