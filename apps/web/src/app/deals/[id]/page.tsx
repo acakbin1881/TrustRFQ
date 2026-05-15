@@ -102,8 +102,9 @@ function mockContractId(dealId: string): string {
 
 function isXlmSettlementMarkedComplete(deal: Deal): boolean {
   return Boolean(
-    deal.transactionHashes.changeMilestone ||
+      deal.transactionHashes.changeMilestone ||
       deal.twPayload.changePayload ||
+      deal.milestoneStatus === "pending_approval" ||
       deal.milestoneStatus === "approved" ||
       deal.escrowStatus === "approved" ||
       deal.escrowStatus === "released"
