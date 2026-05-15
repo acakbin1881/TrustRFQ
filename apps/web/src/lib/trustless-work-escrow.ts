@@ -64,7 +64,7 @@ function extractContractId(response: unknown): string | undefined {
 
 function getTrustlineAddress(asset: AssetCode): string {
   if (asset !== "USDC") {
-    throw new Error("TrustRFQ MVP escrows USDC only because Trustless Work requires an issued-asset trustline.");
+    throw new Error("TrustRFQ uses Trustless Work for maker-funded USDC escrow. The creator's native XLM payment is verified through Horizon instead of escrowed.");
   }
 
   const issuer = process.env.NEXT_PUBLIC_USDC_ISSUER_ADDRESS;
@@ -143,13 +143,19 @@ function getTrustlessWorkErrorMessage(error: unknown): string {
         .join(" ")
     : "";
 
-  return [
+  const message = [
     status ? `Trustless Work ${status}.` : "",
     data?.message ?? maybeAxiosError.message ?? "Request failed.",
     details,
   ]
     .filter(Boolean)
     .join(" ");
+
+  if (message.includes("required asset")) {
+    return `${message} For this flow, the quote maker wallet must have a USDC trustline and enough testnet USDC balance before funding escrow.`;
+  }
+
+  return message;
 }
 
 export function getTrustlessWorkEscrowAsset(deal: Deal): { asset: AssetCode; amount: number; side: "rfq_creator" | "quote_maker" } {
