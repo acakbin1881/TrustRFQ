@@ -104,7 +104,6 @@ function isXlmSettlementMarkedComplete(deal: Deal): boolean {
   return Boolean(
       deal.transactionHashes.changeMilestone ||
       deal.twPayload.changePayload ||
-      deal.milestoneStatus === "pending_approval" ||
       deal.milestoneStatus === "approved" ||
       deal.escrowStatus === "approved" ||
       deal.escrowStatus === "released"
@@ -364,7 +363,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
       const nextHashes = { ...deal.transactionHashes, xlmSettlement: txHash };
       const updated = await updateDealEscrow(deal.id, {
         escrowStatus: "settlement_sent",
-        milestoneStatus: "pending_approval",
+        milestoneStatus: "pending",
         transactionHashes: nextHashes,
         twPayload: {
           ...deal.twPayload,
