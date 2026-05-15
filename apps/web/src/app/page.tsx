@@ -11,62 +11,62 @@ const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"] });
 const STEPS = [
   {
     n: "01 / POST",
-    title: "Post a private RFQ",
-    desc: "The RFQ creator says exactly how much XLM they want to sell and the minimum USDC they will accept. The order never hits a public book.",
+    title: "Create a private RFQ",
+    desc: "Define the asset pair, trade size, minimum receive amount, expiry, and invited counterparties. Instead of hitting a liquidity pool immediately, start with private price discovery.",
     href: "/rfqs/new",
     cta: "Create RFQ",
   },
   {
     n: "02 / QUOTE",
-    title: "Receive sealed firm quotes",
-    desc: "Makers quote how much USDC they will pay for that XLM. Quotes are private, firm, and visible only to the RFQ creator.",
+    title: "Receive maker quotes",
+    desc: "Makers submit private offers for your requested trade. You compare fixed quotes before committing, instead of accepting unpredictable AMM price impact.",
     href: "/rfqs",
-    cta: "Review RFQs",
+    cta: "Browse RFQs",
   },
   {
-    n: "03 / LOCK",
-    title: "Maker locks USDC in escrow",
-    desc: "After the creator accepts one quote, the maker funds the USDC leg into a Trustless Work escrow. The creator can verify the contract before sending XLM.",
-    href: "/deals/deal-rfq1",
-    cta: "View deal",
+    n: "03 / ACCEPT",
+    title: "Accept the best offer",
+    desc: "Review incoming quotes and accept the one that meets your terms. The accepted quote becomes the settlement reference — price and conditions are locked.",
+    href: "/rfqs",
+    cta: "View RFQs",
   },
   {
-    n: "04 / RELEASE",
-    title: "Creator sends XLM, escrow releases USDC",
-    desc: "TrustRFQ verifies the XLM payment through Horizon. Then the creator marks the condition complete and the maker approves USDC release.",
+    n: "04 / SETTLE",
+    title: "Settle through escrow",
+    desc: "The trade moves into an escrow-protected settlement flow powered by Trustless Work on Stellar. No blind sending. No informal middleman.",
     href: "/deals/deal-rfq1",
-    cta: "Track settlement",
+    cta: "View a deal",
   },
 ];
 
 const WHY = [
   {
-    code: "// PRICE",
-    title: "Trade at your exact price",
-    desc: "Large public swaps move the market against you. Private RFQs lock a maker quote before settlement begins.",
+    code: "// QUOTES",
+    title: "Private quotes before execution",
+    desc: "TrustRFQ lets takers request prices from makers before funds move. The accepted quote becomes the trade reference, giving both sides clearer terms than a pool-based estimate.",
   },
   {
-    code: "// BINDING",
-    title: "Firm quotes, not estimates",
-    desc: "Makers submit exact USDC amounts for the creator's XLM. Once accepted, that quote becomes the settlement agreement.",
+    code: "// OTC",
+    title: "Designed for OTC-style trades",
+    desc: "For high-value swaps, teams and traders often need negotiation, privacy, and predictable settlement. TrustRFQ brings that OTC workflow into a structured on-chain experience.",
   },
   {
     code: "// ESCROW",
-    title: "Maker-funded escrow before XLM moves",
-    desc: "The maker locks USDC in Trustless Work first. The creator sends XLM only after the escrow is initialized and funded.",
+    title: "Escrow-protected settlement",
+    desc: "Trustless Work escrow adds a neutral settlement layer after both sides agree. Funds are governed by predefined roles and release logic instead of informal trust.",
   },
   {
-    code: "// PROOF",
-    title: "Horizon-verified settlement",
-    desc: "TrustRFQ checks the XLM transfer on Stellar before the Trustless Work condition can move to release.",
+    code: "// STELLAR",
+    title: "Built for Stellar's early DeFi gap",
+    desc: "Stellar has fast, low-cost settlement and strong payment rails, but OTC-style DeFi tooling is still early. TrustRFQ targets that missing layer: private RFQs plus verifiable escrow settlement.",
   },
 ];
 
 const STATS = [
-  { val: "0%", label: "Slippage on accepted quotes" },
-  { val: "1", label: "Maker-funded USDC escrow per deal" },
-  { val: "Horizon", label: "XLM payment verification" },
-  { val: "On-chain", label: "Contract state and proof" },
+  { val: "RFQ", label: "Private price discovery before execution" },
+  { val: "1", label: "Escrow contract per accepted deal" },
+  { val: "Private", label: "Quote visibility — taker only" },
+  { val: "On-chain", label: "Settlement state and proof" },
 ];
 
 export default function Home() {
@@ -93,24 +93,23 @@ export default function Home() {
             {/* Eyebrow */}
             <div className={`flex items-center gap-3 text-white/30 ${dmMono.className}`}>
               <span className="w-8 h-px bg-white/15" />
-              <span className="text-[11px] uppercase tracking-[0.14em]">Private OTC Settlement</span>
+              <span className="text-[11px] uppercase tracking-[0.14em]">Built on Stellar Testnet · Trustless Work</span>
             </div>
 
             {/* H1 */}
             <h1
               className={`${playfair.className} text-5xl sm:text-6xl lg:text-[4.5rem] font-black leading-[1.04] tracking-tight`}
             >
-              <span className="text-white">Private XLM RFQs.</span>
+              <span className="text-white">Private RFQ settlement</span>
               <br />
-              <span className="text-white">Maker-funded USDC escrow.</span>
+              <span className="text-white">for large Stellar trades.</span>
               <br />
-              <span className="italic text-white/65">Verified before release.</span>
+              <span className="italic text-white/65">No blind sending.</span>
             </h1>
 
             {/* Sub */}
             <p className="text-white/50 text-lg max-w-lg leading-relaxed font-light">
-              Sell XLM through private quotes. The maker locks USDC in Trustless Work first;
-              TrustRFQ verifies the creator&apos;s XLM payment before USDC is released.
+              Create an RFQ, get maker quotes, and settle through Trustless Work escrow.
             </p>
 
             {/* CTAs */}
@@ -119,13 +118,13 @@ export default function Home() {
                 href="/rfqs/new"
                 className="bg-white hover:bg-white/90 text-[#1a1a1a] font-semibold px-7 py-3 rounded text-[14px] transition-colors"
               >
-                Create an RFQ
+                Create RFQ
               </Link>
               <Link
-                href="/deals/deal-rfq1"
+                href="/rfqs"
                 className={`text-white/45 hover:text-white text-[14px] flex items-center gap-1.5 transition-colors group ${dmMono.className}`}
               >
-                View live deal
+                Browse RFQs
                 <span className="group-hover:translate-x-0.5 transition-transform inline-block">â†’</span>
               </Link>
             </div>
@@ -146,17 +145,6 @@ export default function Home() {
               </div>
               <span className={`${dmMono.className} text-[10px] text-white/25`}>escrow infrastructure</span>
             </div>
-          </div>
-
-          {/* â”€â”€ Right: RFQ logo â”€â”€ */}
-          <div className="hidden lg:flex justify-center items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/rfq-logo.svg"
-              alt="RFQ"
-              className="w-72 h-72 opacity-90 select-none pointer-events-none"
-              draggable={false}
-            />
           </div>
 
         </div>
@@ -184,18 +172,18 @@ export default function Home() {
               The DEX problem
             </p>
             <h2 className={`${playfair.className} text-3xl font-bold text-white leading-snug`}>
-              A large XLM sell on a public DEX leaks value before settlement even starts.
+              Large trades should not be forced through shallow liquidity.
             </h2>
             <p className="text-white/45 text-[14px] leading-relaxed">
-              Public pools move price against you as order size grows. TrustRFQ moves price discovery into a private quote flow before funds move.
+              On AMM-style DEXs, large trades can move the pool price and create slippage. The bigger the trade is relative to available liquidity, the more value the trader can lose before settlement even happens.
             </p>
             <p className="text-white/45 text-[14px] leading-relaxed">
-              Once the creator accepts a quote, settlement becomes explicit: maker funds USDC escrow, creator sends XLM, Horizon verifies the payment, and USDC releases.
+              TrustRFQ replaces immediate pool execution with a private RFQ flow. The accepted quote becomes the trade reference, giving both sides clearer terms than a pool-based estimate.
             </p>
             <div className="flex items-center gap-3 mt-1 bg-[#2a2a2a] border border-[#373232] rounded px-4 py-3">
               <span className={`${dmMono.className} text-[13px] text-white font-medium`}>TrustRFQ</span>
               <span className="text-white/25">â†’</span>
-              <span className={`${dmMono.className} text-[13px] text-white/70`}>firm quote · maker-funded USDC escrow · Horizon-verified XLM</span>
+              <span className={`${dmMono.className} text-[13px] text-white/70`}>private quotes · agreed price · escrow-protected settlement</span>
             </div>
           </div>
 
@@ -221,7 +209,7 @@ export default function Home() {
               How it works
             </p>
             <h2 className={`${playfair.className} text-3xl sm:text-[2.5rem] text-white font-bold leading-tight`}>
-              Four steps from RFQ to settled deal
+              From RFQ to settled deal
             </h2>
           </div>
 
@@ -255,17 +243,16 @@ export default function Home() {
           {/* Copy */}
           <div className="flex flex-col gap-5">
             <p className={`${dmMono.className} text-[11px] text-white/30 uppercase tracking-widest`}>
-              Live escrow
+              Escrow status
             </p>
             <h2 className={`${playfair.className} text-3xl font-bold text-white leading-snug`}>
-              Maker locks USDC first.<br />Creator sends XLM after proof.
+              Both sides agree on terms.<br />Escrow handles the settlement trust.
             </h2>
             <p className="text-white/45 text-[14px] leading-relaxed">
-              Every accepted quote becomes a Trustless Work USDC escrow funded by the quote maker.
-              The RFQ creator does not send XLM until the USDC leg is locked on-chain.
+              Once a quote is accepted, the trade moves into an escrow-protected settlement flow powered by Trustless Work on Stellar. Funds are governed by predefined roles and release logic.
             </p>
             <p className="text-white/45 text-[14px] leading-relaxed">
-              TrustRFQ verifies the creator&apos;s XLM transfer through Horizon. After the condition is marked complete, the maker approves release and USDC moves to the creator.
+              Neither side has to blindly trust the other or rely on an informal middleman. The escrow contract holds the settlement state on-chain, verifiable by anyone.
 
             </p>
             <Link
@@ -283,7 +270,7 @@ export default function Home() {
               <span className={`${dmMono.className} text-[12px] text-white/50`}>deal-rfq1</span>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-white/50 lp-pulse inline-block" />
-                <span className={`${dmMono.className} text-[11px] text-white/50`}>Escrow funded</span>
+                <span className={`${dmMono.className} text-[11px] text-white/50`}>Awaiting escrow funding</span>
               </div>
             </div>
 
@@ -292,12 +279,12 @@ export default function Home() {
               <div className="flex items-center gap-3 bg-[#2a2a2a] rounded px-4 py-3.5">
                 <div className="flex-1 text-center">
                   <p className={`${dmMono.className} text-[15px] font-medium text-white`}>250,000</p>
-                  <p className="text-[11px] text-white/40 mt-0.5">XLM · Creator sends after escrow</p>
+                  <p className="text-[11px] text-white/40 mt-0.5">XLM · Taker wants to sell</p>
                 </div>
                 <span className="text-white/20 text-base">â†’</span>
                 <div className="flex-1 text-center">
                   <p className={`${dmMono.className} text-[15px] font-medium text-white`}>51,200</p>
-                  <p className="text-[11px] text-white/40 mt-0.5">USDC · Maker locks first</p>
+                  <p className="text-[11px] text-white/40 mt-0.5">USDC · Maker offers</p>
                 </div>
               </div>
             </div>
@@ -305,7 +292,7 @@ export default function Home() {
             {/* Pending action */}
             <div className="mx-5 mb-4 bg-[#2a2a2a] border-l-2 border-[#5c5151] rounded-r px-3 py-2.5">
               <p className="text-[10px] text-white/30 mb-0.5">Pending action</p>
-              <p className="text-[13px] text-white/65">Creator sends XLM after maker-funded USDC is locked</p>
+              <p className="text-[13px] text-white/65">Next action: fund escrow</p>
             </div>
 
             {/* Rows */}
@@ -332,7 +319,7 @@ export default function Home() {
                 href="/deals/deal-rfq1"
                 className={`${dmMono.className} text-[11px] text-white/40 hover:text-white transition-colors`}
               >
-                View in Escrow Viewer â†’
+                View escrow proof â†’
               </Link>
             </div>
           </div>
@@ -347,7 +334,7 @@ export default function Home() {
               Why TrustRFQ
             </p>
             <h2 className={`${playfair.className} text-3xl sm:text-[2.5rem] text-white font-bold leading-tight`}>
-              Built for trades that can&apos;t afford mistakes
+              Built for large, high-value Stellar trades.
             </h2>
           </div>
 
@@ -371,11 +358,11 @@ export default function Home() {
               Interactive demo
             </p>
             <h2 className={`${playfair.className} text-3xl text-white font-bold`}>
-              Walk through the real settlement path
+              See the full settlement flow
             </h2>
             <p className="text-white/45 text-[14px] mt-3 max-w-lg leading-relaxed">
-              Connect wallets to see the role-specific actions. Creator opens the RFQ and accepts a quote;
-              maker funds USDC escrow; creator sends XLM; maker approves release.
+              Switch identities to walk through each role. Creator posts the RFQ and accepts a quote;
+              maker funds USDC into escrow; creator sends XLM; escrow releases on confirmation.
             </p>
           </div>
 
@@ -391,17 +378,17 @@ export default function Home() {
               {[
                 {
                   label: "RFQ Creator view",
-                  desc: "Creates the RFQ, reviews sealed quotes, accepts one, then sends XLM after maker escrow funding.",
+                  desc: "Posts a private RFQ, reviews maker quotes, accepts the best offer, then follows the escrow-protected settlement flow.",
                   href: "/rfqs",
                 },
                 {
                   label: "Maker view",
-                  desc: "Submits a firm USDC quote, funds the Trustless Work escrow, then approves release after XLM is verified.",
+                  desc: "Submits a firm USDC quote against the private RFQ, funds the Trustless Work escrow, and approves release once XLM is received.",
                   href: "/rfqs",
                 },
                 {
                   label: "Deal / escrow view",
-                  desc: "Tracks maker-funded USDC escrow, XLM verification, condition completion, release, and contract ID.",
+                  desc: "Shows the live escrow deal: funds locked, contract ID, settlement state, and the Trustless Work escrow proof.",
                   href: "/deals/deal-rfq1",
                 },
               ].map(({ label, desc, href }) => (
@@ -423,10 +410,10 @@ export default function Home() {
       <div className="-mx-4 sm:-mx-6 lg:-mx-8 bg-[#2a2a2a] border-t border-[#373232]">
         <div className="text-center py-24 px-4 flex flex-col items-center gap-5 max-w-xl mx-auto">
           <h2 className={`${playfair.className} text-3xl sm:text-[2.5rem] font-bold text-white leading-snug`}>
-            Start with a private RFQ
+            Start with a private RFQ. Settle with escrow.
           </h2>
           <p className="text-white/45 text-base leading-relaxed">
-            Define the XLM amount, set the minimum USDC you will accept, and let the maker-funded escrow remove the trust problem.
+            Define the trade, collect maker quotes, accept the best offer, and let Trustless Work handle the settlement trust problem.
           </p>
           <div className="flex items-center gap-5 mt-1">
             <Link
@@ -439,7 +426,7 @@ export default function Home() {
               href="/rfqs"
               className={`${dmMono.className} text-white/40 hover:text-white text-[13px] flex items-center gap-1.5 transition-colors group`}
             >
-              Review RFQs
+              Browse RFQs
               <span className="group-hover:translate-x-0.5 transition-transform inline-block">â†’</span>
             </Link>
           </div>
@@ -449,8 +436,7 @@ export default function Home() {
       {/* MVP scope */}
       <div className="py-8 border-t border-[#2a2a2a]">
         <p className={`${dmMono.className} text-[11px] text-white/20 text-center leading-relaxed max-w-2xl mx-auto`}>
-          Testnet only Â· No real funds Â· No mainnet Â· No fiat Â· No KYC Â· No dispute resolution Â·
-          Current demo uses XLM/USDC on Stellar testnet · Maker funds USDC escrow · Creator XLM payment is verified through Horizon
+          TrustRFQ is a hackathon demo running on Stellar Testnet · No real funds · No mainnet · No fiat · No KYC
         </p>
       </div>
 
