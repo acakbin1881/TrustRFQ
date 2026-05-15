@@ -181,7 +181,7 @@ function buildSingleReleaseEscrowPayload(deal: Deal, signer: string): Initialize
     },
     roles: {
       approver: quoteMaker,
-      serviceProvider: rfqCreator,
+      serviceProvider: quoteMaker,
       platformAddress,
       releaseSigner: quoteMaker,
       disputeResolver: platformAddress,
@@ -295,6 +295,8 @@ export function useTrustlessWorkEscrow() {
   return {
     initializeEscrow,
     fundInitializedEscrow,
+    markXlmSettlementComplete,
+    approveAndReleaseAfterXlmSettlement,
     releaseAfterXlmSettlement,
   };
 
@@ -411,25 +413,17 @@ export function useTrustlessWorkEscrow() {
     return sendResult as SendTransactionResponse;
   }
 
-  async function releaseAfterXlmSettlement(deal: Deal, signer: string): Promise<ReleaseTrustlessEscrowResult> {
+  async function markXlmSettlementComplete(deal: Deal, signer: string): Promise<ReleaseTrustlessEscrowResult> {
     if (!deal.contractId) {
-      throw new Error("Contract ID is required before releasing escrow.");
+      throw new Error("Contract ID is required before marking settlement complete.");
     }
 
     const serviceProvider =
       getStoredRole(deal, "serviceProvider") ?? roleOrFallback(deal.takerAddress, signer);
-    const approver =
-      getStoredRole(deal, "approver") ?? roleOrFallback(deal.makerAddress, signer);
-    const releaseSigner =
-      getStoredRole(deal, "releaseSigner") ?? roleOrFallback(deal.makerAddress, signer);
 
-    assertConnectedRole(signer, serviceProvider, "Changing milestone status");
-    assertConnectedRole(signer, approver, "Approving the milestone");
-    assertConnectedRole(signer, releaseSigner, "Releasing funds");
+    assertConnectedRole(signer, serviceProvider, "Marking the XLM settlement condition complete");
 
     await updateDealEscrow(deal.id, { escrowStatus: "releasing" });
-
-    const txHashes: ReleaseTrustlessEscrowResult["txHashes"] = {};
 
     const changePayload: ChangeMilestoneStatusPayload = {
       contractId: deal.contractId,
@@ -445,7 +439,23 @@ export function useTrustlessWorkEscrow() {
         signer,
         errorPrefix: "Change milestone status",
       });
-      txHashes.changeMilestone = extractTxHash(changeSendResult);
+      const changeMilestone = extractTxHash(changeSendResult);
+      await updateDealEscrow(deal.id, {
+        escrowStatus: "settlement_sent",
+        milestoneStatus: "pending_approval",
+        transactionHashes: {
+          ...deal.transactionHashes,
+          ...(changeMilestone ? { changeMilestone } : {}),
+        },
+        twPayload: { ...deal.twPayload, changePayload },
+      });
+
+      return {
+        contractId: deal.contractId,
+        txHashes: {
+          ...(changeMilestone ? { changeMilestone } : {}),
+        },
+      };
     } catch (error) {
       const message = getTrustlessWorkErrorMessage(error);
       await updateDealEscrow(deal.id, {
@@ -454,6 +464,24 @@ export function useTrustlessWorkEscrow() {
       });
       throw new Error(message);
     }
+  }
+
+  async function approveAndReleaseAfterXlmSettlement(deal: Deal, signer: string): Promise<ReleaseTrustlessEscrowResult> {
+    if (!deal.contractId) {
+      throw new Error("Contract ID is required before releasing escrow.");
+    }
+
+    const approver =
+      getStoredRole(deal, "approver") ?? roleOrFallback(deal.makerAddress, signer);
+    const releaseSigner =
+      getStoredRole(deal, "releaseSigner") ?? roleOrFallback(deal.makerAddress, signer);
+
+    assertConnectedRole(signer, approver, "Approving the milestone");
+    assertConnectedRole(signer, releaseSigner, "Releasing funds");
+
+    await updateDealEscrow(deal.id, { escrowStatus: "releasing" });
+
+    const txHashes: ReleaseTrustlessEscrowResult["txHashes"] = {};
 
     const approvePayload: ApproveMilestonePayload = {
       contractId: deal.contractId,
@@ -473,7 +501,7 @@ export function useTrustlessWorkEscrow() {
       const message = getTrustlessWorkErrorMessage(error);
       await updateDealEscrow(deal.id, {
         escrowStatus: "settlement_sent",
-        twPayload: { ...deal.twPayload, releaseError: message, changePayload, approvePayload },
+        twPayload: { ...deal.twPayload, releaseError: message, approvePayload },
       });
       throw new Error(message);
     }
@@ -498,7 +526,6 @@ export function useTrustlessWorkEscrow() {
         twPayload: {
           ...deal.twPayload,
           releaseError: message,
-          changePayload,
           approvePayload,
           releasePayload,
         },
@@ -517,7 +544,6 @@ export function useTrustlessWorkEscrow() {
       },
       twPayload: {
         ...deal.twPayload,
-        changePayload,
         approvePayload,
         releasePayload,
         txHashes,
@@ -532,7 +558,6 @@ export function useTrustlessWorkEscrow() {
       tx_hash: txHashes.releaseFunds,
       metadata: {
         contractId: deal.contractId,
-        changeMilestone: txHashes.changeMilestone,
         approveMilestone: txHashes.approveMilestone,
       },
     });
@@ -540,6 +565,22 @@ export function useTrustlessWorkEscrow() {
     return {
       contractId: deal.contractId,
       txHashes,
+    };
+  }
+
+  async function releaseAfterXlmSettlement(deal: Deal, signer: string): Promise<ReleaseTrustlessEscrowResult> {
+    const changed = await markXlmSettlementComplete(deal, signer);
+    const updatedDeal = await import("./rfq-repository").then(({ getDeal }) => getDeal(deal.id));
+    if (!updatedDeal) {
+      throw new Error("Deal not found after marking settlement complete.");
+    }
+    const released = await approveAndReleaseAfterXlmSettlement(updatedDeal, signer);
+    return {
+      contractId: released.contractId,
+      txHashes: {
+        ...changed.txHashes,
+        ...released.txHashes,
+      },
     };
   }
 }

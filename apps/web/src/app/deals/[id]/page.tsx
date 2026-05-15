@@ -100,6 +100,30 @@ function mockContractId(dealId: string): string {
   return `TRFQ-${h.toString(16).toUpperCase().padStart(4, "0")}`;
 }
 
+function isXlmSettlementMarkedComplete(deal: Deal): boolean {
+  return Boolean(
+    deal.transactionHashes.changeMilestone ||
+      deal.twPayload.changePayload ||
+      deal.milestoneStatus === "approved" ||
+      deal.escrowStatus === "approved" ||
+      deal.escrowStatus === "released"
+  );
+}
+
+function getTrustlessWorkRole(
+  deal: Deal,
+  role: "serviceProvider" | "approver" | "releaseSigner"
+): string | undefined {
+  const payload = deal.twPayload.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
+
+  const roles = (payload as { roles?: unknown }).roles;
+  if (!roles || typeof roles !== "object" || Array.isArray(roles)) return undefined;
+
+  const value = (roles as Record<string, unknown>)[role];
+  return typeof value === "string" ? value : undefined;
+}
+
 function NextActionCallout({
   deal,
   walletAddress,
@@ -123,7 +147,9 @@ function NextActionCallout({
       ? `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Next: send ${deal.sellAmount.toLocaleString()} XLM to complete the settlement condition.`
       : `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Waiting for quote maker to send ${deal.sellAmount.toLocaleString()} XLM.`;
   } else if (deal.escrowStatus === "settlement_sent") {
-    message = `${deal.sellAmount.toLocaleString()} XLM settlement marked sent. Next: approve/release the escrowed USDC through Trustless Work.`;
+    message = isXlmSettlementMarkedComplete(deal)
+      ? `${deal.sellAmount.toLocaleString()} XLM condition marked complete. Next: quote maker approves and releases the escrowed USDC.`
+      : `${deal.sellAmount.toLocaleString()} XLM settlement sent. Next: mark the settlement condition complete through Trustless Work.`;
   } else if (deal.escrowStatus === "funding") {
     message = `Funding the USDC escrow with ${escrowAsset.amount.toLocaleString()} USDC.`;
   } else if (deal.escrowStatus === "initialized") {
@@ -171,7 +197,12 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
   const [releasingEscrow, setReleasingEscrow] = useState(false);
   const [xlmDestination, setXlmDestination] = useState("");
   const [xlmSettlementError, setXlmSettlementError] = useState("");
-  const { fundInitializedEscrow, initializeEscrow, releaseAfterXlmSettlement } =
+  const {
+    approveAndReleaseAfterXlmSettlement,
+    fundInitializedEscrow,
+    initializeEscrow,
+    markXlmSettlementComplete,
+  } =
     useTrustlessWorkEscrow();
 
   useEffect(() => {
@@ -374,13 +405,31 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
+  async function markSettlementComplete() {
+    if (!deal) return;
+    setError("");
+    setReleasingEscrow(true);
+    try {
+      const signer = walletAddress || (await connectTestnetWallet());
+      await markXlmSettlementComplete(deal, signer);
+      const updated = await getDeal(deal.id);
+      if (updated) setDeal(updated);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not mark XLM settlement complete."
+      );
+    } finally {
+      setReleasingEscrow(false);
+    }
+  }
+
   async function releaseEscrowedUsdc() {
     if (!deal) return;
     setError("");
     setReleasingEscrow(true);
     try {
       const signer = walletAddress || (await connectTestnetWallet());
-      await releaseAfterXlmSettlement(deal, signer);
+      await approveAndReleaseAfterXlmSettlement(deal, signer);
       const updated = await getDeal(deal.id);
       if (updated) setDeal(updated);
     } catch (err) {
@@ -433,6 +482,15 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
     deal.escrowStatus === "released";
   const isRfqCreator = walletAddress === deal.takerAddress;
   const isQuoteMaker = walletAddress === deal.makerAddress;
+  const xlmConditionMarkedComplete = isXlmSettlementMarkedComplete(deal);
+  const serviceProviderAddress =
+    getTrustlessWorkRole(deal, "serviceProvider") ?? deal.takerAddress;
+  const approverAddress = getTrustlessWorkRole(deal, "approver") ?? deal.makerAddress;
+  const releaseSignerAddress =
+    getTrustlessWorkRole(deal, "releaseSigner") ?? deal.makerAddress;
+  const canMarkSettlementComplete = walletAddress === serviceProviderAddress;
+  const canApproveAndRelease =
+    walletAddress === approverAddress && walletAddress === releaseSignerAddress;
 
   // Timeline step statuses
   const t1: StepStatus = "done";
@@ -703,14 +761,32 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
               ) : (
                 <div className="flex flex-col gap-3">
                   <p className="text-sm text-white/60">
-                    XLM payment verified on Stellar. Release the escrowed USDC through Trustless
-                    Work.
+                    {xlmConditionMarkedComplete
+                      ? "Trustless Work condition is marked complete. The quote maker can approve and release the escrowed USDC."
+                      : "XLM payment verified on Stellar. Mark the Trustless Work settlement condition complete before release."}
                   </p>
-                  {deal.escrowStatus !== "released" && (
-                    <ActionBtn onClick={releaseEscrowedUsdc} variant="success">
-                      {releasingEscrow ? "Releasing USDC..." : "Release escrowed USDC"}
+                  {deal.escrowStatus !== "released" && !xlmConditionMarkedComplete && canMarkSettlementComplete ? (
+                    <ActionBtn onClick={markSettlementComplete} variant="success">
+                      {releasingEscrow ? "Marking complete..." : "Mark settlement complete"}
                     </ActionBtn>
-                  )}
+                  ) : deal.escrowStatus !== "released" && !xlmConditionMarkedComplete ? (
+                    <p className="text-sm text-white/50">
+                      Connect the Trustless Work service provider wallet to mark the condition
+                      complete: {serviceProviderAddress.slice(0, 10)}...
+                      {serviceProviderAddress.slice(-4)}.
+                    </p>
+                  ) : deal.escrowStatus !== "released" && canApproveAndRelease ? (
+                    <ActionBtn onClick={releaseEscrowedUsdc} variant="success">
+                      {releasingEscrow ? "Releasing USDC..." : "Approve and release USDC"}
+                    </ActionBtn>
+                  ) : deal.escrowStatus !== "released" ? (
+                    <p className="text-sm text-white/50">
+                      Connect the Trustless Work release signer wallet to approve and release:
+                      {" "}
+                      {releaseSignerAddress.slice(0, 10)}...
+                      {releaseSignerAddress.slice(-4)}.
+                    </p>
+                  ) : null}
                 </div>
               )}
             </section>
