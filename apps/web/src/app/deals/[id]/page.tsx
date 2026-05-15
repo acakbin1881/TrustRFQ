@@ -149,7 +149,7 @@ function NextActionCallout({
       : `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Waiting for quote maker to send ${deal.sellAmount.toLocaleString()} XLM.`;
   } else if (deal.escrowStatus === "settlement_sent") {
     message = isXlmSettlementMarkedComplete(deal)
-      ? `${deal.sellAmount.toLocaleString()} XLM condition marked complete. Next: quote maker approves and releases the escrowed USDC.`
+      ? `${deal.sellAmount.toLocaleString()} XLM condition marked complete. Next: quote maker approves the escrowed USDC release to their wallet.`
       : `${deal.sellAmount.toLocaleString()} XLM settlement sent. Next: mark the settlement condition complete through Trustless Work.`;
   } else if (deal.escrowStatus === "funding") {
     message = `Funding the USDC escrow with ${escrowAsset.amount.toLocaleString()} USDC.`;
@@ -763,7 +763,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                 <div className="flex flex-col gap-3">
                   <p className="text-sm text-white/60">
                     {xlmConditionMarkedComplete
-                      ? "Trustless Work condition is marked complete. The quote maker can approve and release the escrowed USDC."
+                    ? "Trustless Work condition is marked complete. The quote maker can approve the USDC release to their wallet."
                       : "XLM payment verified on Stellar. Mark the Trustless Work settlement condition complete before release."}
                   </p>
                   {deal.escrowStatus !== "released" && !xlmConditionMarkedComplete && canMarkSettlementComplete ? (
@@ -778,7 +778,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                     </p>
                   ) : deal.escrowStatus !== "released" && canApproveAndRelease ? (
                     <ActionBtn onClick={releaseEscrowedUsdc} variant="success">
-                      {releasingEscrow ? "Releasing USDC..." : "Approve and release USDC"}
+                      {releasingEscrow ? "Releasing USDC..." : "Approve USDC release"}
                     </ActionBtn>
                   ) : deal.escrowStatus !== "released" ? (
                     <p className="text-sm text-white/50">
@@ -865,7 +865,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
           {isSettled && (
             <div className="bg-[#2a2a2a] border border-[#5c5151] rounded-xl p-5 text-center">
               <p className="text-white/80 font-semibold">
-                Settlement complete. RFQ creator received {deal.buyAmount.toLocaleString()} USDC
+                Settlement complete. Quote maker received {deal.buyAmount.toLocaleString()} USDC
                 through Trustless Work escrow for the accepted XLM/USDC agreement.
               </p>
             </div>

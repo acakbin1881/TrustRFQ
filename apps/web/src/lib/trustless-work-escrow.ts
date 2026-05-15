@@ -157,7 +157,7 @@ export function getTrustlessWorkEscrowAsset(deal: Deal): { asset: AssetCode; amo
     throw new Error("TrustRFQ MVP only supports XLM/USDC agreements with USDC escrow.");
   }
 
-  return { asset: "USDC", amount: deal.buyAmount, side: "quote_maker" };
+  return { asset: "USDC", amount: deal.buyAmount, side: "rfq_creator" };
 }
 
 function buildSingleReleaseEscrowPayload(deal: Deal, signer: string): InitializeSingleReleaseEscrowPayload {
@@ -165,14 +165,13 @@ function buildSingleReleaseEscrowPayload(deal: Deal, signer: string): Initialize
   const platformAddress = getPlatformAddress(signer);
   const escrowAsset = getTrustlessWorkEscrowAsset(deal);
   const trustlineAddress = getTrustlineAddress(escrowAsset.asset);
-  const rfqCreator = roleOrFallback(deal.takerAddress, signer);
   const quoteMaker = roleOrFallback(deal.makerAddress, platformAddress);
 
   return {
     signer,
     engagementId,
     title: `TrustRFQ ${deal.rfqId}`,
-    description: `Accepted XLM/USDC quote ${deal.quoteId}: ${deal.sellAmount} XLM for ${deal.buyAmount} USDC. TrustRFQ sets the agreement; Trustless Work escrows the USDC settlement leg.`,
+    description: `Accepted XLM/USDC quote ${deal.quoteId}: ${deal.sellAmount} XLM for ${deal.buyAmount} USDC. TrustRFQ verifies the XLM leg; Trustless Work escrows and releases the USDC leg to the XLM sender.`,
     amount: escrowAsset.amount,
     platformFee: getPlatformFee(),
     trustline: {
@@ -185,7 +184,7 @@ function buildSingleReleaseEscrowPayload(deal: Deal, signer: string): Initialize
       platformAddress,
       releaseSigner: quoteMaker,
       disputeResolver: platformAddress,
-      receiver: rfqCreator,
+      receiver: quoteMaker,
     },
     milestones: [
       {
