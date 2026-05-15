@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fmt, type AssetCode, type Deal, type DealStatus } from "@/lib/mock-data";
 import { getDeal, updateDealDeposit, updateDealEscrow, updateDealStatus } from "@/lib/rfq-repository";
 import { getTrustlessWorkEscrowAsset, useTrustlessWorkEscrow } from "@/lib/trustless-work-escrow";
+import { useCurrentIdentity } from "@/lib/identity";
 import {
   addAssetTrustline,
   connectWallet,
@@ -93,12 +94,19 @@ function mockContractId(dealId: string): string {
   return `TRFQ-${h.toString(16).toUpperCase().padStart(4, "0")}`;
 }
 
-function NextActionCallout({ deal }: { deal: Deal }) {
+function NextActionCallout({
+  deal,
+  currentAddress,
+}: {
+  deal: Deal;
+  currentAddress: string;
+}) {
   const isSettled = deal.status === "settled";
   const isRefunded = deal.status === "refunded";
   const dealExpired = new Date(deal.expiresAt) < new Date();
   const bothFunded = deal.takerDeposited && deal.makerDeposited;
   const escrowAsset = getTrustlessWorkEscrowAsset(deal);
+  const isQuoteMaker = currentAddress === deal.makerAddress;
 
   if (isSettled || isRefunded) return null;
 
@@ -106,7 +114,9 @@ function NextActionCallout({ deal }: { deal: Deal }) {
   let color: string;
 
   if (deal.escrowStatus === "funded") {
-    message = `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Next: send ${deal.sellAmount.toLocaleString()} XLM to complete the settlement condition.`;
+    message = isQuoteMaker
+      ? `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Next: send ${deal.sellAmount.toLocaleString()} XLM to complete the settlement condition.`
+      : `USDC escrow funded with ${escrowAsset.amount.toLocaleString()} USDC. Waiting for quote maker to send ${deal.sellAmount.toLocaleString()} XLM.`;
     color = "border-[#5c5151] bg-[#2a2a2a] text-white/70";
   } else if (deal.escrowStatus === "settlement_sent") {
     message = `${deal.sellAmount.toLocaleString()} XLM settlement marked sent. Next: approve/release the escrowed USDC through Trustless Work.`;
@@ -154,6 +164,7 @@ function getAssetIssuer(asset: AssetCode): string | undefined {
 
 export default function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const [currentAddress] = useCurrentIdentity();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -429,6 +440,8 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
     deal.escrowStatus === "approved" ||
     deal.escrowStatus === "releasing" ||
     deal.escrowStatus === "released";
+  const isRfqCreator = currentAddress === deal.takerAddress;
+  const isQuoteMaker = currentAddress === deal.makerAddress;
 
   const s1: StepStatus = "done";
   const s2: StepStatus = rfqCreatorDeposited ? "done" : isSettled || isRefunded ? "pending" : "active";
@@ -539,7 +552,7 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
         </div>
       </section>
 
-      <NextActionCallout deal={deal} />
+      <NextActionCallout deal={deal} currentAddress={currentAddress} />
 
       {escrowAlreadyFunded && !isSettled && !isRefunded && (
         <section className="bg-[#2a2a2a] border border-[#5c5151] rounded-xl p-5 flex flex-col gap-4">
@@ -549,10 +562,18 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                 XLM settlement condition
               </p>
               <h2 className="text-xl font-bold text-white">
-                Send {deal.sellAmount.toLocaleString()} XLM
+                {xlmSettlementSent
+                  ? "XLM settlement verified"
+                  : isQuoteMaker
+                  ? `Send ${deal.sellAmount.toLocaleString()} XLM`
+                  : "Waiting for quote maker"}
               </h2>
               <p className="text-sm text-white/50 mt-1">
-                The USDC side is funded in Trustless Work. Send the XLM leg from your wallet; TrustRFQ verifies the payment on Stellar before moving to release.
+                {xlmSettlementSent
+                  ? "TrustRFQ verified the XLM payment on Stellar. The USDC escrow can now move to release."
+                  : isQuoteMaker
+                  ? "The USDC side is funded in Trustless Work. Send the XLM leg from your wallet; TrustRFQ verifies the payment on Stellar before moving to release."
+                  : "The USDC side is funded in Trustless Work. The quote maker must send the XLM leg before release can continue."}
               </p>
             </div>
             <span className="text-[10px] bg-[#373232] text-white/60 border border-[#3f3b3b] px-2 py-1 rounded-full shrink-0">
@@ -560,29 +581,35 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
             </span>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-3 text-xs">
-            <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
-              <p className="text-white/40 mb-1">Amount to send</p>
-              <p className="text-white font-semibold">
-                {deal.sellAmount.toLocaleString()} XLM
-              </p>
-            </div>
-            <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
-              <p className="text-white/40 mb-1">Send to counterparty</p>
-              <input
-                value={xlmDestination}
-                onChange={(event) => setXlmDestination(event.target.value)}
-                disabled={xlmSettlementSent || sendingXlm}
-                placeholder="G..."
-                className="w-full bg-transparent text-white/70 font-mono text-xs break-all outline-none placeholder:text-white/20 disabled:text-white/40"
-              />
-              {!xlmDestination && (
-                <p className="text-white/30 mt-1">
-                  Maker A is a mock identity. Paste the real Stellar testnet address that should receive XLM.
+          {(isQuoteMaker || xlmSettlementSent) ? (
+            <div className="grid sm:grid-cols-2 gap-3 text-xs">
+              <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
+                <p className="text-white/40 mb-1">Amount to send</p>
+                <p className="text-white font-semibold">
+                  {deal.sellAmount.toLocaleString()} XLM
                 </p>
-              )}
+              </div>
+              <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
+                <p className="text-white/40 mb-1">Send to counterparty</p>
+                <input
+                  value={xlmDestination}
+                  onChange={(event) => setXlmDestination(event.target.value)}
+                  disabled={xlmSettlementSent || sendingXlm}
+                  placeholder="G..."
+                  className="w-full bg-transparent text-white/70 font-mono text-xs break-all outline-none placeholder:text-white/20 disabled:text-white/40"
+                />
+                {!xlmDestination && (
+                  <p className="text-white/30 mt-1">
+                    Maker A is a mock identity. Paste the real Stellar testnet address that should receive XLM.
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-3 text-sm text-white/50">
+              You are viewing this deal as the RFQ creator. The next action belongs to the quote maker.
+            </div>
+          )}
 
           {xlmSettlementError && (
             <p className="text-xs text-white/80 bg-[#373232] border border-[#5c5151] rounded-lg px-3 py-2">
@@ -590,10 +617,14 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
             </p>
           )}
 
-          {!xlmSettlementSent ? (
+          {!xlmSettlementSent && isQuoteMaker ? (
             <ActionBtn onClick={sendXlmSettlement} variant="success">
               {sendingXlm ? "Sending XLM..." : "Send XLM"}
             </ActionBtn>
+          ) : !xlmSettlementSent && isRfqCreator ? (
+            <p className="text-sm text-white/50">
+              Waiting for quote maker to send {deal.sellAmount.toLocaleString()} XLM.
+            </p>
           ) : (
             <div className="flex flex-col gap-3">
               <p className="text-sm text-white/60">
