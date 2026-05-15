@@ -680,7 +680,12 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                 </span>
               </div>
 
-              {isRfqCreator || xlmSettlementSent ? (
+              {!walletAddress ? (
+                <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-3 text-sm text-white/50">
+                  Connect your wallet so TrustRFQ can determine whether this action belongs to
+                  the RFQ creator or quote maker.
+                </div>
+              ) : isRfqCreator || xlmSettlementSent ? (
                 <div className="grid sm:grid-cols-2 gap-3 text-xs">
                   <div className="rounded-lg border border-[#373232] bg-[#1a1a1a]/50 px-3 py-2">
                     <p className="text-white/40 mb-1">Amount to send</p>
@@ -718,7 +723,11 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
                 </p>
               )}
 
-              {!xlmSettlementSent && isRfqCreator ? (
+              {!walletAddress ? (
+                <p className="text-sm text-white/50">
+                  Wallet connection required before continuing settlement.
+                </p>
+              ) : !xlmSettlementSent && isRfqCreator ? (
                 <ActionBtn onClick={sendXlmSettlement} variant="success">
                   {sendingXlm ? "Sending XLM..." : "Send XLM"}
                 </ActionBtn>
