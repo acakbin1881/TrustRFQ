@@ -158,6 +158,20 @@ function getErrorStatus(error: unknown): number | undefined {
   return typeof maybeResponse?.status === "number" ? maybeResponse.status : undefined;
 }
 
+async function loadTestnetAccount(server: Horizon.Server, address: string, label: string) {
+  try {
+    return await server.loadAccount(address);
+  } catch (error) {
+    if (getErrorStatus(error) === 404) {
+      throw new Error(
+        `${label} account was not found on Stellar Testnet. Switch Freighter to Testnet and fund this address with Friendbot: ${address}`
+      );
+    }
+
+    throw error;
+  }
+}
+
 export async function sendNativePayment({
   from,
   to,
@@ -184,7 +198,9 @@ export async function sendNativePayment({
   const horizonUrl =
     process.env.NEXT_PUBLIC_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
   const server = new Horizon.Server(horizonUrl);
-  const account = await server.loadAccount(from);
+  const account = await loadTestnetAccount(server, from, "Source wallet");
+  await loadTestnetAccount(server, to, "Destination");
+
   let builder = new TransactionBuilder(account, {
     fee: BASE_FEE,
     networkPassphrase: Networks.TESTNET,
