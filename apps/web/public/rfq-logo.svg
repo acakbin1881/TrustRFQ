@@ -1,0 +1,66 @@
+<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- clip each letter to its 120° sector (with a tiny inset gap for the divider lines) -->
+    <clipPath id="cr">
+      <!-- R sector: 12-o'clock → CCW → 8-o'clock -->
+      <path d="M 500 500 L 500 118 A 382 382 0 0 0 169 691 Z"/>
+    </clipPath>
+    <clipPath id="cf">
+      <!-- F sector: 12-o'clock → CW → 4-o'clock -->
+      <path d="M 500 500 L 500 118 A 382 382 0 0 1 831 691 Z"/>
+    </clipPath>
+    <clipPath id="cq">
+      <!-- Q sector: 8-o'clock → CW → 4-o'clock (bottom) -->
+      <path d="M 500 500 L 169 691 A 382 382 0 0 1 831 691 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- background: charcoal gray, matching the original -->
+  <rect width="1000" height="1000" fill="#3b3b3b"/>
+
+  <!-- white circle ring -->
+  <circle cx="500" cy="500" r="362" fill="none" stroke="white" stroke-width="52"/>
+
+  <!-- ── R (upper-left sector) ── -->
+  <g clip-path="url(#cr)">
+    <text
+      x="318" y="558"
+      text-anchor="middle"
+      font-family="'Arial Black','Arial Bold',Arial,sans-serif"
+      font-weight="900"
+      font-size="310"
+      fill="white"
+    >R</text>
+  </g>
+
+  <!-- ── F (upper-right sector) ── -->
+  <g clip-path="url(#cf)">
+    <text
+      x="668" y="520"
+      text-anchor="middle"
+      font-family="'Arial Black','Arial Bold',Arial,sans-serif"
+      font-weight="900"
+      font-size="290"
+      fill="white"
+    >F</text>
+  </g>
+
+  <!-- ── Q (bottom sector) ── -->
+  <g clip-path="url(#cq)">
+    <text
+      x="505" y="800"
+      text-anchor="middle"
+      font-family="'Arial Black','Arial Bold',Arial,sans-serif"
+      font-weight="900"
+      font-size="290"
+      fill="white"
+    >Q</text>
+  </g>
+
+  <!-- small 4-pointed star — bottom-right, matching original -->
+  <path
+    d="M 928 952 L 936 928 L 944 952 L 968 960 L 944 968 L 936 992 L 928 968 L 904 960 Z"
+    fill="white"
+    opacity="0.55"
+  />
+</svg>
