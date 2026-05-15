@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 html {
-  scroll-snap-type: y proximity;
   scroll-padding-top: 52px;
 }
 
