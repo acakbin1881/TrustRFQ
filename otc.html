@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OTC Desk — Block trade XLM / USDC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    ::selection { background: rgba(229, 181, 103, 0.3); }
+    input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+    body {
+      width: 100%;
+      min-height: 100vh;
+      background: #000000;
+      font-family: 'Hanken Grotesk', sans-serif;
+      color: #fff;
+    }
+
+    /* ===== nav ===== */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 48px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .nav__left { display: flex; align-items: center; gap: 14px; }
+    .nav__home {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .nav__home:hover { color: rgba(255, 255, 255, 0.9); }
+    .nav__divider { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.12); }
+    .nav__brand {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+    }
+    .nav__chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(229, 181, 103, 0.28);
+      background: rgba(229, 181, 103, 0.06);
+    }
+    .nav__chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #E5B567; }
+    .nav__chip-text { color: #E5B567; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
+
+    /* ===== page ===== */
+    .page { max-width: 1100px; margin: 0 auto; padding: 56px 48px 100px; }
+
+    .page__title {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 40px;
+      letter-spacing: -1px;
+    }
+    .page__subtitle {
+      margin: 14px 0 0;
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 17px;
+      max-width: 560px;
+      line-height: 1.6;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      gap: 24px;
+      margin-top: 48px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 32px;
+      border-radius: 18px;
+      background: #0a0a0c;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .panel--offers { min-height: 420px; }
+
+    .panel__label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* side toggle */
+    .side-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 24px;
+      padding: 5px;
+      background: #000;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .side-btn {
+      padding: 12px;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all .15s;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.55);
+    }
+    .side-btn.is-active { background: #E5B567; color: #0a0a0c; }
+
+    /* amount */
+    .field { margin-top: 24px; }
+    .field__label { color: rgba(255, 255, 255, 0.5); font-size: 13px; font-weight: 500; }
+    .field__input {
+      width: 100%;
+      margin-top: 10px;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 22px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field__input:focus { border-color: rgba(229, 181, 103, 0.5); }
+
+    /* request button */
+    .btn-request {
+      width: 100%;
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      background: #E5B567;
+      color: #0a0a0c;
+      transition: opacity .15s;
+    }
+    .btn-request.is-busy { opacity: 0.6; pointer-events: none; }
+
+    /* offers header */
+    .offers__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .offers__status { color: rgba(255, 255, 255, 0.4); font-size: 13px; }
+
+    /* centered states (empty / loading / settled) */
+    .state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 340px;
+      text-align: center;
+    }
+    .state__icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 24px;
+    }
+    .state__text {
+      margin: 20px 0 0;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 15px;
+      max-width: 280px;
+      line-height: 1.6;
+    }
+    .state__loading-title {
+      color: #E5B567;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+    }
+    .state__loading-sub { margin: 12px 0 0; color: rgba(255, 255, 255, 0.4); font-size: 14px; }
+
+    /* offers list */
+    .offers__list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 22px;
+    }
+    .offer {
+      padding: 18px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all .15s;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .offer.is-selected {
+      background: rgba(229, 181, 103, 0.07);
+      border-color: rgba(229, 181, 103, 0.4);
+    }
+    .offer__row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .offer__maker { display: flex; align-items: center; gap: 12px; }
+    .offer__avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(229, 181, 103, 0.1);
+      border: 1px solid rgba(229, 181, 103, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #E5B567;
+    }
+    .offer__name { font-size: 15px; font-weight: 600; color: #fff; }
+    .offer__meta { font-size: 12px; color: rgba(255, 255, 255, 0.4); }
+    .offer__priceblock { text-align: right; }
+    .offer__price {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .offer__total { font-size: 12px; color: rgba(255, 255, 255, 0.45); }
+    .offer__best {
+      margin-top: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(229, 181, 103, 0.14);
+      color: #E5B567;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    /* settle button */
+    .btn-settle {
+      width: 100%;
+      margin-top: 22px;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      background: #fff;
+      color: #0a0a0c;
+      transition: opacity .15s;
+    }
+    .btn-settle.is-busy { opacity: 0.6; pointer-events: none; }
+
+    /* settled state */
+    .settled__icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(229, 181, 103, 0.12);
+      border: 1px solid rgba(229, 181, 103, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #E5B567;
+      font-size: 30px;
+    }
+    .settled__title {
+      margin: 22px 0 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .settled__summary {
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 15px;
+      max-width: 320px;
+      line-height: 1.6;
+    }
+    .btn-reset {
+      margin-top: 28px;
+      padding: 12px 24px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .btn-reset:hover { background: rgba(255, 255, 255, 0.1); }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- nav -->
+  <nav class="nav">
+    <div class="nav__left">
+      <a href="hero.html" class="nav__home">← Home</a>
+      <span class="nav__divider"></span>
+      <span class="nav__brand">OTC Desk</span>
+    </div>
+    <div class="nav__chip">
+      <span class="nav__chip-dot"></span>
+      <span class="nav__chip-text">STELLAR TESTNET</span>
+    </div>
+  </nav>
+
+  <div class="page">
+    <h1 class="page__title">Block trade — XLM / USDC</h1>
+    <p class="page__subtitle">Open a request for quote, let makers compete, and settle the best offer as a zero-slippage atomic swap.</p>
+
+    <div class="grid">
+
+      <!-- ===== RFQ TICKET ===== -->
+      <div class="panel">
+        <div class="panel__label">RFQ TICKET</div>
+
+        <!-- side toggle -->
+        <div class="side-toggle">
+          <button type="button" class="side-btn" data-side="sell">Sell XLM</button>
+          <button type="button" class="side-btn" data-side="buy">Buy XLM</button>
+        </div>
+
+        <!-- amount -->
+        <div class="field">
+          <label class="field__label" for="amount">Amount (XLM)</label>
+          <input id="amount" class="field__input" inputmode="numeric" value="5000000">
+        </div>
+
+        <button type="button" class="btn-request" id="requestBtn">Request quotes</button>
+      </div>
+
+      <!-- ===== OFFERS FEED ===== -->
+      <div class="panel panel--offers">
+        <div class="offers__head">
+          <div class="panel__label">MAKER OFFERS</div>
+          <div class="offers__status" id="offersStatus"></div>
+        </div>
+
+        <!-- empty state -->
+        <div class="state" id="stateEmpty">
+          <div class="state__icon">⇄</div>
+          <p class="state__text">Set your size and request quotes. Makers respond with signed, time-limited offers.</p>
+        </div>
+
+        <!-- loading -->
+        <div class="state" id="stateLoading" hidden>
+          <div class="state__loading-title">Collecting quotes…</div>
+          <p class="state__loading-sub">Broadcasting RFQ to the maker network</p>
+        </div>
+
+        <!-- offers -->
+        <div id="stateOffers" hidden>
+          <div class="offers__list" id="offersList"></div>
+          <button type="button" class="btn-settle" id="settleBtn"></button>
+        </div>
+
+        <!-- settled -->
+        <div class="state" id="stateSettled" hidden>
+          <div class="settled__icon">✓</div>
+          <h3 class="settled__title">Atomic swap settled</h3>
+          <p class="settled__summary" id="settledSummary"></p>
+          <button type="button" class="btn-reset" id="resetBtn">New trade</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var MID = 0.1200;
+
+      var state = { side: 'sell', amount: '5000000', phase: 'idle', offers: [], selectedId: null };
+      var loadTimer = null, settleTimer = null;
+
+      // ----- helpers -----
+      function num() {
+        return Math.max(0, parseInt(String(state.amount).replace(/[^0-9]/g, ''), 10) || 0);
+      }
+      function fmt(n, d) {
+        d = d || 0;
+        return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+      }
+      function genOffers() {
+        var makers = [
+          { maker: 'Lumina Capital', initials: 'LC' },
+          { maker: 'Orbital Markets', initials: 'OM' },
+          { maker: 'Meridian OTC', initials: 'MD' },
+          { maker: 'Apex Liquidity', initials: 'AX' }
+        ];
+        var sell = state.side === 'sell';
+        return makers.map(function (m, i) {
+          var bps = 3 + i * 2 + Math.random() * 1.5;
+          var price = sell ? MID * (1 - bps / 10000) : MID * (1 + bps / 10000);
+          return { maker: m.maker, initials: m.initials, id: 'm' + i, price: price, bps: bps, expiry: (28 - i * 3) + 's' };
+        }).sort(function (a, b) {
+          return sell ? b.price - a.price : a.price - b.price;
+        });
+      }
+
+      // ----- actions -----
+      function setSide(side) {
+        state.side = side; state.phase = 'idle'; state.offers = []; state.selectedId = null;
+        clearTimeout(loadTimer); clearTimeout(settleTimer);
+        render();
+      }
+      function onAmount(e) {
+        state.amount = e.target.value; state.phase = 'idle'; state.offers = []; state.selectedId = null;
+        clearTimeout(loadTimer); clearTimeout(settleTimer);
+        render();
+      }
+      function requestQuotes() {
+        if (num() <= 0) return;
+        state.phase = 'loading'; state.offers = []; state.selectedId = null;
+        render();
+        clearTimeout(loadTimer);
+        loadTimer = setTimeout(function () {
+          state.offers = genOffers();
+          state.phase = 'offers';
+          state.selectedId = state.offers[0].id;
+          render();
+        }, 1100);
+      }
+      function settle() {
+        state.phase = 'settling';
+        render();
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(function () { state.phase = 'settled'; render(); }, 1000);
+      }
+      function reset() {
+        state.phase = 'idle'; state.offers = []; state.selectedId = null;
+        render();
+      }
+
+      // ----- DOM refs -----
+      var $amount = document.getElementById('amount');
+      var $requestBtn = document.getElementById('requestBtn');
+      var $offersStatus = document.getElementById('offersStatus');
+      var $stateEmpty = document.getElementById('stateEmpty');
+      var $stateLoading = document.getElementById('stateLoading');
+      var $stateOffers = document.getElementById('stateOffers');
+      var $stateSettled = document.getElementById('stateSettled');
+      var $offersList = document.getElementById('offersList');
+      var $settleBtn = document.getElementById('settleBtn');
+      var $settledSummary = document.getElementById('settledSummary');
+      var sideButtons = Array.prototype.slice.call(document.querySelectorAll('.side-btn'));
+
+      // ----- wiring -----
+      sideButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () { setSide(btn.getAttribute('data-side')); });
+      });
+      $amount.addEventListener('input', onAmount);
+      $requestBtn.addEventListener('click', requestQuotes);
+      $settleBtn.addEventListener('click', function () { if (selectedOffer()) settle(); });
+      document.getElementById('resetBtn').addEventListener('click', reset);
+
+      function selectedOffer() {
+        for (var i = 0; i < state.offers.length; i++) {
+          if (state.offers[i].id === state.selectedId) return state.offers[i];
+        }
+        return null;
+      }
+
+      // ----- render -----
+      function render() {
+        var phase = state.phase;
+        var sell = state.side === 'sell';
+        var n = num();
+
+        // side toggle
+        sideButtons.forEach(function (btn) {
+          var active = btn.getAttribute('data-side') === state.side;
+          btn.classList.toggle('is-active', active);
+        });
+
+        // request button
+        var loading = phase === 'loading';
+        $requestBtn.textContent = loading ? 'Requesting…' : 'Request quotes';
+        $requestBtn.classList.toggle('is-busy', loading);
+
+        // offers status
+        $offersStatus.textContent = phase === 'offers'
+          ? state.offers.length + ' live'
+          : (phase === 'settling' ? 'settling' : '');
+
+        // phase visibility
+        $stateEmpty.hidden = phase !== 'idle';
+        $stateLoading.hidden = phase !== 'loading';
+        $stateOffers.hidden = !(phase === 'offers' || phase === 'settling');
+        $stateSettled.hidden = phase !== 'settled';
+
+        // offers list
+        if (phase === 'offers' || phase === 'settling') {
+          renderOffers(n);
+          var sel = selectedOffer();
+          var settling = phase === 'settling';
+          $settleBtn.textContent = settling
+            ? 'Settling atomic swap…'
+            : (sel ? 'Settle with ' + sel.maker : 'Select an offer');
+          $settleBtn.classList.toggle('is-busy', settling);
+        }
+
+        // settled summary
+        if (phase === 'settled') {
+          var s = selectedOffer();
+          $settledSummary.textContent = s
+            ? (sell ? 'Sold' : 'Bought') + ' ' + fmt(n) + ' XLM at $' + s.price.toFixed(5)
+              + ' via ' + s.maker + ' — zero slippage, one transaction.'
+            : '';
+        }
+      }
+
+      function renderOffers(n) {
+        $offersList.innerHTML = '';
+        state.offers.forEach(function (o, idx) {
+          var selected = o.id === state.selectedId;
+          var best = idx === 0;
+          var total = n * o.price;
+
+          var card = document.createElement('div');
+          card.className = 'offer' + (selected ? ' is-selected' : '');
+          card.addEventListener('click', function () { state.selectedId = o.id; render(); });
+
+          card.innerHTML =
+            '<div class="offer__row">' +
+              '<div class="offer__maker">' +
+                '<div class="offer__avatar">' + o.initials + '</div>' +
+                '<div>' +
+                  '<div class="offer__name">' + o.maker + '</div>' +
+                  '<div class="offer__meta">' + o.bps.toFixed(1) + ' bps · expires ' + o.expiry + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="offer__priceblock">' +
+                '<div class="offer__price">$' + o.price.toFixed(5) + '</div>' +
+                '<div class="offer__total">' + fmt(total, 0) + ' USDC</div>' +
+              '</div>' +
+            '</div>' +
+            (best ? '<div class="offer__best">★ BEST QUOTE</div>' : '');
+
+          $offersList.appendChild(card);
+        });
+      }
+
+      render();
+    })();
+  </script>
+</body>
+</html>
