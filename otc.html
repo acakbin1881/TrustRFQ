@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OTC Desk — Block trade XLM / USDC</title>
+  <title>OTC Desk — RFQ negotiation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -28,6 +28,8 @@
       justify-content: space-between;
       padding: 22px 48px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      gap: 18px;
+      flex-wrap: wrap;
     }
     .nav__left { display: flex; align-items: center; gap: 14px; }
     .nav__home {
@@ -46,6 +48,7 @@
       font-size: 18px;
       letter-spacing: -0.3px;
     }
+    .nav__right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
     .nav__chip {
       display: inline-flex;
       align-items: center;
@@ -57,6 +60,47 @@
     }
     .nav__chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #E5B567; }
     .nav__chip-text { color: #E5B567; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
+
+    /* role switch + identity */
+    .role-toggle {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      background: #000;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .role-btn {
+      padding: 8px 20px;
+      border-radius: 7px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.55);
+      transition: all .15s;
+    }
+    .role-btn.is-active { background: #E5B567; color: #0a0a0c; }
+    .identity { display: inline-flex; align-items: center; gap: 10px; }
+    .identity__badge {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: rgba(229, 181, 103, 0.1);
+      border: 1px solid rgba(229, 181, 103, 0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; color: #E5B567;
+    }
+    .name-input {
+      padding: 8px 12px; border-radius: 9px; background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.12); color: #fff;
+      font-size: 13px; font-family: 'Hanken Grotesk', sans-serif; outline: none; width: 150px;
+    }
+    .name-input:focus { border-color: rgba(229, 181, 103, 0.5); }
+    .conn { display: inline-flex; align-items: center; gap: 7px; color: rgba(255,255,255,0.45); font-size: 12px; }
+    .conn__dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: background .2s; }
+    .conn__dot.is-on { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.6); }
 
     /* ===== page ===== */
     .page { max-width: 1100px; margin: 0 auto; padding: 56px 48px 100px; }
@@ -72,7 +116,7 @@
       margin: 14px 0 0;
       color: rgba(255, 255, 255, 0.55);
       font-size: 17px;
-      max-width: 560px;
+      max-width: 620px;
       line-height: 1.6;
     }
 
@@ -125,7 +169,7 @@
     }
     .side-btn.is-active { background: #E5B567; color: #0a0a0c; }
 
-    /* amount */
+    /* fields */
     .field { margin-top: 24px; }
     .field__label { color: rgba(255, 255, 255, 0.5); font-size: 13px; font-weight: 500; }
     .field__input {
@@ -143,8 +187,16 @@
       transition: border-color .15s;
     }
     .field__input:focus { border-color: rgba(229, 181, 103, 0.5); }
+    .field__hint { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.4); }
 
-    /* request button */
+    .ttl-select {
+      width: 100%; margin-top: 10px; padding: 14px;
+      border-radius: 12px; background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;
+      font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; outline: none;
+    }
+
+    /* primary action button */
     .btn-request {
       width: 100%;
       margin-top: 24px;
@@ -159,23 +211,32 @@
       color: #0a0a0c;
       transition: opacity .15s;
     }
-    .btn-request.is-busy { opacity: 0.6; pointer-events: none; }
+    .btn-request.is-busy, .btn-request:disabled { opacity: 0.6; pointer-events: none; }
 
     /* offers header */
     .offers__head {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     .offers__status { color: rgba(255, 255, 255, 0.4); font-size: 13px; }
+    .oracle-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 11px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);
+      color: rgba(255,255,255,0.65); font-size: 12px;
+    }
+    .oracle-chip b { color: #E5B567; font-family: 'Space Grotesk', sans-serif; }
 
-    /* centered states (empty / loading / settled) */
+    /* centered states */
     .state {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 340px;
+      min-height: 320px;
       text-align: center;
     }
     .state__icon {
@@ -194,7 +255,7 @@
       margin: 20px 0 0;
       color: rgba(255, 255, 255, 0.45);
       font-size: 15px;
-      max-width: 280px;
+      max-width: 300px;
       line-height: 1.6;
     }
     .state__loading-title {
@@ -205,7 +266,7 @@
     }
     .state__loading-sub { margin: 12px 0 0; color: rgba(255, 255, 255, 0.4); font-size: 14px; }
 
-    /* offers list */
+    /* lists */
     .offers__list {
       display: flex;
       flex-direction: column;
@@ -215,15 +276,14 @@
     .offer {
       padding: 18px;
       border-radius: 14px;
-      cursor: pointer;
       transition: all .15s;
       background: #000;
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .offer.is-selected {
-      background: rgba(229, 181, 103, 0.07);
-      border-color: rgba(229, 181, 103, 0.4);
-    }
+    .offer.is-clickable { cursor: pointer; }
+    .offer.is-clickable:hover { border-color: rgba(229, 181, 103, 0.3); }
+    .offer.is-best { border-color: rgba(229, 181, 103, 0.4); background: rgba(229, 181, 103, 0.05); }
+    .offer.is-expired { opacity: 0.5; }
     .offer__row {
       display: flex;
       align-items: center;
@@ -245,7 +305,9 @@
       color: #E5B567;
     }
     .offer__name { font-size: 15px; font-weight: 600; color: #fff; }
-    .offer__meta { font-size: 12px; color: rgba(255, 255, 255, 0.4); }
+    .offer__meta { font-size: 12px; color: rgba(255, 255, 255, 0.4); margin-top: 2px; }
+    .offer__meta .bps-pos { color: #4ade80; }
+    .offer__meta .bps-neg { color: #f87171; }
     .offer__priceblock { text-align: right; }
     .offer__price {
       font-family: 'Space Grotesk', sans-serif;
@@ -268,6 +330,54 @@
       letter-spacing: 0.3px;
     }
 
+    /* per-card actions */
+    .offer__actions { display: flex; gap: 10px; margin-top: 14px; }
+    .btn-accept {
+      flex: 1; padding: 12px; border-radius: 10px; border: none; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
+      background: #E5B567; color: #0a0a0c;
+    }
+    .btn-accept:disabled, .btn-accept.is-disabled { opacity: 0.4; pointer-events: none; }
+    .btn-counter {
+      padding: 12px 16px; border-radius: 10px; cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05); color: #fff;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
+    }
+    .btn-counter:hover { background: rgba(255,255,255,0.1); }
+    .counter-box { margin-top: 12px; display: flex; gap: 10px; }
+    .counter-box input {
+      flex: 1; padding: 11px 13px; border-radius: 9px; background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.14); color: #fff;
+      font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; outline: none;
+    }
+    .counter-box input:focus { border-color: rgba(229, 181, 103, 0.5); }
+    .waiting { color: rgba(255, 255, 255, 0.45); font-size: 13px; margin-top: 14px; text-align: center; }
+
+    /* maker negotiation thread */
+    .thread-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+    .thread-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-radius: 10px; background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .thread-row.is-standing { border-color: rgba(229, 181, 103, 0.3); }
+    .thread-from {
+      font-size: 11px; letter-spacing: 0.4px; font-weight: 600;
+      text-transform: uppercase; color: rgba(255, 255, 255, 0.45);
+    }
+    .thread-price { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; }
+    .rfq-summary {
+      margin-top: 8px; padding: 16px; border-radius: 12px;
+      background: #000; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .rfq-summary__amt { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; }
+    .rfq-summary__meta { color: rgba(255,255,255,0.45); font-size: 13px; margin-top: 4px; }
+
+    .badge-status { display: inline-flex; padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+    .badge-accepted { background: rgba(74, 222, 128, 0.14); color: #4ade80; }
+    .badge-rejected { background: rgba(255, 255, 255, 0.08); color: rgba(255,255,255,0.5); }
+    .badge-side { background: rgba(229, 181, 103, 0.12); color: #E5B567; }
+
     /* settle button */
     .btn-settle {
       width: 100%;
@@ -279,11 +389,11 @@
       font-family: 'Space Grotesk', sans-serif;
       font-size: 16px;
       font-weight: 600;
-      background: #fff;
+      background: #E5B567;
       color: #0a0a0c;
       transition: opacity .15s;
     }
-    .btn-settle.is-busy { opacity: 0.6; pointer-events: none; }
+    .btn-settle.is-busy, .btn-settle:disabled { opacity: 0.6; pointer-events: none; }
 
     /* settled state */
     .settled__icon {
@@ -309,7 +419,7 @@
       margin: 12px 0 0;
       color: rgba(255, 255, 255, 0.55);
       font-size: 15px;
-      max-width: 320px;
+      max-width: 340px;
       line-height: 1.6;
     }
     .btn-reset {
@@ -326,8 +436,28 @@
     }
     .btn-reset:hover { background: rgba(255, 255, 255, 0.1); }
 
+    .btn-ghost {
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-link {
+      background: none; border: none; cursor: pointer; padding: 0;
+      color: rgba(255,255,255,0.55); font-size: 13px; font-family: 'Hanken Grotesk', sans-serif;
+    }
+    .btn-link:hover { color: #fff; }
+
     [hidden] { display: none !important; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
 </head>
 <body>
 
@@ -338,250 +468,723 @@
       <span class="nav__divider"></span>
       <span class="nav__brand">OTC Desk</span>
     </div>
-    <div class="nav__chip">
-      <span class="nav__chip-dot"></span>
-      <span class="nav__chip-text">STELLAR TESTNET</span>
+    <div class="nav__right">
+      <div class="role-toggle">
+        <button type="button" class="role-btn" data-action="set-role" data-role="taker">Taker</button>
+        <button type="button" class="role-btn" data-action="set-role" data-role="maker">Maker</button>
+      </div>
+      <div class="identity">
+        <div class="identity__badge" id="idBadge">··</div>
+        <input class="name-input" id="nameInput" placeholder="Your name" autocomplete="off">
+      </div>
+      <div class="conn"><span class="conn__dot" id="connDot"></span><span id="connText">offline</span></div>
+      <div class="nav__chip">
+        <span class="nav__chip-dot"></span>
+        <span class="nav__chip-text">OFF-CHAIN</span>
+      </div>
     </div>
   </nav>
 
   <div class="page">
-    <h1 class="page__title">Block trade — XLM / USDC</h1>
-    <p class="page__subtitle">Open a request for quote, let makers compete, and settle the best offer as a zero-slippage atomic swap.</p>
+    <h1 class="page__title" id="pageTitle">Block trade — XLM / USDC</h1>
+    <p class="page__subtitle" id="pageSubtitle"></p>
 
     <div class="grid">
-
-      <!-- ===== RFQ TICKET ===== -->
-      <div class="panel">
-        <div class="panel__label">RFQ TICKET</div>
-
-        <!-- side toggle -->
-        <div class="side-toggle">
-          <button type="button" class="side-btn" data-side="sell">Sell XLM</button>
-          <button type="button" class="side-btn" data-side="buy">Buy XLM</button>
-        </div>
-
-        <!-- amount -->
-        <div class="field">
-          <label class="field__label" for="amount">Amount (XLM)</label>
-          <input id="amount" class="field__input" inputmode="numeric" value="5000000">
-        </div>
-
-        <button type="button" class="btn-request" id="requestBtn">Request quotes</button>
-      </div>
-
-      <!-- ===== OFFERS FEED ===== -->
-      <div class="panel panel--offers">
-        <div class="offers__head">
-          <div class="panel__label">MAKER OFFERS</div>
-          <div class="offers__status" id="offersStatus"></div>
-        </div>
-
-        <!-- empty state -->
-        <div class="state" id="stateEmpty">
-          <div class="state__icon">⇄</div>
-          <p class="state__text">Set your size and request quotes. Makers respond with signed, time-limited offers.</p>
-        </div>
-
-        <!-- loading -->
-        <div class="state" id="stateLoading" hidden>
-          <div class="state__loading-title">Collecting quotes…</div>
-          <p class="state__loading-sub">Broadcasting RFQ to the maker network</p>
-        </div>
-
-        <!-- offers -->
-        <div id="stateOffers" hidden>
-          <div class="offers__list" id="offersList"></div>
-          <button type="button" class="btn-settle" id="settleBtn"></button>
-        </div>
-
-        <!-- settled -->
-        <div class="state" id="stateSettled" hidden>
-          <div class="settled__icon">✓</div>
-          <h3 class="settled__title">Atomic swap settled</h3>
-          <p class="settled__summary" id="settledSummary"></p>
-          <button type="button" class="btn-reset" id="resetBtn">New trade</button>
-        </div>
-      </div>
-
+      <div class="panel" id="leftPanel"></div>
+      <div class="panel panel--offers" id="rightPanel"></div>
     </div>
   </div>
 
   <script>
     (function () {
-      var MID = 0.1200;
+      // ---- config ----
+      var BASE = 'XLM', QUOTE = 'USDC';
+      var oracle = {
+        mid: 0.1200,
+        // signed spread vs mid where positive = better for the taker
+        bps: function (price, side) {
+          var raw = (price - this.mid) / this.mid * 10000;
+          return side === 'sell' ? raw : -raw;
+        },
+        // a starting maker quote `bps` away from mid, in the taker's favour direction
+        suggest: function (side, bps) {
+          return side === 'sell' ? this.mid * (1 - bps / 10000) : this.mid * (1 + bps / 10000);
+        }
+      };
 
-      var state = { side: 'sell', amount: '5000000', phase: 'idle', offers: [], selectedId: null };
-      var loadTimer = null, settleTimer = null;
+      // localStorage can throw (file://, sandboxed, privacy mode) — degrade gracefully
+      var store = {
+        get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+        set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+      };
 
-      // ----- helpers -----
-      function num() {
-        return Math.max(0, parseInt(String(state.amount).replace(/[^0-9]/g, ''), 10) || 0);
+      var sb = (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY &&
+                window.SUPABASE_URL.indexOf('YOUR-PROJECT') === -1)
+        ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+        : null;
+
+      // ---- state ----
+      var state = {
+        role: store.get('rfq_role') || 'taker',
+        name: store.get('rfq_display_name') || '',
+        // taker
+        amount: '5000000',
+        side: 'sell',
+        busy: false,
+        // shared focused rfq
+        rfq: null,            // the focused rfq row (taker's own, or maker's selected)
+        quotes: new Map(),    // id -> quote, for the focused rfq
+        connected: false,
+        // maker
+        openRfqs: [],
+        // ui drafts (not re-rendered while typing)
+        counterFor: null,     // maker_name whose counter box is open (taker view)
+        drafts: {},           // maker_name -> draft counter price (taker view)
+        makerPriceDraft: '',
+        makerTtl: '30'
+      };
+      var openCh = null, focusCh = null;
+      var lastExpireCall = 0;
+      var settleAnim = false;
+
+      // ---- helpers ----
+      function num() { return Math.max(0, parseInt(String(state.amount).replace(/[^0-9]/g, ''), 10) || 0); }
+      function parsePrice(v) { return parseFloat(String(v).replace(/[^0-9.]/g, '')) || 0; }
+      function fmt(n, d) { d = d || 0; return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+      function timeAgo(iso) {
+        var s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+        if (s < 60) return s + 's ago';
+        if (s < 3600) return Math.floor(s / 60) + 'm ago';
+        if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+        return Math.floor(s / 86400) + 'd ago';
       }
-      function fmt(n, d) {
-        d = d || 0;
-        return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+      function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+      function initialsOf(name) {
+        var parts = (name || '').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return '··';
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0][0] + parts[1][0]).toUpperCase();
       }
-      function genOffers() {
-        var makers = [
-          { maker: 'Lumina Capital', initials: 'LC' },
-          { maker: 'Orbital Markets', initials: 'OM' },
-          { maker: 'Meridian OTC', initials: 'MD' },
-          { maker: 'Apex Liquidity', initials: 'AX' }
-        ];
-        var sell = state.side === 'sell';
-        return makers.map(function (m, i) {
-          var bps = 3 + i * 2 + Math.random() * 1.5;
-          var price = sell ? MID * (1 - bps / 10000) : MID * (1 + bps / 10000);
-          return { maker: m.maker, initials: m.initials, id: 'm' + i, price: price, bps: bps, expiry: (28 - i * 3) + 's' };
-        }).sort(function (a, b) {
-          return sell ? b.price - a.price : a.price - b.price;
+      function fmtCountdown(rem) {
+        if (rem <= 0) return 'expired';
+        if (rem < 60) return rem + 's';
+        return Math.floor(rem / 60) + ':' + ('0' + (rem % 60)).slice(-2);
+      }
+      function fmtBps(v) {
+        var cls = v >= 0 ? 'bps-pos' : 'bps-neg';
+        return '<span class="' + cls + '">' + (v >= 0 ? '+' : '') + v.toFixed(1) + ' bps</span>';
+      }
+      function ensureClient() {
+        if (!sb) return false;
+        return true;
+      }
+
+      // ---- pure derivations (status is cosmetic; standing = newest row) ----
+      function quotesArr() {
+        var a = []; state.quotes.forEach(function (q) { a.push(q); }); return a;
+      }
+      function threadsOf(quotes) {
+        var m = new Map();
+        quotes.forEach(function (q) {
+          var arr = m.get(q.maker_name) || []; arr.push(q); m.set(q.maker_name, arr);
         });
+        return m;
+      }
+      function standingOf(arr) {
+        var best = null;
+        arr.forEach(function (q) {
+          if (!best) { best = q; return; }
+          var t1 = new Date(q.created_at).getTime(), t2 = new Date(best.created_at).getTime();
+          if (t1 > t2 || (t1 === t2 && q.id > best.id)) best = q;
+        });
+        return best;
+      }
+      function isTerminal(s) { return s === 'accepted' || s === 'rejected' || s === 'expired'; }
+      function whoseTurn(standing) {
+        if (!standing) return 'maker';
+        if (isTerminal(standing.status)) return 'closed';
+        return standing.from_role === 'maker' ? 'taker' : 'maker';
+      }
+      function isExpired(standing) {
+        return !!standing && standing.status === 'active' &&
+               new Date(standing.expires_at).getTime() <= Date.now();
+      }
+      // [{ maker, standing, thread }] sorted best-first for the rfq's side
+      function rankedThreads() {
+        var side = state.rfq ? state.rfq.side : 'sell';
+        var out = [];
+        threadsOf(quotesArr()).forEach(function (arr, maker) {
+          out.push({ maker: maker, standing: standingOf(arr), thread: arr });
+        });
+        function acceptable(t) {
+          return t.standing && t.standing.status === 'active' &&
+                 t.standing.from_role === 'maker' && !isExpired(t.standing);
+        }
+        out.sort(function (a, b) {
+          var aa = acceptable(a), ba = acceptable(b);
+          if (aa !== ba) return aa ? -1 : 1;
+          if (aa && ba) {
+            return side === 'sell' ? b.standing.price - a.standing.price
+                                   : a.standing.price - b.standing.price;
+          }
+          return new Date(b.standing.created_at) - new Date(a.standing.created_at);
+        });
+        return out;
       }
 
-      // ----- actions -----
-      function setSide(side) {
-        state.side = side; state.phase = 'idle'; state.offers = []; state.selectedId = null;
-        clearTimeout(loadTimer); clearTimeout(settleTimer);
-        render();
+      // ---- data layer (every transition guards on status + verifies row count) ----
+      function createRfq() {
+        return sb.from('rfqs').insert({
+          side: state.side, amount: num(), status: 'open',
+          taker_name: state.name || null, base_asset: BASE, quote_asset: QUOTE
+        }).select().single();
       }
-      function onAmount(e) {
-        state.amount = e.target.value; state.phase = 'idle'; state.offers = []; state.selectedId = null;
-        clearTimeout(loadTimer); clearTimeout(settleTimer);
-        render();
+      function listOpenRfqs() {
+        return sb.from('rfqs').select('*').eq('status', 'open')
+          .order('created_at', { ascending: false }).limit(50);
       }
-      function requestQuotes() {
-        if (num() <= 0) return;
-        state.phase = 'loading'; state.offers = []; state.selectedId = null;
-        render();
-        clearTimeout(loadTimer);
-        loadTimer = setTimeout(function () {
-          state.offers = genOffers();
-          state.phase = 'offers';
-          state.selectedId = state.offers[0].id;
+      function listQuotesForRfq(rfqId) {
+        return sb.from('quotes').select('*').eq('rfq_id', rfqId)
+          .order('created_at', { ascending: true });
+      }
+      async function submitQuote(o) {
+        // cosmetic supersede of prior active in this thread (best-effort)
+        await sb.from('quotes').update({ status: 'superseded' })
+          .eq('rfq_id', o.rfqId).eq('maker_name', o.makerName).eq('status', 'active');
+        return sb.from('quotes').insert({
+          rfq_id: o.rfqId, maker_name: o.makerName, maker_initials: o.makerInitials || null,
+          price: o.price, from_role: o.fromRole, status: 'active',
+          expires_at: new Date(Date.now() + o.ttlSec * 1000).toISOString(),
+          parent_id: o.parentId || null
+        }).select().single();
+      }
+      async function acceptStanding(quote, rfq) {
+        // settle the rfq FIRST, guarded on still-open
+        var r1 = await sb.from('rfqs').update({
+          status: 'settled', accepted_quote_id: quote.id, maker: quote.maker_name, price: quote.price
+        }).eq('id', rfq.id).eq('status', 'open').select();
+        if (r1.error) throw r1.error;
+        if (!r1.data || r1.data.length !== 1) return { raceLost: true };
+        // mark the accepted quote, then reject siblings (best-effort, cosmetic)
+        await sb.from('quotes').update({ status: 'accepted' }).eq('id', quote.id).eq('status', 'active');
+        await sb.from('quotes').update({ status: 'rejected' })
+          .eq('rfq_id', rfq.id).neq('id', quote.id).eq('status', 'active');
+        return { ok: true, rfq: r1.data[0] };
+      }
+      function expireStale(rfqId) {
+        return sb.from('quotes').update({ status: 'expired' })
+          .eq('rfq_id', rfqId).eq('status', 'active').lt('expires_at', new Date().toISOString());
+      }
+
+      // ---- realtime ----
+      function removeFocus() { if (focusCh) { try { sb.removeChannel(focusCh); } catch (e) {} focusCh = null; } }
+      function removeOpen() { if (openCh) { try { sb.removeChannel(openCh); } catch (e) {} openCh = null; } }
+      function teardownAll() { removeFocus(); removeOpen(); state.connected = false; }
+
+      function subscribeFocus(rfqId) {
+        removeFocus();
+        focusCh = sb.channel('rfq-' + rfqId)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes', filter: 'rfq_id=eq.' + rfqId },
+            function (p) { if (p['new'] && p['new'].id) { state.quotes.set(p['new'].id, p['new']); render(); } })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rfqs', filter: 'id=eq.' + rfqId },
+            function (p) {
+              if (!p['new']) return;
+              if (state.rfq && state.rfq.id === p['new'].id) state.rfq = p['new'];
+              upsertOpenRfq(p['new']);
+              render();
+            })
+          .subscribe(function (st) { state.connected = (st === 'SUBSCRIBED'); render(); });
+      }
+      function subscribeOpenFeed() {
+        removeOpen();
+        openCh = sb.channel('open-feed')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'rfqs' },
+            function (p) { if (p['new']) upsertOpenRfq(p['new']); render(); })
+          .subscribe(function (st) { state.connected = (st === 'SUBSCRIBED'); render(); });
+      }
+      function upsertOpenRfq(row) {
+        var i = -1;
+        for (var k = 0; k < state.openRfqs.length; k++) { if (state.openRfqs[k].id === row.id) { i = k; break; } }
+        if (row.status === 'open') {
+          if (i >= 0) state.openRfqs[i] = row; else state.openRfqs.unshift(row);
+        } else if (i >= 0) {
+          state.openRfqs.splice(i, 1);
+        }
+      }
+
+      // ---- actions ----
+      function setRole(role) {
+        if (role === state.role) return;
+        state.role = role;
+        store.set('rfq_role', role);
+        teardownAll();
+        state.rfq = null; state.quotes = new Map(); state.openRfqs = [];
+        state.counterFor = null; state.drafts = {};
+        if (role === 'maker') mountMaker(); else render();
+      }
+      function setName(v) {
+        state.name = v;
+        store.set('rfq_display_name', v);
+        var b = document.getElementById('idBadge'); if (b) b.textContent = initialsOf(v);
+      }
+      function setSide(side) { state.side = side; render(); }
+
+      async function requestQuotes() {
+        if (num() <= 0 || state.busy) return;
+        if (!ensureClient()) { render(); return; }
+        state.busy = true; removeFocus(); state.rfq = null; state.quotes = new Map(); render();
+        try {
+          var res = await createRfq();
+          if (res.error) throw res.error;
+          state.rfq = res.data;
+          state.busy = false;
+          subscribeFocus(res.data.id);
           render();
-        }, 1100);
+        } catch (e) {
+          state.busy = false; render();
+          alert('Could not open RFQ: ' + (e.message || e));
+        }
       }
-      function settle() {
-        state.phase = 'settling';
-        render();
-        clearTimeout(settleTimer);
-        settleTimer = setTimeout(function () { state.phase = 'settled'; render(); }, 1000);
+
+      async function takerCounter(makerName) {
+        var price = parsePrice(state.drafts[makerName]);
+        if (price <= 0 || !state.rfq) return;
+        // find the maker's current standing to carry initials forward
+        var arr = threadsOf(quotesArr()).get(makerName) || [];
+        var st = standingOf(arr);
+        try {
+          var res = await submitQuote({
+            rfqId: state.rfq.id, makerName: makerName,
+            makerInitials: st ? st.maker_initials : initialsOf(makerName),
+            price: price, fromRole: 'taker', ttlSec: 60, parentId: st ? st.id : null
+          });
+          if (res.error) throw res.error;
+          state.quotes.set(res.data.id, res.data);
+          state.counterFor = null; state.drafts[makerName] = '';
+          render();
+        } catch (e) { alert('Counter failed: ' + (e.message || e)); }
       }
+
+      async function accept(quoteId) {
+        var q = state.quotes.get(quoteId);
+        if (!q || !state.rfq) return;
+        if (isExpired(q)) { alert('That quote has expired.'); return; }
+        settleAnim = true; render();
+        try {
+          var r = await acceptStanding(q, state.rfq);
+          settleAnim = false;
+          if (r.raceLost) {
+            alert('That quote is no longer available — refreshing.');
+            await rehydrateFocus();
+            return;
+          }
+          if (r.rfq) state.rfq = r.rfq;
+          render();
+        } catch (e) { settleAnim = false; render(); alert('Accept failed: ' + (e.message || e)); }
+      }
+
       function reset() {
-        state.phase = 'idle'; state.offers = []; state.selectedId = null;
+        removeFocus();
+        state.rfq = null; state.quotes = new Map(); state.counterFor = null; state.drafts = {};
         render();
       }
 
-      // ----- DOM refs -----
-      var $amount = document.getElementById('amount');
-      var $requestBtn = document.getElementById('requestBtn');
-      var $offersStatus = document.getElementById('offersStatus');
-      var $stateEmpty = document.getElementById('stateEmpty');
-      var $stateLoading = document.getElementById('stateLoading');
-      var $stateOffers = document.getElementById('stateOffers');
-      var $stateSettled = document.getElementById('stateSettled');
-      var $offersList = document.getElementById('offersList');
-      var $settleBtn = document.getElementById('settleBtn');
-      var $settledSummary = document.getElementById('settledSummary');
-      var sideButtons = Array.prototype.slice.call(document.querySelectorAll('.side-btn'));
+      // maker
+      async function mountMaker() {
+        render();
+        if (!ensureClient()) return;
+        try {
+          var res = await listOpenRfqs();
+          if (res.error) throw res.error;
+          state.openRfqs = res.data || [];
+        } catch (e) { state.openRfqs = []; }
+        subscribeOpenFeed();
+        render();
+      }
+      async function selectRfq(rfqId) {
+        var row = null;
+        for (var i = 0; i < state.openRfqs.length; i++) if (state.openRfqs[i].id === rfqId) row = state.openRfqs[i];
+        if (!row) return;
+        state.rfq = row; state.quotes = new Map();
+        render();
+        await rehydrateFocus();
+        subscribeFocus(rfqId);
+      }
+      function makerBack() { removeFocus(); state.rfq = null; state.quotes = new Map(); render(); }
 
-      // ----- wiring -----
-      sideButtons.forEach(function (btn) {
-        btn.addEventListener('click', function () { setSide(btn.getAttribute('data-side')); });
-      });
-      $amount.addEventListener('input', onAmount);
-      $requestBtn.addEventListener('click', requestQuotes);
-      $settleBtn.addEventListener('click', function () { if (selectedOffer()) settle(); });
-      document.getElementById('resetBtn').addEventListener('click', reset);
-
-      function selectedOffer() {
-        for (var i = 0; i < state.offers.length; i++) {
-          if (state.offers[i].id === state.selectedId) return state.offers[i];
-        }
-        return null;
+      async function makerSubmit(isAcceptInstead) {
+        if (!state.rfq) return;
+        if (!state.name) { alert('Enter a maker name in the top bar first.'); return; }
+        var price = parsePrice(state.makerPriceDraft);
+        if (price <= 0) { alert('Enter a price.'); return; }
+        try {
+          var res = await submitQuote({
+            rfqId: state.rfq.id, makerName: state.name, makerInitials: initialsOf(state.name),
+            price: price, fromRole: 'maker', ttlSec: parseInt(state.makerTtl, 10) || 30
+          });
+          if (res.error) throw res.error;
+          state.quotes.set(res.data.id, res.data);
+          state.makerPriceDraft = '';
+          render();
+        } catch (e) { alert('Quote failed: ' + (e.message || e)); }
+      }
+      async function makerAcceptCounter(quoteId) {
+        var q = state.quotes.get(quoteId);
+        if (!q || !state.rfq) return;
+        if (isExpired(q)) { alert('That counter has expired.'); return; }
+        try {
+          var r = await acceptStanding(q, state.rfq);
+          if (r.raceLost) { alert('No longer available — refreshing.'); await rehydrateFocus(); return; }
+          if (r.rfq) state.rfq = r.rfq;
+          render();
+        } catch (e) { alert('Accept failed: ' + (e.message || e)); }
       }
 
-      // ----- render -----
-      function render() {
-        var phase = state.phase;
-        var sell = state.side === 'sell';
-        var n = num();
+      async function rehydrateFocus() {
+        if (!state.rfq || !sb) { render(); return; }
+        try {
+          var rq = await sb.from('rfqs').select('*').eq('id', state.rfq.id).single();
+          if (!rq.error && rq.data) state.rfq = rq.data;
+          var res = await listQuotesForRfq(state.rfq.id);
+          if (!res.error) {
+            state.quotes = new Map();
+            (res.data || []).forEach(function (q) { state.quotes.set(q.id, q); });
+          }
+        } catch (e) {}
+        render();
+      }
 
-        // side toggle
-        sideButtons.forEach(function (btn) {
-          var active = btn.getAttribute('data-side') === state.side;
-          btn.classList.toggle('is-active', active);
+      async function refresh() {
+        if (state.role === 'maker' && !state.rfq) {
+          var res = await listOpenRfqs();
+          if (!res.error) state.openRfqs = res.data || [];
+        } else {
+          await rehydrateFocus();
+        }
+        render();
+      }
+
+      // ---- countdown tick (no full re-render) ----
+      function tick() {
+        var now = Date.now();
+        document.querySelectorAll('[data-expires]').forEach(function (el) {
+          var exp = Number(el.getAttribute('data-expires'));
+          el.textContent = fmtCountdown(Math.max(0, Math.floor((exp - now) / 1000)));
         });
-
-        // request button
-        var loading = phase === 'loading';
-        $requestBtn.textContent = loading ? 'Requesting…' : 'Request quotes';
-        $requestBtn.classList.toggle('is-busy', loading);
-
-        // offers status
-        $offersStatus.textContent = phase === 'offers'
-          ? state.offers.length + ' live'
-          : (phase === 'settling' ? 'settling' : '');
-
-        // phase visibility
-        $stateEmpty.hidden = phase !== 'idle';
-        $stateLoading.hidden = phase !== 'loading';
-        $stateOffers.hidden = !(phase === 'offers' || phase === 'settling');
-        $stateSettled.hidden = phase !== 'settled';
-
-        // offers list
-        if (phase === 'offers' || phase === 'settling') {
-          renderOffers(n);
-          var sel = selectedOffer();
-          var settling = phase === 'settling';
-          $settleBtn.textContent = settling
-            ? 'Settling atomic swap…'
-            : (sel ? 'Settle with ' + sel.maker : 'Select an offer');
-          $settleBtn.classList.toggle('is-busy', settling);
-        }
-
-        // settled summary
-        if (phase === 'settled') {
-          var s = selectedOffer();
-          $settledSummary.textContent = s
-            ? (sell ? 'Sold' : 'Bought') + ' ' + fmt(n) + ' XLM at $' + s.price.toFixed(5)
-              + ' via ' + s.maker + ' — zero slippage, one transaction.'
-            : '';
+        document.querySelectorAll('[data-accept-exp]').forEach(function (btn) {
+          if (Number(btn.getAttribute('data-accept-exp')) <= now) {
+            btn.disabled = true; btn.classList.add('is-disabled');
+            var card = btn.closest('.offer'); if (card) card.classList.add('is-expired');
+          }
+        });
+        // opportunistic, debounced cosmetic expiry
+        if (sb && state.rfq && now - lastExpireCall > 4000) {
+          var hasStale = false;
+          state.quotes.forEach(function (q) {
+            if (q.status === 'active' && new Date(q.expires_at).getTime() <= now) hasStale = true;
+          });
+          if (hasStale) { lastExpireCall = now; expireStale(state.rfq.id); }
         }
       }
 
-      function renderOffers(n) {
-        $offersList.innerHTML = '';
-        state.offers.forEach(function (o, idx) {
-          var selected = o.id === state.selectedId;
-          var best = idx === 0;
-          var total = n * o.price;
+      // ---- render ----
+      function render() {
+        // preserve focus across innerHTML rebuilds
+        var active = document.activeElement;
+        var activeId = active && active.id ? active.id : null;
+        var caret = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
 
-          var card = document.createElement('div');
-          card.className = 'offer' + (selected ? ' is-selected' : '');
-          card.addEventListener('click', function () { state.selectedId = o.id; render(); });
+        syncNav();
+        document.getElementById('leftPanel').innerHTML = state.role === 'taker' ? leftTaker() : leftMaker();
+        document.getElementById('rightPanel').innerHTML = state.role === 'taker' ? rightTaker() : rightMaker();
 
-          card.innerHTML =
+        if (activeId) {
+          var el = document.getElementById(activeId);
+          if (el) { el.focus(); if (caret != null && el.setSelectionRange) { try { el.setSelectionRange(caret, caret); } catch (e) {} } }
+        }
+      }
+
+      function syncNav() {
+        document.querySelectorAll('.role-btn').forEach(function (b) {
+          b.classList.toggle('is-active', b.getAttribute('data-role') === state.role);
+        });
+        var name = document.getElementById('nameInput');
+        if (name && document.activeElement !== name) name.value = state.name;
+        document.getElementById('idBadge').textContent = initialsOf(state.name);
+        document.getElementById('connDot').classList.toggle('is-on', state.connected);
+        document.getElementById('connText').textContent = state.connected ? 'live' : (sb ? 'connecting…' : 'no backend');
+        document.getElementById('pageTitle').textContent = state.role === 'taker'
+          ? 'Request quotes — XLM / USDC' : 'Provide liquidity — XLM / USDC';
+        document.getElementById('pageSubtitle').textContent = state.role === 'taker'
+          ? 'Open an RFQ, let makers compete with time-limited quotes, counter for a better price, and accept the best one. Off-chain negotiation only.'
+          : 'Browse open requests broadcast by takers, quote a price, and negotiate counters in real time. Off-chain negotiation only.';
+      }
+
+      function noBackendBlock() {
+        return '<div class="state"><div class="state__icon">⚠</div>' +
+          '<p class="state__text">Supabase is not configured. Add your project URL and anon key to <b>supabase-config.js</b>, then reload.</p></div>';
+      }
+
+      // ---------- TAKER ----------
+      function leftTaker() {
+        var busy = state.busy;
+        return '' +
+          '<div class="panel__label">RFQ TICKET</div>' +
+          '<div class="side-toggle">' +
+            '<button type="button" class="side-btn ' + (state.side === 'sell' ? 'is-active' : '') + '" data-action="set-side" data-side="sell">Sell XLM</button>' +
+            '<button type="button" class="side-btn ' + (state.side === 'buy' ? 'is-active' : '') + '" data-action="set-side" data-side="buy">Buy XLM</button>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label class="field__label" for="amountInput">Amount (XLM)</label>' +
+            '<input id="amountInput" class="field__input" inputmode="numeric" value="' + esc(state.amount) + '">' +
+            '<div class="field__hint">Oracle mid $' + oracle.mid.toFixed(5) + ' · ref. value ' + fmt(num() * oracle.mid) + ' ' + QUOTE + '</div>' +
+          '</div>' +
+          '<button type="button" class="btn-request ' + (busy ? 'is-busy' : '') + '" data-action="request">' +
+            (busy ? 'Opening RFQ…' : (state.rfq && state.rfq.status === 'open' ? 'Open a new RFQ' : 'Request quotes')) +
+          '</button>' +
+          (state.rfq && state.rfq.status === 'open'
+            ? '<p class="field__hint">RFQ #' + esc(String(state.rfq.id).slice(0, 8)) + ' live · waiting for makers to quote.</p>'
+            : '');
+      }
+
+      function rightTaker() {
+        if (!sb) return offersHead('') + noBackendBlock();
+        if (!state.rfq) {
+          return offersHead('') +
+            '<div class="state"><div class="state__icon">⇄</div>' +
+            '<p class="state__text">Set your size and request quotes. Makers respond with time-limited offers you can accept or counter.</p></div>';
+        }
+        if (state.rfq.status === 'settled') return rightTaker_settled();
+
+        var ranked = rankedThreads();
+        var live = ranked.filter(function (t) { return t.standing && t.standing.status === 'active' && t.standing.from_role === 'maker' && !isExpired(t.standing); }).length;
+        var head = offersHead(live + ' live · ' + ranked.length + ' makers');
+        if (settleAnim) {
+          return head + '<div class="state"><div class="state__loading-title">Settling…</div><p class="state__loading-sub">Locking in the accepted quote</p></div>';
+        }
+        if (!ranked.length) {
+          return head + '<div class="state"><div class="state__loading-title">Collecting quotes…</div><p class="state__loading-sub">RFQ broadcast to the maker network</p></div>';
+        }
+        var cards = ranked.map(function (t, i) { return takerCard(t, i === 0 && t.standing.from_role === 'maker' && t.standing.status === 'active' && !isExpired(t.standing)); }).join('');
+        return head + '<div class="offers__list">' + cards + '</div>';
+      }
+
+      function offersHead(status) {
+        return '<div class="offers__head">' +
+          '<div class="panel__label">MAKER OFFERS</div>' +
+          '<div style="display:flex;align-items:center;gap:12px;">' +
+            '<span class="oracle-chip">Oracle mid <b>$' + oracle.mid.toFixed(5) + '</b></span>' +
+            '<span class="offers__status">' + esc(status) + '</span>' +
+            (sb ? '<button type="button" class="btn-ghost" data-action="refresh">↻</button>' : '') +
+          '</div></div>';
+      }
+
+      function takerCard(t, isBest) {
+        var s = t.standing, n = num();
+        var expired = isExpired(s);
+        var total = n * s.price;
+        var side = state.rfq.side;
+        var turn = whoseTurn(s);
+        var meta;
+        if (s.status === 'active' && !isTerminal(s.status)) {
+          meta = fmtBps(oracle.bps(s.price, side)) +
+            ' · ' + (s.from_role === 'taker' ? 'your counter' : 'maker quote') +
+            ' · <span data-expires="' + new Date(s.expires_at).getTime() + '">' + fmtCountdown(Math.max(0, Math.floor((new Date(s.expires_at).getTime() - Date.now()) / 1000))) + '</span>';
+        } else {
+          meta = fmtBps(oracle.bps(s.price, side)) + ' · ' + esc(s.status);
+        }
+
+        var actions = '';
+        if (turn === 'taker' && !expired) {
+          actions =
+            '<div class="offer__actions">' +
+              '<button type="button" class="btn-accept" data-action="accept" data-id="' + esc(s.id) + '" data-accept-exp="' + new Date(s.expires_at).getTime() + '">Accept</button>' +
+              '<button type="button" class="btn-counter" data-action="open-counter" data-maker="' + esc(t.maker) + '">Counter</button>' +
+            '</div>';
+        } else if (turn === 'maker') {
+          actions = '<p class="waiting">Countered $' + s.price.toFixed(5) + ' — waiting for ' + esc(t.maker) + ' to re-quote.</p>';
+        } else if (expired) {
+          actions = '<div class="offer__actions"><button type="button" class="btn-counter" data-action="open-counter" data-maker="' + esc(t.maker) + '">Re-engage / counter</button></div>';
+        }
+        if (state.counterFor === t.maker) {
+          actions +=
+            '<div class="counter-box">' +
+              '<input id="counter-' + esc(t.maker) + '" inputmode="decimal" placeholder="Your price" value="' + esc(state.drafts[t.maker] || '') + '">' +
+              '<button type="button" class="btn-accept" style="flex:0 0 auto;padding:11px 18px;" data-action="send-counter" data-maker="' + esc(t.maker) + '">Send</button>' +
+            '</div>';
+        }
+
+        return '<div class="offer ' + (isBest ? 'is-best' : '') + ' ' + (expired ? 'is-expired' : '') + '">' +
+          '<div class="offer__row">' +
+            '<div class="offer__maker">' +
+              '<div class="offer__avatar">' + esc(s.maker_initials || initialsOf(t.maker)) + '</div>' +
+              '<div><div class="offer__name">' + esc(t.maker) + '</div>' +
+              '<div class="offer__meta">' + meta + '</div></div>' +
+            '</div>' +
+            '<div class="offer__priceblock">' +
+              '<div class="offer__price">$' + s.price.toFixed(5) + '</div>' +
+              '<div class="offer__total">' + fmt(total) + ' ' + QUOTE + '</div>' +
+            '</div>' +
+          '</div>' +
+          (isBest ? '<div class="offer__best">★ BEST QUOTE</div>' : '') +
+          actions +
+        '</div>';
+      }
+
+      function rightTaker_settled() {
+        var n = num(), r = state.rfq;
+        var summary = (r.side === 'sell' ? 'Sold' : 'Bought') + ' ' + fmt(Number(r.amount) || n) + ' XLM at $' +
+          Number(r.price).toFixed(5) + ' via ' + esc(r.maker) + ' — accepted off-chain.';
+        return offersHead('settled') +
+          '<div class="state">' +
+            '<div class="settled__icon">✓</div>' +
+            '<h3 class="settled__title">Quote accepted</h3>' +
+            '<p class="settled__summary">' + summary + '</p>' +
+            '<button type="button" class="btn-reset" data-action="reset">New RFQ</button>' +
+          '</div>';
+      }
+
+      // ---------- MAKER ----------
+      function leftMaker() {
+        var inThread = !!state.rfq;
+        return '' +
+          '<div class="panel__label">MAKER DESK</div>' +
+          '<div class="field"><div class="field__label">Quoting as</div>' +
+            '<div style="margin-top:10px;font-family:\'Space Grotesk\',sans-serif;font-size:20px;font-weight:600;">' +
+            (state.name ? esc(state.name) : '<span style="color:rgba(255,255,255,0.4)">set your name above →</span>') + '</div></div>' +
+          '<div class="field"><div class="field__label">Oracle reference</div>' +
+            '<div style="margin-top:10px;font-family:\'Space Grotesk\',sans-serif;font-size:20px;font-weight:600;color:#E5B567;">$' + oracle.mid.toFixed(5) + '</div></div>' +
+          (inThread
+            ? '<button type="button" class="btn-ghost" style="margin-top:24px;" data-action="maker-back">← All open requests</button>'
+            : '<p class="field__hint">Pick an open request on the right to quote. Open a second tab as a Taker to see both sides.</p>');
+      }
+
+      function rightMaker() {
+        if (!sb) return '<div class="offers__head"><div class="panel__label">OPEN REQUESTS</div></div>' + noBackendBlock();
+        if (state.rfq) return makerThread();
+        var head = '<div class="offers__head"><div class="panel__label">OPEN REQUESTS</div>' +
+          '<div style="display:flex;align-items:center;gap:12px;">' +
+          '<span class="offers__status">' + state.openRfqs.length + ' open</span>' +
+          '<button type="button" class="btn-ghost" data-action="refresh">↻ Refresh</button></div></div>';
+        if (!state.openRfqs.length) {
+          return head + '<div class="state"><div class="state__icon">⇄</div><p class="state__text">No open requests yet. Open a tab as a Taker and post one.</p></div>';
+        }
+        var cards = state.openRfqs.map(function (r) {
+          var amt = Number(r.amount) || 0;
+          var sideLabel = r.side === 'sell' ? 'SELL' : 'BUY';
+          return '<div class="offer is-clickable" data-action="select-rfq" data-id="' + esc(r.id) + '">' +
             '<div class="offer__row">' +
               '<div class="offer__maker">' +
-                '<div class="offer__avatar">' + o.initials + '</div>' +
-                '<div>' +
-                  '<div class="offer__name">' + o.maker + '</div>' +
-                  '<div class="offer__meta">' + o.bps.toFixed(1) + ' bps · expires ' + o.expiry + '</div>' +
-                '</div>' +
+                '<div class="offer__avatar">' + initialsOf(r.taker_name || sideLabel) + '</div>' +
+                '<div><div class="offer__name">' + fmt(amt) + ' XLM</div>' +
+                '<div class="offer__meta">' + esc(r.taker_name || 'Anon taker') + ' · ' + timeAgo(r.created_at) + ' · #' + esc(String(r.id).slice(0, 8)) + '</div></div>' +
               '</div>' +
-              '<div class="offer__priceblock">' +
-                '<div class="offer__price">$' + o.price.toFixed(5) + '</div>' +
-                '<div class="offer__total">' + fmt(total, 0) + ' USDC</div>' +
-              '</div>' +
-            '</div>' +
-            (best ? '<div class="offer__best">★ BEST QUOTE</div>' : '');
-
-          $offersList.appendChild(card);
-        });
+              '<div class="offer__priceblock"><span class="badge-status badge-side">' + sideLabel + ' XLM</span></div>' +
+            '</div></div>';
+        }).join('');
+        return head + '<div class="offers__list">' + cards + '</div>';
       }
 
-      render();
+      function makerThread() {
+        var r = state.rfq, n = Number(r.amount) || 0;
+        var mine = state.name ? (threadsOf(quotesArr()).get(state.name) || []) : [];
+        var standing = standingOf(mine);
+        var turn = whoseTurn(standing);
+        var expired = isExpired(standing);
+
+        var head = '<div class="offers__head"><div class="panel__label">NEGOTIATION</div>' +
+          '<div style="display:flex;align-items:center;gap:12px;">' +
+          '<span class="oracle-chip">Oracle mid <b>$' + oracle.mid.toFixed(5) + '</b></span>' +
+          '<button type="button" class="btn-ghost" data-action="refresh">↻</button></div></div>';
+
+        var summary = '<div class="rfq-summary">' +
+          '<div class="rfq-summary__amt">' + fmt(n) + ' XLM <span class="badge-status badge-side">' + (r.side === 'sell' ? 'SELL' : 'BUY') + '</span></div>' +
+          '<div class="rfq-summary__meta">' + esc(r.taker_name || 'Anon taker') + ' · #' + esc(String(r.id).slice(0, 8)) +
+          (r.status === 'settled' ? ' · <span class="badge-status badge-accepted">SETTLED</span>' : '') + '</div></div>';
+
+        var rows = mine.slice().sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); }).map(function (q) {
+          var isStanding = standing && q.id === standing.id;
+          var who = q.from_role === 'maker' ? 'You' : 'Taker';
+          var cd = (isStanding && q.status === 'active')
+            ? ' · <span data-expires="' + new Date(q.expires_at).getTime() + '">' + fmtCountdown(Math.max(0, Math.floor((new Date(q.expires_at).getTime() - Date.now()) / 1000))) + '</span>'
+            : (isTerminal(q.status) ? ' · ' + esc(q.status) : '');
+          return '<div class="thread-row ' + (isStanding ? 'is-standing' : '') + '">' +
+            '<div><div class="thread-from">' + who + cd + '</div>' +
+            '<div class="offer__meta">' + fmtBps(oracle.bps(q.price, r.side)) + ' · ' + fmt(n * q.price) + ' ' + QUOTE + '</div></div>' +
+            '<div class="thread-price">$' + q.price.toFixed(5) + '</div></div>';
+        }).join('');
+
+        var action = '';
+        if (r.status === 'settled') {
+          // a maker "won" if the accepted quote belongs to their thread
+          var acceptedMine = mine.some(function (q) { return q.id === r.accepted_quote_id; });
+          action = '<p class="waiting"><span class="badge-status ' + (acceptedMine ? 'badge-accepted">Your quote was accepted ✓' : 'badge-rejected">Settled with another maker') + '</span></p>';
+        } else if (!standing || turn === 'maker' || expired) {
+          // empty thread, OR taker countered (standing.from_role==='taker'), OR expired → maker acts
+          var counterPending = standing && standing.from_role === 'taker' && standing.status === 'active' && !expired;
+          action =
+            (counterPending
+              ? '<p class="waiting">Taker countered at <b>$' + standing.price.toFixed(5) + '</b>. Accept it or re-quote.</p>' +
+                '<button type="button" class="btn-settle" data-action="maker-accept" data-id="' + esc(standing.id) + '" data-accept-exp="' + new Date(standing.expires_at).getTime() + '">Accept taker\'s $' + standing.price.toFixed(5) + '</button>'
+              : '') +
+            '<div class="field"><label class="field__label" for="makerPrice">' + (standing ? 'Re-quote price' : 'Your price') + ' (USDC / XLM)</label>' +
+              '<input id="makerPrice" class="field__input" inputmode="decimal" placeholder="' + oracle.suggest(r.side, 5).toFixed(5) + '" value="' + esc(state.makerPriceDraft) + '">' +
+              (state.makerPriceDraft ? '<div class="field__hint">' + fmtBps(oracle.bps(parsePrice(state.makerPriceDraft), r.side)) + ' vs oracle · ' + fmt(n * parsePrice(state.makerPriceDraft)) + ' ' + QUOTE + '</div>' : '') +
+            '</div>' +
+            '<select id="makerTtl" class="ttl-select">' +
+              ['15', '30', '60', '120'].map(function (s) { return '<option value="' + s + '"' + (state.makerTtl === s ? ' selected' : '') + '>Valid for ' + s + 's</option>'; }).join('') +
+            '</select>' +
+            '<button type="button" class="btn-request" data-action="maker-submit">' + (standing ? 'Send re-quote' : 'Send quote') + '</button>';
+        } else {
+          // standing is the maker's own active quote → waiting on taker
+          action = '<p class="waiting">Quote standing at <b>$' + standing.price.toFixed(5) + '</b> — waiting for the taker to accept or counter.</p>';
+        }
+
+        return head + summary + (rows ? '<div class="thread-list">' + rows + '</div>' : '') + '<div style="margin-top:18px;">' + action + '</div>';
+      }
+
+      // ---- event wiring (delegated; panels are rebuilt on render) ----
+      document.body.addEventListener('click', function (e) {
+        var el = e.target.closest('[data-action]');
+        if (!el) return;
+        var a = el.getAttribute('data-action');
+        if (a === 'set-role') setRole(el.getAttribute('data-role'));
+        else if (a === 'set-side') setSide(el.getAttribute('data-side'));
+        else if (a === 'request') requestQuotes();
+        else if (a === 'accept') accept(el.getAttribute('data-id'));
+        else if (a === 'open-counter') { state.counterFor = el.getAttribute('data-maker'); render(); }
+        else if (a === 'send-counter') takerCounter(el.getAttribute('data-maker'));
+        else if (a === 'reset') reset();
+        else if (a === 'refresh') refresh();
+        else if (a === 'select-rfq') selectRfq(el.getAttribute('data-id'));
+        else if (a === 'maker-back') makerBack();
+        else if (a === 'maker-submit') makerSubmit();
+        else if (a === 'maker-accept') makerAcceptCounter(el.getAttribute('data-id'));
+      });
+
+      document.body.addEventListener('input', function (e) {
+        var id = e.target.id;
+        if (id === 'nameInput') setName(e.target.value);
+        else if (id === 'amountInput') state.amount = e.target.value;
+        else if (id === 'makerPrice') { state.makerPriceDraft = e.target.value; refreshHint(); }
+        else if (id && id.indexOf('counter-') === 0) state.drafts[id.slice(8)] = e.target.value;
+      });
+      document.body.addEventListener('change', function (e) {
+        if (e.target.id === 'makerTtl') state.makerTtl = e.target.value;
+      });
+      // live bps hint under maker price without rebuilding the input
+      function refreshHint() {
+        var inp = document.getElementById('makerPrice'); if (!inp || !state.rfq) return;
+        var hint = inp.parentNode.querySelector('.field__hint');
+        var p = parsePrice(state.makerPriceDraft);
+        var html = p > 0 ? fmtBps(oracle.bps(p, state.rfq.side)) + ' vs oracle · ' + fmt((Number(state.rfq.amount) || 0) * p) + ' ' + QUOTE : '';
+        if (!hint && p > 0) { hint = document.createElement('div'); hint.className = 'field__hint'; inp.parentNode.appendChild(hint); }
+        if (hint) hint.innerHTML = html;
+      }
+
+      // ---- boot ----
+      setInterval(tick, 1000);
+      if (state.role === 'maker') mountMaker(); else render();
     })();
   </script>
 </body>
