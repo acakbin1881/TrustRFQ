@@ -627,13 +627,16 @@
         connected: false,
         // maker
         openRfqs: [],
+        // indexer / intent layer
+        foundMakers: [],      // taker: active intents matching the current (makerToken, takerToken)
+        myIntents: [],        // maker: my own active intents
         // ui drafts (not re-rendered while typing)
         counterFor: null,     // maker_name whose counter box is open (taker view)
         drafts: {},           // maker_name -> draft counter price (taker view)
         makerPriceDraft: '',
         makerTtl: '30'
       };
-      var openCh = null, focusCh = null;
+      var openCh = null, focusCh = null, intentCh = null;
       var lastExpireCall = 0;
       var lastOracleStep = 0;
       var settleAnim = false;
@@ -860,10 +863,50 @@
         }
       };
 
+      // ---- Indexer Protocol API (intent layer — whitepaper §3) ----
+      // Makers announce/withdraw intent to trade a direction; Takers discover
+      // counterparties before negotiating over the Peer API above.
+      // makerToken = token the maker PROVIDES (taker receives); takerTokens = what the maker wants.
+      var Indexer = {
+        // Maker → Indexer: "I want to trade <makerToken> for <takerTokens>."  e.g. addIntent('XLM', ['USDC'])
+        addIntent: async function (makerToken, takerTokens) {
+          var takerToken = (takerTokens && takerTokens[0]) || otherToken(makerToken);
+          if (!state.address) { state.address = genAddress(); store.set('rfq_address', state.address); }
+          // idempotent: withdraw any existing active intent for this exact direction first
+          await sb.from('intents').update({ status: 'withdrawn' })
+            .eq('maker_name', state.name).eq('maker_token', makerToken)
+            .eq('taker_token', takerToken).eq('status', 'active');
+          return sb.from('intents').insert({
+            maker_name: state.name, maker_address: state.address,
+            maker_token: makerToken, taker_token: takerToken, status: 'active'
+          }).select().single();
+        },
+        // Maker → Indexer: "I am no longer interested in trading <makerToken> for <takerTokens>."
+        removeIntent: function (makerToken, takerTokens) {
+          var takerToken = (takerTokens && takerTokens[0]) || otherToken(makerToken);
+          return sb.from('intents').update({ status: 'withdrawn' })
+            .eq('maker_name', state.name).eq('maker_token', makerToken)
+            .eq('taker_token', takerToken).eq('status', 'active');
+        },
+        // any → Indexer: "List active intent associated with a maker."
+        getIntent: function (makerName) {
+          return sb.from('intents').select('*').eq('maker_name', makerName)
+            .eq('status', 'active').order('created_at', { ascending: false });
+        },
+        // Taker → Indexer: "Find someone trading <makerToken> for <takerToken>."  e.g. findIntent('XLM', 'USDC')
+        // The returned rows ARE the Indexer's foundIntent(maker, intentList) callback to the taker.
+        findIntent: function (makerToken, takerToken) {
+          return sb.from('intents').select('*')
+            .eq('maker_token', makerToken).eq('taker_token', takerToken)
+            .eq('status', 'active').order('created_at', { ascending: false });
+        }
+      };
+
       // ---- realtime ----
       function removeFocus() { if (focusCh) { try { sb.removeChannel(focusCh); } catch (e) {} focusCh = null; } }
       function removeOpen() { if (openCh) { try { sb.removeChannel(openCh); } catch (e) {} openCh = null; } }
-      function teardownAll() { removeFocus(); removeOpen(); state.connected = false; }
+      function removeIntents() { if (intentCh) { try { sb.removeChannel(intentCh); } catch (e) {} intentCh = null; } }
+      function teardownAll() { removeFocus(); removeOpen(); removeIntents(); state.connected = false; }
 
       function subscribeFocus(rfqId) {
         removeFocus();
@@ -896,6 +939,32 @@
         }
       }
 
+      // ---- indexer realtime (intent feed — both roles watch it live) ----
+      // Maker view loads its own intents (getIntent); Taker view loads makers for
+      // the chosen direction (findIntent → foundIntent). Re-runs on any intent change.
+      function loadIntents() {
+        if (!sb) return Promise.resolve();
+        if (state.role === 'maker') {
+          return Indexer.getIntent(state.name).then(function (r) {
+            if (!r.error) state.myIntents = r.data || [];
+          }, function () {});
+        }
+        return Indexer.findIntent(state.makerToken, state.takerToken).then(function (r) {
+          if (!r.error) state.foundMakers = r.data || [];
+        }, function () {});
+      }
+      function subscribeIntents() {
+        removeIntents();
+        intentCh = sb.channel('intents-feed')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'intents' },
+            function () { loadIntents().then(render); })
+          .subscribe(function (st) { state.connected = (st === 'SUBSCRIBED'); render(); });
+      }
+      function startIntents() {
+        if (!sb) return;
+        loadIntents().then(function () { subscribeIntents(); render(); });
+      }
+
       // ---- actions ----
       function setRole(role) {
         if (role === state.role) return;
@@ -907,6 +976,7 @@
         // Keep the focused RFQ + its quotes so a single operator can flip
         // Taker ↔ Maker in one tab and watch both sides of the negotiation.
         if (state.rfq) subscribeFocus(state.rfq.id);
+        startIntents();
         if (role === 'maker') mountMaker(); else render();
       }
       function setName(v) {
@@ -918,11 +988,13 @@
         if (TOKENS.indexOf(t) < 0) return;
         state.makerToken = t; state.takerToken = otherToken(t);
         state.side = sideForMakerToken(t); render();
+        if (state.role === 'taker') loadIntents().then(render);   // refresh foundMakers for the new direction
       }
       function setTakerToken(t) {
         if (TOKENS.indexOf(t) < 0) return;
         state.takerToken = t; state.makerToken = otherToken(t);
         state.side = sideForMakerToken(state.makerToken); render();
+        if (state.role === 'taker') loadIntents().then(render);
       }
 
       // kind: 'quote' (indicative) | 'order' (firm/signed)
@@ -1001,6 +1073,25 @@
         removeFocus();
         state.rfq = null; state.quotes = new Map(); state.counterFor = null; state.drafts = {};
         render();
+      }
+
+      // ---- indexer actions (maker announces/withdraws intent) ----
+      function intentActive(makerToken, takerToken) {
+        return (state.myIntents || []).some(function (it) {
+          return it.maker_token === makerToken && it.taker_token === takerToken && it.status === 'active';
+        });
+      }
+      async function toggleIntent(makerToken, takerToken) {
+        if (!ensureClient()) { render(); return; }
+        if (!state.name) { alert('Enter a maker name in the top bar first.'); return; }
+        try {
+          var r = intentActive(makerToken, takerToken)
+            ? await Indexer.removeIntent(makerToken, [takerToken])
+            : await Indexer.addIntent(makerToken, [takerToken]);
+          if (r.error) throw r.error;
+          await loadIntents();   // realtime will also fire; this gives instant feedback
+          render();
+        } catch (e) { alert('Intent update failed: ' + (e.message || e)); }
       }
 
       // maker
@@ -1167,6 +1258,35 @@
           '</select></div>';
       }
 
+      // Taker discovery: findIntent → foundIntent (live makers for the chosen direction)
+      function counterpartiesPanel() {
+        var mt = state.makerToken, tt = state.takerToken;
+        var head = '<div class="field"><div class="field__label">Counterparties · findIntent(' + esc(mt) + ', ' + esc(tt) + ')</div>';
+        if (!sb) return head + '<div class="field__hint">Backend not configured.</div></div>';
+        var makers = state.foundMakers || [];
+        if (!makers.length) {
+          return head + '<div class="field__hint">No makers have announced intent for ' + esc(mt) +
+            ' ← ' + esc(tt) + ' yet — you can still broadcast an RFQ and makers may respond.</div></div>';
+        }
+        var rows = makers.map(function (it) {
+          var ad = it.maker_address
+            ? esc(String(it.maker_address).slice(0, 6) + '…' + String(it.maker_address).slice(-4)) : '—';
+          return '<div class="offer" style="padding:12px 14px;">' +
+            '<div class="offer__row">' +
+              '<div class="offer__maker">' +
+                '<div class="offer__avatar">' + esc(initialsOf(it.maker_name)) + '</div>' +
+                '<div><div class="offer__name">' + esc(it.maker_name || 'Anon maker') + '</div>' +
+                '<div class="offer__meta">provides ' + esc(it.maker_token) + ' · wants ' + esc(it.taker_token) + ' · ' + ad + '</div></div>' +
+              '</div>' +
+              '<div class="offer__priceblock"><span class="kind-tag kind-tag--order">LIVE</span></div>' +
+            '</div></div>';
+        }).join('');
+        return head +
+          '<div class="field__hint">' + makers.length + ' maker' + (makers.length > 1 ? 's' : '') +
+            ' live for ' + esc(mt) + ' ← ' + esc(tt) + ' · foundIntent</div>' +
+          '<div class="offers__list" style="margin-top:12px;">' + rows + '</div></div>';
+      }
+
       function leftTaker() {
         var busy = state.busy;
         var live = state.rfq && state.rfq.status === 'open';
@@ -1180,7 +1300,8 @@
             '<input id="amountInput" class="field__input" inputmode="numeric" value="' + esc(state.amount) + '">' +
             '<div class="field__hint">Oracle mid $' + oracle.mid.toFixed(5) + ' · pay ≈ ' + fmt(refPay, tokDp(tt)) + ' ' + esc(tt) + ' at mid</div>' +
           '</div>' +
-          tokenSelect('takerTokenSel', 'Token I will pay with', tt);
+          tokenSelect('takerTokenSel', 'Token I will pay with', tt) +
+          counterpartiesPanel();
 
         if (live) {
           return ticket +
@@ -1329,6 +1450,22 @@
       // ---------- MAKER ----------
       function leftMaker() {
         var inThread = !!state.rfq;
+        var xlmOn = intentActive('XLM', 'USDC'), usdcOn = intentActive('USDC', 'XLM');
+        var addrShort = state.address
+          ? esc(String(state.address).slice(0, 6) + '…' + String(state.address).slice(-4)) : '—';
+        var liveN = (state.myIntents || []).length;
+        var intentCard =
+          '<div class="field"><div class="field__label">Market making · addIntent / removeIntent</div>' +
+            '<div class="side-toggle">' +
+              '<button type="button" class="side-btn ' + (xlmOn ? 'is-active' : '') + '" data-action="toggle-intent" data-mt="XLM" data-tt="USDC">XLM → USDC</button>' +
+              '<button type="button" class="side-btn ' + (usdcOn ? 'is-active' : '') + '" data-action="toggle-intent" data-mt="USDC" data-tt="XLM">USDC → XLM</button>' +
+            '</div>' +
+            '<div class="field__hint">' +
+              (state.name
+                ? 'Announce the direction(s) you make markets in · ' + addrShort + ' · ' +
+                  (liveN ? liveN + ' live intent' + (liveN > 1 ? 's' : '') : 'no live intent')
+                : 'Set your maker name above to announce intent.') +
+            '</div></div>';
         return '' +
           '<div class="panel__label">MAKER DESK</div>' +
           '<div class="field"><div class="field__label">Quoting as</div>' +
@@ -1336,6 +1473,7 @@
             (state.name ? esc(state.name) : '<span style="color:rgba(255,255,255,0.4)">set your name above →</span>') + '</div></div>' +
           '<div class="field"><div class="field__label">Oracle reference</div>' +
             '<div style="margin-top:10px;font-family:\'Space Grotesk\',sans-serif;font-size:20px;font-weight:600;color:#E5B567;">$' + oracle.mid.toFixed(5) + '</div></div>' +
+          intentCard +
           (inThread
             ? '<button type="button" class="btn-ghost" style="margin-top:24px;" data-action="maker-back">← All open requests</button>'
             : '<p class="field__hint">Pick an open request on the right to quote. Open a second tab as a Taker to see both sides.</p>');
@@ -1475,6 +1613,7 @@
         else if (a === 'maker-submit') makerSubmit();
         else if (a === 'maker-accept') makerAcceptCounter(el.getAttribute('data-id'));
         else if (a === 'use-oracle') useOraclePrice();
+        else if (a === 'toggle-intent') toggleIntent(el.getAttribute('data-mt'), el.getAttribute('data-tt'));
       });
 
       // Maker accepts the Oracle's fair price → fill the total input with it
@@ -1513,6 +1652,7 @@
       // ---- boot ----
       if (!state.address) { state.address = genAddress(); store.set('rfq_address', state.address); }
       setInterval(tick, 1000);
+      startIntents();
       if (state.role === 'maker') mountMaker(); else render();
     })();
   </script>

@@ -9,10 +9,12 @@ One app, two peer roles via a top-bar **role switcher**:
 
 - **Taker** — builds an RFQ ticket by choosing the **token to receive**
   (`makerToken`) + amount and the **token to pay** (`takerToken`) — XLM or USDC —
+  **discovers live makers** for that direction (`findIntent` → `foundIntent`),
   then either **gets an indicative quote** (`getQuote`) or **requests a firm,
   signed order** (`getOrder`). Watches makers compete with time-limited
   responses, **counters** for a better price, and **accepts** a signed order.
-- **Maker** — browses open requests (the Indexer feed), and responds in kind:
+- **Maker** — **announces intent** to make markets in a direction
+  (`addIntent` / `removeIntent`), browses open requests, and responds in kind:
   `provideQuote` (indicative) to a quote request, or `provideOrder` (a signed,
   executable order carrying `expiration` / `nonce` / `signature`) to an order
   request, negotiating counters back and forth in real time.
@@ -46,6 +48,29 @@ total with a one-click **Use** button. A **Taker** consults `getPrice` to verify
 a received order — each offer card shows a live fairness badge (**Oracle ✓ fair**
 within ±15 bps, else **⚠ N bps over fair**). Oracle prices are suggestions only,
 never executable.
+
+### Indexer Protocol (intent layer)
+
+The off-chain discovery layer (whitepaper §3). Instead of makers passively
+watching the open feed, **makers announce intent** to trade a direction and
+**takers discover counterparties** before negotiating. Implemented as an
+`Indexer` namespace in `otc.html`, backed by a new `intents` table.
+`makerToken` is the token the maker **provides** (the taker receives);
+`takerTokens` is what the maker wants in return.
+
+| RPC | Caller → Callee | Meaning |
+| --- | --- | --- |
+| `addIntent(makerToken, takerTokens)` | Maker → Indexer | "I want to trade XLM for USDC." → `addIntent('XLM', ['USDC'])` |
+| `removeIntent(makerToken, takerTokens)` | Maker → Indexer | "No longer trading XLM for USDC." → `removeIntent('XLM', ['USDC'])` |
+| `getIntent(maker)` | any → Indexer | "List active intent for this maker." |
+| `findIntent(makerToken, takerToken)` | Taker → Indexer | "Find someone trading XLM for USDC." → `findIntent('XLM', 'USDC')` |
+| `foundIntent(maker, intentList)` | Indexer → Taker | The matching makers returned to the taker. |
+
+A **Maker** toggles *Market making · XLM → USDC / USDC → XLM* to `addIntent` /
+`removeIntent` (their mock `G…` address is attached). A **Taker** sees a live
+**Counterparties** panel (`findIntent` → `foundIntent`) listing makers who
+announced the chosen direction. Discovery is **additive** — the RFQ is still
+broadcast, so makers without a standing intent can still respond.
 
 > No accounts: identity is just a display name you type, persisted in
 > `localStorage`. Acceptance / "settlement" is mocked; the negotiation lifecycle
@@ -134,6 +159,36 @@ never executable.
    alter table public.quotes add column if not exists taker_amount  numeric;
    alter table public.quotes add column if not exists nonce         text;
    alter table public.quotes add column if not exists signature     text;
+
+   -- Indexer (intent) layer — makers announce intent, takers discover counterparties
+   create table if not exists public.intents (
+     id            uuid primary key default gen_random_uuid(),
+     created_at    timestamptz not null default now(),
+     maker_name    text not null,
+     maker_address text,
+     maker_token   text not null,   -- token the maker provides (taker receives)
+     taker_token   text not null,   -- token the maker wants in return
+     status        text not null default 'active' check (status in ('active','withdrawn')),
+     expires_at    timestamptz
+   );
+   create index if not exists intents_dir_idx   on public.intents (maker_token, taker_token, status);
+   create index if not exists intents_maker_idx on public.intents (maker_name);
+
+   alter table public.intents enable row level security;
+   drop policy if exists "anon read intents"   on public.intents;
+   drop policy if exists "anon insert intents" on public.intents;
+   drop policy if exists "anon update intents" on public.intents;
+   create policy "anon read intents"   on public.intents for select using (true);
+   create policy "anon insert intents" on public.intents for insert with check (true);
+   create policy "anon update intents" on public.intents for update using (true) with check (true);
+
+   do $$
+   begin
+     if not exists (select 1 from pg_publication_tables
+                    where pubname='supabase_realtime' and schemaname='public' and tablename='intents') then
+       alter publication supabase_realtime add table public.intents;
+     end if;
+   end $$;
    ```
 
 3. Project Settings → API → copy the **Project URL** and **anon public** key into
@@ -148,11 +203,16 @@ never executable.
 
 1. **Tab A — Taker:** type a name, keep role **Taker**. In the RFQ ticket pick
    the token to **receive** (`makerToken`, XLM or USDC) and an amount — the
-   **pay** token auto-sets to the other. Click *Get indicative quote* (`getQuote`)
-   or *Request firm order* (`getOrder`). The RFQ goes `open`.
-2. **Tab B — Maker:** type a maker name, switch role to **Maker**. The request
-   shows in the open feed tagged **QUOTE** or **ORDER**; click it and respond —
-   *Send indicative quote* or *Send signed order* — with a short validity.
+   **pay** token auto-sets to the other. The **Counterparties** panel lists makers
+   who announced this direction (`findIntent` → `foundIntent`). Click *Get
+   indicative quote* (`getQuote`) or *Request firm order* (`getOrder`). The RFQ
+   goes `open`.
+2. **Tab B — Maker:** type a maker name, switch role to **Maker**. Toggle
+   **Market making · XLM → USDC** (or **USDC → XLM**) to announce intent
+   (`addIntent`) — your maker shows up live in the taker's **Counterparties**
+   panel. The request shows in the open feed tagged **QUOTE** or **ORDER**; click
+   it and respond — *Send indicative quote* or *Send signed order* — with a short
+   validity.
 3. Tab A sees the response arrive **live** with its bps-vs-oracle spread and a
    ticking countdown. A signed order shows a **Signed order** badge (nonce + sig).
    Open more maker tabs to make offers compete — the best price floats to the top
@@ -168,9 +228,11 @@ never executable.
 
 ## How it maps to the whitepaper
 
-- *Indexer* (intent to trade) → the shared `rfqs` table / open-RFQ feed; each row
-  carries the order envelope (`maker_token`, `taker_token`, `maker_amount`,
-  `taker_address`, `request_kind`).
+- *Indexer* (intent to trade) → the `Indexer` namespace over the `intents` table:
+  makers `addIntent` / `removeIntent` a direction, takers `findIntent` to receive
+  `foundIntent` (the matching makers). The shared `rfqs` open-feed remains the RFQ
+  broadcast — each row carries the order envelope (`maker_token`, `taker_token`,
+  `maker_amount`, `taker_address`, `request_kind`).
 - *Order API* (`getOrder` / `provideOrder`) → an `rfqs` row with
   `request_kind='order'` + `quotes` rows with `response_kind='order'` carrying
   `expiration` / `nonce` / `signature` (mocked).
