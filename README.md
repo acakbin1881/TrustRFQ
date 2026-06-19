@@ -58,7 +58,7 @@ never executable.
    and enables realtime on both tables):
 
    ```sql
-   -- base table (skip the create if you already have rfqs)
+   -- base table
    create table if not exists public.rfqs (
      id uuid primary key default gen_random_uuid(),
      created_at timestamptz not null default now(),
@@ -70,21 +70,13 @@ never executable.
    );
 
    -- negotiation columns
-   alter table public.rfqs add column if not exists base_asset  text default 'XLM';
-   alter table public.rfqs add column if not exists quote_asset text default 'USDC';
-   alter table public.rfqs add column if not exists taker_name  text;
+   alter table public.rfqs add column if not exists base_asset        text default 'XLM';
+   alter table public.rfqs add column if not exists quote_asset       text default 'USDC';
+   alter table public.rfqs add column if not exists taker_name        text;
    alter table public.rfqs add column if not exists accepted_quote_id uuid;
 
-   -- peer-protocol order envelope (getOrder / getQuote)
-   alter table public.rfqs add column if not exists maker_token   text default 'XLM';   -- token the taker wants to receive
-   alter table public.rfqs add column if not exists taker_token   text default 'USDC';  -- token the taker pays with
-   alter table public.rfqs add column if not exists maker_amount  numeric;              -- makerAmount (in maker_token)
-   alter table public.rfqs add column if not exists taker_address text;
-   alter table public.rfqs add column if not exists request_kind  text default 'order'
-     check (request_kind in ('quote','order'));   -- 'quote' = indicative, 'order' = firm/signed
-
    -- one row per price proposal; a "thread" = all rows sharing (rfq_id, maker_name)
-   create table public.quotes (
+   create table if not exists public.quotes (
      id             uuid primary key default gen_random_uuid(),
      created_at     timestamptz not null default now(),
      rfq_id         uuid not null references public.rfqs(id) on delete cascade,
@@ -95,22 +87,22 @@ never executable.
      status         text not null default 'active'
                       check (status in ('active','superseded','accepted','rejected','expired')),
      expires_at     timestamptz not null,
-     parent_id      uuid references public.quotes(id)   -- informational only
+     parent_id      uuid references public.quotes(id)
    );
-   create index on public.quotes (rfq_id, created_at);
-   create index on public.quotes (maker_name);
+   create index if not exists quotes_rfq_created_idx on public.quotes (rfq_id, created_at);
+   create index if not exists quotes_maker_idx        on public.quotes (maker_name);
 
-   -- peer-protocol response envelope (provideOrder / provideQuote)
-   alter table public.quotes add column if not exists response_kind text default 'order'
-     check (response_kind in ('quote','order'));  -- 'quote' = indicative, 'order' = signed/executable
-   alter table public.quotes add column if not exists maker_address text;
-   alter table public.quotes add column if not exists taker_amount  numeric;  -- takerAmount (in taker_token)
-   alter table public.quotes add column if not exists nonce         text;     -- mock (no on-chain yet)
-   alter table public.quotes add column if not exists signature     text;     -- mock '0x…' (no wallet yet)
-
-   -- Row Level Security: anon may read/insert/update (demo only, no auth)
+   -- Row Level Security (demo only, no auth)
    alter table public.rfqs   enable row level security;
    alter table public.quotes enable row level security;
+
+   drop policy if exists "anon read rfqs"     on public.rfqs;
+   drop policy if exists "anon insert rfqs"   on public.rfqs;
+   drop policy if exists "anon update rfqs"   on public.rfqs;
+   drop policy if exists "anon read quotes"   on public.quotes;
+   drop policy if exists "anon insert quotes" on public.quotes;
+   drop policy if exists "anon update quotes" on public.quotes;
+
    create policy "anon read rfqs"     on public.rfqs   for select using (true);
    create policy "anon insert rfqs"   on public.rfqs   for insert with check (true);
    create policy "anon update rfqs"   on public.rfqs   for update using (true) with check (true);
@@ -118,9 +110,30 @@ never executable.
    create policy "anon insert quotes" on public.quotes for insert with check (true);
    create policy "anon update quotes" on public.quotes for update using (true) with check (true);
 
-   -- realtime feeds (so quotes/counters/settles stream live)
-   alter publication supabase_realtime add table public.rfqs;
-   alter publication supabase_realtime add table public.quotes;
+   -- realtime (guarded so re-running won't error if already added)
+   do $$
+   begin
+     if not exists (select 1 from pg_publication_tables
+                    where pubname='supabase_realtime' and schemaname='public' and tablename='rfqs') then
+       alter publication supabase_realtime add table public.rfqs;
+     end if;
+     if not exists (select 1 from pg_publication_tables
+                    where pubname='supabase_realtime' and schemaname='public' and tablename='quotes') then
+       alter publication supabase_realtime add table public.quotes;
+     end if;
+   end $$;
+
+   -- peer-protocol columns (Order / Quote APIs)
+   alter table public.rfqs add column if not exists maker_token   text default 'XLM';
+   alter table public.rfqs add column if not exists taker_token   text default 'USDC';
+   alter table public.rfqs add column if not exists maker_amount  numeric;
+   alter table public.rfqs add column if not exists taker_address text;
+   alter table public.rfqs add column if not exists request_kind  text default 'order' check (request_kind in ('quote','order'));
+   alter table public.quotes add column if not exists response_kind text default 'order' check (response_kind in ('quote','order'));
+   alter table public.quotes add column if not exists maker_address text;
+   alter table public.quotes add column if not exists taker_amount  numeric;
+   alter table public.quotes add column if not exists nonce         text;
+   alter table public.quotes add column if not exists signature     text;
    ```
 
 3. Project Settings → API → copy the **Project URL** and **anon public** key into
