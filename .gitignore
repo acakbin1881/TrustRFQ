@@ -1,0 +1,4 @@
+# Claude Code — machine-specific local permissions (do not commit)
+.claude/settings.local.json
+
+.vercel
