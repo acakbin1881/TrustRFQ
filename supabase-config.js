@@ -12,5 +12,5 @@
 // auth — identity is just a display name the user types (kept in localStorage).
 // ---------------------------------------------------------------------------
 
-window.SUPABASE_URL = 'https://vzitlzzbdnnxigexopdj.supabase.co';
-window.SUPABASE_ANON_KEY = 'sb_publishable_7zZi5H-rgAQ8PzC99MrHNA__0vA02DQ';
+window.SUPABASE_URL = 'https://zaflldqvenbgfaxtzbjc.supabase.co';
+window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZmxsZHF2ZW5iZ2ZheHR6YmpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MTc1MDAsImV4cCI6MjA5NzI5MzUwMH0._ICBXPBxuBkx39eCxeE5nRxD8D4__TE2_pQsyurs6mk';

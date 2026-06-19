@@ -213,6 +213,77 @@
     }
     .btn-request.is-busy, .btn-request:disabled { opacity: 0.6; pointer-events: none; }
 
+    /* token dropdowns (taker ticket) */
+    .token-select {
+      width: 100%; margin-top: 10px; padding: 16px 18px;
+      border-radius: 12px; background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;
+      font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600;
+      outline: none; cursor: pointer; transition: border-color .15s;
+    }
+    .token-select:focus { border-color: rgba(229, 181, 103, 0.5); }
+
+    /* dual ticket actions (quote vs firm order) */
+    .ticket-actions { display: grid; gap: 10px; margin-top: 24px; }
+    .ticket-actions .btn-request { margin-top: 0; }
+    .btn-quote {
+      width: 100%; padding: 16px; border-radius: 12px; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600;
+      background: transparent; color: #E5B567;
+      border: 1px solid rgba(229, 181, 103, 0.45); transition: background .15s;
+    }
+    .btn-quote:hover { background: rgba(229, 181, 103, 0.08); }
+    .btn-quote.is-busy, .btn-quote:disabled { opacity: 0.6; pointer-events: none; }
+
+    /* signed-order badge */
+    .order-badge {
+      margin-top: 14px; display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 13px; border-radius: 9px;
+      border: 1px solid rgba(229, 181, 103, 0.28); background: rgba(229, 181, 103, 0.06);
+      color: #E5B567; font-size: 12px; font-family: 'Space Grotesk', sans-serif;
+      letter-spacing: 0.2px; word-break: break-all;
+    }
+
+    /* quote/order kind tag */
+    .kind-tag {
+      display: inline-flex; padding: 3px 9px; border-radius: 6px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.6px; vertical-align: middle;
+    }
+    .kind-tag--quote { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6); }
+    .kind-tag--order { background: rgba(229, 181, 103, 0.16); color: #E5B567; }
+
+    /* Oracle: maker price suggestion */
+    .oracle-suggest {
+      margin-top: 24px; padding: 13px 15px; border-radius: 11px;
+      border: 1px solid rgba(229, 181, 103, 0.22); background: rgba(229, 181, 103, 0.05);
+    }
+    .oracle-suggest__main {
+      font-family: 'Space Grotesk', sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.2px;
+    }
+    .oracle-suggest__row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px;
+    }
+    .oracle-suggest__row span {
+      font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #E5B567;
+    }
+    .btn-oracle {
+      flex: 0 0 auto; padding: 7px 16px; border-radius: 8px; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600;
+      background: transparent; color: #E5B567; border: 1px solid rgba(229, 181, 103, 0.45);
+      transition: background .15s;
+    }
+    .btn-oracle:hover { background: rgba(229, 181, 103, 0.12); }
+
+    /* Oracle: taker fairness verdict on an offer */
+    .oracle-check {
+      margin-top: 12px; display: inline-flex; align-items: center;
+      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.2px;
+    }
+    .oracle-check.is-ok   { background: rgba(74, 222, 128, 0.13); color: #4ade80; }
+    .oracle-check.is-warn { background: rgba(229, 181, 103, 0.14); color: #E5B567; }
+
     /* offers header */
     .offers__head {
       display: flex;
@@ -498,9 +569,11 @@
   <script>
     (function () {
       // ---- config ----
-      var BASE = 'XLM', QUOTE = 'USDC';
+      // The Oracle service (whitepaper §4): an off-chain price feed both peers
+      // consult. getPrice/providePrice are suggestions only (not executable).
       var oracle = {
-        mid: 0.1200,
+        mid: 0.1200,       // live USDC per XLM (gently drifts, see step())
+        base: 0.1200,      // anchor for the random walk
         // signed spread vs mid where positive = better for the taker
         bps: function (price, side) {
           var raw = (price - this.mid) / this.mid * 10000;
@@ -509,6 +582,20 @@
         // a starting maker quote `bps` away from mid, in the taker's favour direction
         suggest: function (side, bps) {
           return side === 'sell' ? this.mid * (1 - bps / 10000) : this.mid * (1 + bps / 10000);
+        },
+        // Oracle API — getPrice(makerToken, takerToken): price = takerToken per 1 makerToken
+        getPrice: function (makerToken, takerToken) {
+          var price = makerToken === takerToken ? 1
+                    : (makerToken === 'XLM' ? this.mid : 1 / this.mid);
+          return this.providePrice(makerToken, takerToken, price);
+        },
+        providePrice: function (makerToken, takerToken, price) {
+          return { makerToken: makerToken, takerToken: takerToken, price: price };
+        },
+        // gentle ±~4 bps drift per step, clamped to ±3% of base — feels like a live feed
+        step: function () {
+          var d = (Math.random() - 0.5) * this.base * 0.0008;
+          this.mid = Math.min(this.base * 1.03, Math.max(this.base * 0.97, this.mid + d));
         }
       };
 
@@ -527,9 +614,12 @@
       var state = {
         role: store.get('rfq_role') || 'taker',
         name: store.get('rfq_display_name') || '',
+        address: store.get('rfq_address') || '',
         // taker
         amount: '5000000',
-        side: 'sell',
+        makerToken: 'XLM',   // token the taker wants to receive (drives side: XLM=buy, USDC=sell)
+        takerToken: 'USDC',  // token the taker pays with
+        side: 'buy',
         busy: false,
         // shared focused rfq
         rfq: null,            // the focused rfq row (taker's own, or maker's selected)
@@ -545,6 +635,7 @@
       };
       var openCh = null, focusCh = null;
       var lastExpireCall = 0;
+      var lastOracleStep = 0;
       var settleAnim = false;
 
       // ---- helpers ----
@@ -633,12 +724,8 @@
       }
 
       // ---- data layer (every transition guards on status + verifies row count) ----
-      function createRfq() {
-        return sb.from('rfqs').insert({
-          side: state.side, amount: num(), status: 'open',
-          taker_name: state.name || null, base_asset: BASE, quote_asset: QUOTE
-        }).select().single();
-      }
+      // RFQ creation + quote/order submission live in the Peer API (above); these
+      // are the read + settlement helpers shared by both roles.
       function listOpenRfqs() {
         return sb.from('rfqs').select('*').eq('status', 'open')
           .order('created_at', { ascending: false }).limit(50);
@@ -646,17 +733,6 @@
       function listQuotesForRfq(rfqId) {
         return sb.from('quotes').select('*').eq('rfq_id', rfqId)
           .order('created_at', { ascending: true });
-      }
-      async function submitQuote(o) {
-        // cosmetic supersede of prior active in this thread (best-effort)
-        await sb.from('quotes').update({ status: 'superseded' })
-          .eq('rfq_id', o.rfqId).eq('maker_name', o.makerName).eq('status', 'active');
-        return sb.from('quotes').insert({
-          rfq_id: o.rfqId, maker_name: o.makerName, maker_initials: o.makerInitials || null,
-          price: o.price, from_role: o.fromRole, status: 'active',
-          expires_at: new Date(Date.now() + o.ttlSec * 1000).toISOString(),
-          parent_id: o.parentId || null
-        }).select().single();
       }
       async function acceptStanding(quote, rfq) {
         // settle the rfq FIRST, guarded on still-open
@@ -675,6 +751,114 @@
         return sb.from('quotes').update({ status: 'expired' })
           .eq('rfq_id', rfqId).eq('status', 'active').lt('expires_at', new Date().toISOString());
       }
+
+      // ---- tokens & order envelope helpers ----
+      var TOKENS = ['XLM', 'USDC'];
+      function otherToken(t) { return t === 'XLM' ? 'USDC' : 'XLM'; }
+      // makerToken = the token the taker wants to RECEIVE; this fixes the trade direction
+      function sideForMakerToken(mt) { return mt === 'XLM' ? 'buy' : 'sell'; }
+      function makerTokenOf(r) { return (r && r.maker_token) || 'XLM'; }
+      function takerTokenOf(r) { return (r && r.taker_token) || 'USDC'; }
+      function makerAmountOf(r) { return Number(r && r.maker_amount != null ? r.maker_amount : (r ? r.amount : 0)) || 0; }
+      // amount the taker pays (in takerToken units) for `makerAmount` of makerToken at `price` USDC/XLM
+      function payAmount(makerAmount, price, makerToken) {
+        if (!price) return 0;
+        return makerToken === 'XLM' ? makerAmount * price : makerAmount / price;
+      }
+      // inverse of payAmount: a total (in takerToken) → per-unit price (USDC/XLM)
+      function priceFromTotal(total, makerAmount, makerToken) {
+        if (!total || !makerAmount) return 0;
+        return makerToken === 'XLM' ? total / makerAmount   // buy:  USDC total / XLM amount
+                                    : makerAmount / total;  // sell: USDC amount / XLM total
+      }
+      function tokDp(tok) { return tok === 'USDC' ? 2 : 0; }
+      // total headline (e.g. "615,000 USDC") and small per-unit reference ("$0.12300/XLM")
+      function totalLabel(r, price) {
+        return fmt(payAmount(makerAmountOf(r), price, makerTokenOf(r)), tokDp(takerTokenOf(r))) + ' ' + takerTokenOf(r);
+      }
+      function unitLabel(price) { return '$' + Number(price).toFixed(5) + '/XLM'; }
+      // Oracle fairness check (Taker side): is a quote/order within tolerance of the feed?
+      var ORACLE_TOL_BPS = 15;
+      function oracleVerdict(price, side) {           // bps signed: + = better for taker
+        var b = oracle.bps(price, side);
+        if (b >= -ORACLE_TOL_BPS)
+          return { ok: true,  text: 'Oracle ✓ ' + (b >= 0 ? 'at/above fair' : 'fair') };
+        return     { ok: false, text: 'Oracle ⚠ ' + Math.abs(b).toFixed(1) + ' bps over fair' };
+      }
+      // mock signing primitives (no wallet / no on-chain yet — values are placeholders)
+      function mockNonce() { return String(Math.floor(Math.random() * 1e15)); }
+      function mockSignature() {
+        var h = '0123456789abcdef', s = '0x';
+        for (var i = 0; i < 64; i++) s += h[Math.floor(Math.random() * 16)];
+        return s;
+      }
+      function genAddress() {
+        var b32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', s = 'G';
+        for (var i = 0; i < 55; i++) s += b32[Math.floor(Math.random() * 32)];
+        return s;
+      }
+
+      // ---- Peer Protocol API (off-chain, transport-agnostic RPCs over Supabase) ----
+      // Order API: executable, "signed" orders.  Quote API: indicative, not executable.
+      var Peer = {
+        // Taker → Maker: "I want to buy <makerAmount> <makerToken> using <takerToken>."
+        getOrder: function (makerAmount, makerToken, takerToken, takerAddress) {
+          return sb.from('rfqs').insert({
+            side: sideForMakerToken(makerToken),
+            amount: makerAmount, maker_amount: makerAmount,
+            maker_token: makerToken, taker_token: takerToken,
+            base_asset: makerToken, quote_asset: takerToken,
+            status: 'open', request_kind: 'order',
+            taker_name: state.name || null, taker_address: takerAddress || null
+          }).select().single();
+        },
+        // Taker → Maker: "How much would it cost to buy <makerAmount> <makerToken>?"
+        getQuote: function (makerAmount, makerToken, takerTokens) {
+          var takerToken = (takerTokens && takerTokens[0]) || otherToken(makerToken);
+          return sb.from('rfqs').insert({
+            side: sideForMakerToken(makerToken),
+            amount: makerAmount, maker_amount: makerAmount,
+            maker_token: makerToken, taker_token: takerToken,
+            base_asset: makerToken, quote_asset: takerToken,
+            status: 'open', request_kind: 'quote',
+            taker_name: state.name || null
+          }).select().single();
+        },
+        // Maker → Taker: a signed, executable order (carries expiration, nonce, signature).
+        // Also used for taker counter-offers (from_role='taker'), which carry no signature.
+        provideOrder: async function (o) {
+          var signed = (o.fromRole || 'maker') === 'maker';
+          await sb.from('quotes').update({ status: 'superseded' })
+            .eq('rfq_id', o.rfqId).eq('maker_name', o.makerName).eq('status', 'active');
+          return sb.from('quotes').insert({
+            rfq_id: o.rfqId, maker_name: o.makerName, maker_initials: o.makerInitials || null,
+            price: o.price, from_role: o.fromRole || 'maker', status: 'active',
+            response_kind: 'order',
+            expires_at: new Date(Date.now() + o.ttlSec * 1000).toISOString(),
+            maker_address: signed ? (o.makerAddress || null) : null,
+            taker_amount: o.takerAmount,
+            nonce: signed ? mockNonce() : null,
+            signature: signed ? mockSignature() : null,
+            parent_id: o.parentId || null
+          }).select().single();
+        },
+        // Maker → Taker: an indicative quote (not executable, no signature).
+        provideQuote: async function (o) {
+          await sb.from('quotes').update({ status: 'superseded' })
+            .eq('rfq_id', o.rfqId).eq('maker_name', o.makerName).eq('status', 'active');
+          return sb.from('quotes').insert({
+            rfq_id: o.rfqId, maker_name: o.makerName, maker_initials: o.makerInitials || null,
+            price: o.price, from_role: 'maker', status: 'active',
+            response_kind: 'quote',
+            expires_at: new Date(Date.now() + o.ttlSec * 1000).toISOString(),
+            taker_amount: o.takerAmount, parent_id: null
+          }).select().single();
+        },
+        // Taker turns an indicative request into a firm (signed) order request.
+        escalateToOrder: function (rfqId) {
+          return sb.from('rfqs').update({ request_kind: 'order' }).eq('id', rfqId).select().single();
+        }
+      };
 
       // ---- realtime ----
       function removeFocus() { if (focusCh) { try { sb.removeChannel(focusCh); } catch (e) {} focusCh = null; } }
@@ -718,8 +902,11 @@
         state.role = role;
         store.set('rfq_role', role);
         teardownAll();
-        state.rfq = null; state.quotes = new Map(); state.openRfqs = [];
+        state.openRfqs = [];
         state.counterFor = null; state.drafts = {};
+        // Keep the focused RFQ + its quotes so a single operator can flip
+        // Taker ↔ Maker in one tab and watch both sides of the negotiation.
+        if (state.rfq) subscribeFocus(state.rfq.id);
         if (role === 'maker') mountMaker(); else render();
       }
       function setName(v) {
@@ -727,14 +914,27 @@
         store.set('rfq_display_name', v);
         var b = document.getElementById('idBadge'); if (b) b.textContent = initialsOf(v);
       }
-      function setSide(side) { state.side = side; render(); }
+      function setMakerToken(t) {
+        if (TOKENS.indexOf(t) < 0) return;
+        state.makerToken = t; state.takerToken = otherToken(t);
+        state.side = sideForMakerToken(t); render();
+      }
+      function setTakerToken(t) {
+        if (TOKENS.indexOf(t) < 0) return;
+        state.takerToken = t; state.makerToken = otherToken(t);
+        state.side = sideForMakerToken(state.makerToken); render();
+      }
 
-      async function requestQuotes() {
+      // kind: 'quote' (indicative) | 'order' (firm/signed)
+      async function requestRfq(kind) {
         if (num() <= 0 || state.busy) return;
         if (!ensureClient()) { render(); return; }
         state.busy = true; removeFocus(); state.rfq = null; state.quotes = new Map(); render();
         try {
-          var res = await createRfq();
+          var makerAmount = num();
+          var res = kind === 'quote'
+            ? await Peer.getQuote(makerAmount, state.makerToken, [state.takerToken])
+            : await Peer.getOrder(makerAmount, state.makerToken, state.takerToken, state.address);
           if (res.error) throw res.error;
           state.rfq = res.data;
           state.busy = false;
@@ -746,17 +946,31 @@
         }
       }
 
+      async function escalateOrder() {
+        if (!state.rfq || state.rfq.request_kind === 'order') return;
+        try {
+          var r = await Peer.escalateToOrder(state.rfq.id);
+          if (r.error) throw r.error;
+          if (r.data) state.rfq = r.data;
+          render();
+        } catch (e) { alert('Could not request a firm order: ' + (e.message || e)); }
+      }
+
       async function takerCounter(makerName) {
-        var price = parsePrice(state.drafts[makerName]);
-        if (price <= 0 || !state.rfq) return;
+        // draft now holds the TOTAL the taker offers (in takerToken)
+        var total = parsePrice(state.drafts[makerName]);
+        if (total <= 0 || !state.rfq) return;
+        var price = priceFromTotal(total, num(), makerTokenOf(state.rfq));
+        if (price <= 0) return;
         // find the maker's current standing to carry initials forward
         var arr = threadsOf(quotesArr()).get(makerName) || [];
         var st = standingOf(arr);
         try {
-          var res = await submitQuote({
+          var res = await Peer.provideOrder({
             rfqId: state.rfq.id, makerName: makerName,
             makerInitials: st ? st.maker_initials : initialsOf(makerName),
-            price: price, fromRole: 'taker', ttlSec: 60, parentId: st ? st.id : null
+            price: price, fromRole: 'taker', ttlSec: 60, parentId: st ? st.id : null,
+            takerAmount: total
           });
           if (res.error) throw res.error;
           state.quotes.set(res.data.id, res.data);
@@ -812,16 +1026,34 @@
       }
       function makerBack() { removeFocus(); state.rfq = null; state.quotes = new Map(); render(); }
 
-      async function makerSubmit(isAcceptInstead) {
+      async function makerSubmit() {
         if (!state.rfq) return;
         if (!state.name) { alert('Enter a maker name in the top bar first.'); return; }
-        var price = parsePrice(state.makerPriceDraft);
-        if (price <= 0) { alert('Enter a price.'); return; }
+        var r = state.rfq;
+        var makerAmount = makerAmountOf(r), makerToken = makerTokenOf(r);
+        // draft now holds the TOTAL the maker offers (in takerToken)
+        var takerAmount = parsePrice(state.makerPriceDraft);
+        if (takerAmount <= 0) { alert('Enter a total.'); return; }
+        var price = priceFromTotal(takerAmount, makerAmount, makerToken);
+        if (price <= 0) { alert('Enter a total.'); return; }
+        var ttl = parseInt(state.makerTtl, 10) || 30;
         try {
-          var res = await submitQuote({
-            rfqId: state.rfq.id, makerName: state.name, makerInitials: initialsOf(state.name),
-            price: price, fromRole: 'maker', ttlSec: parseInt(state.makerTtl, 10) || 30
-          });
+          var res;
+          if (r.request_kind === 'quote') {
+            // indicative response — provideQuote (not executable)
+            res = await Peer.provideQuote({
+              rfqId: r.id, makerName: state.name, makerInitials: initialsOf(state.name),
+              price: price, takerAmount: takerAmount, ttlSec: ttl
+            });
+          } else {
+            // firm response — provideOrder (signed, executable)
+            res = await Peer.provideOrder({
+              rfqId: r.id, makerName: state.name, makerInitials: initialsOf(state.name),
+              makerAddress: state.address, makerAmount: makerAmount, makerToken: makerToken,
+              takerAddress: r.taker_address, takerAmount: takerAmount, takerToken: takerTokenOf(r),
+              price: price, ttlSec: ttl, fromRole: 'maker'
+            });
+          }
           if (res.error) throw res.error;
           state.quotes.set(res.data.id, res.data);
           state.makerPriceDraft = '';
@@ -867,6 +1099,8 @@
       // ---- countdown tick (no full re-render) ----
       function tick() {
         var now = Date.now();
+        // gently move the Oracle feed and refresh bps/badges (render preserves focus)
+        if (now - lastOracleStep > 4000) { lastOracleStep = now; oracle.step(); render(); }
         document.querySelectorAll('[data-expires]').forEach(function (el) {
           var exp = Number(el.getAttribute('data-expires'));
           el.textContent = fmtCountdown(Math.max(0, Math.floor((exp - now) / 1000)));
@@ -926,25 +1160,43 @@
       }
 
       // ---------- TAKER ----------
+      function tokenSelect(id, label, value) {
+        return '<div class="field"><label class="field__label" for="' + id + '">' + label + '</label>' +
+          '<select id="' + id + '" class="token-select">' +
+            TOKENS.map(function (t) { return '<option value="' + t + '"' + (t === value ? ' selected' : '') + '>' + t + '</option>'; }).join('') +
+          '</select></div>';
+      }
+
       function leftTaker() {
         var busy = state.busy;
-        return '' +
+        var live = state.rfq && state.rfq.status === 'open';
+        var mt = state.makerToken, tt = state.takerToken;
+        var refPay = payAmount(num(), oracle.mid, mt);
+        var ticket = '' +
           '<div class="panel__label">RFQ TICKET</div>' +
-          '<div class="side-toggle">' +
-            '<button type="button" class="side-btn ' + (state.side === 'sell' ? 'is-active' : '') + '" data-action="set-side" data-side="sell">Sell XLM</button>' +
-            '<button type="button" class="side-btn ' + (state.side === 'buy' ? 'is-active' : '') + '" data-action="set-side" data-side="buy">Buy XLM</button>' +
-          '</div>' +
+          tokenSelect('makerTokenSel', 'Token I want to receive', mt) +
           '<div class="field">' +
-            '<label class="field__label" for="amountInput">Amount (XLM)</label>' +
+            '<label class="field__label" for="amountInput">Amount (' + esc(mt) + ')</label>' +
             '<input id="amountInput" class="field__input" inputmode="numeric" value="' + esc(state.amount) + '">' +
-            '<div class="field__hint">Oracle mid $' + oracle.mid.toFixed(5) + ' · ref. value ' + fmt(num() * oracle.mid) + ' ' + QUOTE + '</div>' +
+            '<div class="field__hint">Oracle mid $' + oracle.mid.toFixed(5) + ' · pay ≈ ' + fmt(refPay, tokDp(tt)) + ' ' + esc(tt) + ' at mid</div>' +
           '</div>' +
-          '<button type="button" class="btn-request ' + (busy ? 'is-busy' : '') + '" data-action="request">' +
-            (busy ? 'Opening RFQ…' : (state.rfq && state.rfq.status === 'open' ? 'Open a new RFQ' : 'Request quotes')) +
-          '</button>' +
-          (state.rfq && state.rfq.status === 'open'
-            ? '<p class="field__hint">RFQ #' + esc(String(state.rfq.id).slice(0, 8)) + ' live · waiting for makers to quote.</p>'
-            : '');
+          tokenSelect('takerTokenSel', 'Token I will pay with', tt);
+
+        if (live) {
+          return ticket +
+            '<button type="button" class="btn-quote" style="margin-top:24px;" data-action="new-rfq">Start a new RFQ</button>' +
+            '<p class="field__hint">RFQ #' + esc(String(state.rfq.id).slice(0, 8)) + ' live · ' +
+              (state.rfq.request_kind === 'quote' ? 'indicative quote' : 'firm order') +
+              ' · waiting for makers.</p>';
+        }
+        return ticket +
+          '<div class="ticket-actions">' +
+            '<button type="button" class="btn-quote ' + (busy ? 'is-busy' : '') + '" data-action="get-quote">' +
+              (busy ? 'Opening…' : 'Get indicative quote') + '</button>' +
+            '<button type="button" class="btn-request ' + (busy ? 'is-busy' : '') + '" data-action="request-order">' +
+              (busy ? 'Opening…' : 'Request firm order') + '</button>' +
+          '</div>' +
+          '<p class="field__hint">A <b>quote</b> is indicative pricing; a <b>firm order</b> is a signed, executable order you can accept.</p>';
       }
 
       function rightTaker() {
@@ -965,7 +1217,7 @@
         if (!ranked.length) {
           return head + '<div class="state"><div class="state__loading-title">Collecting quotes…</div><p class="state__loading-sub">RFQ broadcast to the maker network</p></div>';
         }
-        var cards = ranked.map(function (t, i) { return takerCard(t, i === 0 && t.standing.from_role === 'maker' && t.standing.status === 'active' && !isExpired(t.standing)); }).join('');
+        var cards = ranked.map(function (t, i) { return takerCard(t, i === 0 && t.standing.from_role === 'maker' && t.standing.response_kind === 'order' && t.standing.status === 'active' && !isExpired(t.standing)); }).join('');
         return head + '<div class="offers__list">' + cards + '</div>';
       }
 
@@ -981,38 +1233,62 @@
 
       function takerCard(t, isBest) {
         var s = t.standing, n = num();
+        var r = state.rfq;
+        var makerToken = makerTokenOf(r), takerToken = takerTokenOf(r);
         var expired = isExpired(s);
-        var total = n * s.price;
-        var side = state.rfq.side;
+        var pay = payAmount(n, s.price, makerToken);
+        var side = r.side;
+        var indicative = s.response_kind === 'quote';
         var turn = whoseTurn(s);
+        var kindTag = indicative
+          ? '<span class="kind-tag kind-tag--quote">INDICATIVE</span>'
+          : '<span class="kind-tag kind-tag--order">SIGNED ORDER</span>';
         var meta;
         if (s.status === 'active' && !isTerminal(s.status)) {
-          meta = fmtBps(oracle.bps(s.price, side)) +
-            ' · ' + (s.from_role === 'taker' ? 'your counter' : 'maker quote') +
+          meta = kindTag + ' · ' + fmtBps(oracle.bps(s.price, side)) +
+            ' · ' + (s.from_role === 'taker' ? 'your counter' : (indicative ? 'maker quote' : 'maker order')) +
             ' · <span data-expires="' + new Date(s.expires_at).getTime() + '">' + fmtCountdown(Math.max(0, Math.floor((new Date(s.expires_at).getTime() - Date.now()) / 1000))) + '</span>';
         } else {
-          meta = fmtBps(oracle.bps(s.price, side)) + ' · ' + esc(s.status);
+          meta = kindTag + ' · ' + fmtBps(oracle.bps(s.price, side)) + ' · ' + esc(s.status);
         }
 
         var actions = '';
-        if (turn === 'taker' && !expired) {
+        if (indicative) {
+          // not executable; offer to lock terms with a firm signed order
+          if (r.request_kind === 'quote' && !expired) {
+            actions = '<div class="offer__actions"><button type="button" class="btn-accept" data-action="escalate">Request firm order</button></div>' +
+              '<p class="waiting">Indicative only — request a firm signed order to lock these terms.</p>';
+          } else {
+            actions = '<p class="waiting">Indicative quote — waiting for a signed order from ' + esc(t.maker) + '.</p>';
+          }
+        } else if (turn === 'taker' && !expired) {
           actions =
             '<div class="offer__actions">' +
               '<button type="button" class="btn-accept" data-action="accept" data-id="' + esc(s.id) + '" data-accept-exp="' + new Date(s.expires_at).getTime() + '">Accept</button>' +
               '<button type="button" class="btn-counter" data-action="open-counter" data-maker="' + esc(t.maker) + '">Counter</button>' +
             '</div>';
         } else if (turn === 'maker') {
-          actions = '<p class="waiting">Countered $' + s.price.toFixed(5) + ' — waiting for ' + esc(t.maker) + ' to re-quote.</p>';
+          actions = '<p class="waiting">Countered ' + totalLabel(r, s.price) + ' — waiting for ' + esc(t.maker) + ' to re-quote.</p>';
         } else if (expired) {
           actions = '<div class="offer__actions"><button type="button" class="btn-counter" data-action="open-counter" data-maker="' + esc(t.maker) + '">Re-engage / counter</button></div>';
         }
         if (state.counterFor === t.maker) {
           actions +=
             '<div class="counter-box">' +
-              '<input id="counter-' + esc(t.maker) + '" inputmode="decimal" placeholder="Your price" value="' + esc(state.drafts[t.maker] || '') + '">' +
+              '<input id="counter-' + esc(t.maker) + '" inputmode="decimal" placeholder="Total you offer (' + esc(takerToken) + ')" value="' + esc(state.drafts[t.maker] || '') + '">' +
               '<button type="button" class="btn-accept" style="flex:0 0 auto;padding:11px 18px;" data-action="send-counter" data-maker="' + esc(t.maker) + '">Send</button>' +
             '</div>';
         }
+
+        var badge = (!indicative && s.from_role === 'maker' && s.nonce)
+          ? '<div class="order-badge">🔏 Signed order · nonce ' + esc(String(s.nonce).slice(0, 8)) +
+            ' · sig ' + esc(String(s.signature || '').slice(0, 10)) + '…</div>'
+          : '';
+
+        // Oracle verification (Taker calls getPrice to check the order is fair)
+        var v = oracleVerdict(s.price, side);
+        var oracleChip = '<div class="oracle-check ' + (v.ok ? 'is-ok' : 'is-warn') + '">' +
+          esc(v.text) + ' · feed ' + unitLabel(oracle.mid) + '</div>';
 
         return '<div class="offer ' + (isBest ? 'is-best' : '') + ' ' + (expired ? 'is-expired' : '') + '">' +
           '<div class="offer__row">' +
@@ -1022,19 +1298,25 @@
               '<div class="offer__meta">' + meta + '</div></div>' +
             '</div>' +
             '<div class="offer__priceblock">' +
-              '<div class="offer__price">$' + s.price.toFixed(5) + '</div>' +
-              '<div class="offer__total">' + fmt(total) + ' ' + QUOTE + '</div>' +
+              '<div class="offer__price">' + fmt(pay, tokDp(takerToken)) + ' ' + esc(takerToken) + '</div>' +
+              '<div class="offer__total">≈ ' + unitLabel(s.price) + '</div>' +
             '</div>' +
           '</div>' +
+          oracleChip +
           (isBest ? '<div class="offer__best">★ BEST QUOTE</div>' : '') +
+          badge +
           actions +
         '</div>';
       }
 
       function rightTaker_settled() {
-        var n = num(), r = state.rfq;
-        var summary = (r.side === 'sell' ? 'Sold' : 'Bought') + ' ' + fmt(Number(r.amount) || n) + ' XLM at $' +
-          Number(r.price).toFixed(5) + ' via ' + esc(r.maker) + ' — accepted off-chain.';
+        var r = state.rfq;
+        var mt = makerTokenOf(r), tt = takerTokenOf(r);
+        var makerAmount = makerAmountOf(r);
+        var pay = payAmount(makerAmount, Number(r.price), mt);
+        var summary = 'Received ' + fmt(makerAmount, tokDp(mt)) + ' ' + esc(mt) + ' for ' +
+          fmt(pay, tokDp(tt)) + ' ' + esc(tt) + ' at $' + Number(r.price).toFixed(5) +
+          ' via ' + esc(r.maker) + ' — signed order accepted off-chain.';
         return offersHead('settled') +
           '<div class="state">' +
             '<div class="settled__icon">✓</div>' +
@@ -1070,23 +1352,28 @@
           return head + '<div class="state"><div class="state__icon">⇄</div><p class="state__text">No open requests yet. Open a tab as a Taker and post one.</p></div>';
         }
         var cards = state.openRfqs.map(function (r) {
-          var amt = Number(r.amount) || 0;
-          var sideLabel = r.side === 'sell' ? 'SELL' : 'BUY';
+          var mt = makerTokenOf(r), tt = takerTokenOf(r);
+          var amt = makerAmountOf(r);
+          var isQuote = r.request_kind === 'quote';
+          var kindTag = '<span class="kind-tag ' + (isQuote ? 'kind-tag--quote">QUOTE' : 'kind-tag--order">ORDER') + '</span>';
           return '<div class="offer is-clickable" data-action="select-rfq" data-id="' + esc(r.id) + '">' +
             '<div class="offer__row">' +
               '<div class="offer__maker">' +
-                '<div class="offer__avatar">' + initialsOf(r.taker_name || sideLabel) + '</div>' +
-                '<div><div class="offer__name">' + fmt(amt) + ' XLM</div>' +
-                '<div class="offer__meta">' + esc(r.taker_name || 'Anon taker') + ' · ' + timeAgo(r.created_at) + ' · #' + esc(String(r.id).slice(0, 8)) + '</div></div>' +
+                '<div class="offer__avatar">' + initialsOf(r.taker_name || mt) + '</div>' +
+                '<div><div class="offer__name">' + fmt(amt, tokDp(mt)) + ' ' + esc(mt) + '</div>' +
+                '<div class="offer__meta">wants ' + esc(mt) + ' · pays ' + esc(tt) + ' · ' + esc(r.taker_name || 'Anon taker') + ' · ' + timeAgo(r.created_at) + '</div></div>' +
               '</div>' +
-              '<div class="offer__priceblock"><span class="badge-status badge-side">' + sideLabel + ' XLM</span></div>' +
+              '<div class="offer__priceblock">' + kindTag + '</div>' +
             '</div></div>';
         }).join('');
         return head + '<div class="offers__list">' + cards + '</div>';
       }
 
       function makerThread() {
-        var r = state.rfq, n = Number(r.amount) || 0;
+        var r = state.rfq;
+        var mt = makerTokenOf(r), tt = takerTokenOf(r);
+        var n = makerAmountOf(r);
+        var isQuote = r.request_kind === 'quote';
         var mine = state.name ? (threadsOf(quotesArr()).get(state.name) || []) : [];
         var standing = standingOf(mine);
         var turn = whoseTurn(standing);
@@ -1097,9 +1384,10 @@
           '<span class="oracle-chip">Oracle mid <b>$' + oracle.mid.toFixed(5) + '</b></span>' +
           '<button type="button" class="btn-ghost" data-action="refresh">↻</button></div></div>';
 
+        var kindTag = '<span class="kind-tag ' + (isQuote ? 'kind-tag--quote">QUOTE REQUEST' : 'kind-tag--order">ORDER REQUEST') + '</span>';
         var summary = '<div class="rfq-summary">' +
-          '<div class="rfq-summary__amt">' + fmt(n) + ' XLM <span class="badge-status badge-side">' + (r.side === 'sell' ? 'SELL' : 'BUY') + '</span></div>' +
-          '<div class="rfq-summary__meta">' + esc(r.taker_name || 'Anon taker') + ' · #' + esc(String(r.id).slice(0, 8)) +
+          '<div class="rfq-summary__amt">' + fmt(n, tokDp(mt)) + ' ' + esc(mt) + ' ' + kindTag + '</div>' +
+          '<div class="rfq-summary__meta">wants ' + esc(mt) + ' · pays ' + esc(tt) + ' · ' + esc(r.taker_name || 'Anon taker') + ' · #' + esc(String(r.id).slice(0, 8)) +
           (r.status === 'settled' ? ' · <span class="badge-status badge-accepted">SETTLED</span>' : '') + '</div></div>';
 
         var rows = mine.slice().sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); }).map(function (q) {
@@ -1108,36 +1396,60 @@
           var cd = (isStanding && q.status === 'active')
             ? ' · <span data-expires="' + new Date(q.expires_at).getTime() + '">' + fmtCountdown(Math.max(0, Math.floor((new Date(q.expires_at).getTime() - Date.now()) / 1000))) + '</span>'
             : (isTerminal(q.status) ? ' · ' + esc(q.status) : '');
+          var pay = payAmount(n, q.price, mt);
           return '<div class="thread-row ' + (isStanding ? 'is-standing' : '') + '">' +
             '<div><div class="thread-from">' + who + cd + '</div>' +
-            '<div class="offer__meta">' + fmtBps(oracle.bps(q.price, r.side)) + ' · ' + fmt(n * q.price) + ' ' + QUOTE + '</div></div>' +
-            '<div class="thread-price">$' + q.price.toFixed(5) + '</div></div>';
+            '<div class="offer__meta">' + fmtBps(oracle.bps(q.price, r.side)) + ' · ' + unitLabel(q.price) +
+            (q.from_role === 'maker' && q.response_kind === 'order' && q.nonce ? ' · <span class="kind-tag kind-tag--order">SIGNED</span>' : '') + '</div></div>' +
+            '<div class="thread-price">' + fmt(pay, tokDp(tt)) + ' ' + esc(tt) + '</div></div>';
         }).join('');
+
+        // taker upgraded an indicative request to a firm order → prompt a signed order
+        var needsSign = standing && standing.from_role === 'maker' && standing.response_kind === 'quote' &&
+                        !isQuote && standing.status === 'active' && !expired;
 
         var action = '';
         if (r.status === 'settled') {
           // a maker "won" if the accepted quote belongs to their thread
           var acceptedMine = mine.some(function (q) { return q.id === r.accepted_quote_id; });
           action = '<p class="waiting"><span class="badge-status ' + (acceptedMine ? 'badge-accepted">Your quote was accepted ✓' : 'badge-rejected">Settled with another maker') + '</span></p>';
-        } else if (!standing || turn === 'maker' || expired) {
-          // empty thread, OR taker countered (standing.from_role==='taker'), OR expired → maker acts
+        } else if (!standing || turn === 'maker' || expired || needsSign) {
+          // empty thread, OR taker countered, OR expired, OR escalation to a signed order → maker acts
           var counterPending = standing && standing.from_role === 'taker' && standing.status === 'active' && !expired;
           action =
-            (counterPending
-              ? '<p class="waiting">Taker countered at <b>$' + standing.price.toFixed(5) + '</b>. Accept it or re-quote.</p>' +
-                '<button type="button" class="btn-settle" data-action="maker-accept" data-id="' + esc(standing.id) + '" data-accept-exp="' + new Date(standing.expires_at).getTime() + '">Accept taker\'s $' + standing.price.toFixed(5) + '</button>'
+            (needsSign
+              ? '<p class="waiting">Taker upgraded this to a <b>firm order</b> — send a signed order to lock the trade.</p>'
               : '') +
-            '<div class="field"><label class="field__label" for="makerPrice">' + (standing ? 'Re-quote price' : 'Your price') + ' (USDC / XLM)</label>' +
-              '<input id="makerPrice" class="field__input" inputmode="decimal" placeholder="' + oracle.suggest(r.side, 5).toFixed(5) + '" value="' + esc(state.makerPriceDraft) + '">' +
-              (state.makerPriceDraft ? '<div class="field__hint">' + fmtBps(oracle.bps(parsePrice(state.makerPriceDraft), r.side)) + ' vs oracle · ' + fmt(n * parsePrice(state.makerPriceDraft)) + ' ' + QUOTE + '</div>' : '') +
+            (counterPending
+              ? '<p class="waiting">Taker countered at <b>' + totalLabel(r, standing.price) + '</b> (' + unitLabel(standing.price) + '). Accept it or re-quote.</p>' +
+                '<button type="button" class="btn-settle" data-action="maker-accept" data-id="' + esc(standing.id) + '" data-accept-exp="' + new Date(standing.expires_at).getTime() + '">Accept taker\'s ' + totalLabel(r, standing.price) + '</button>'
+              : '') +
+            (function () {
+              // Maker calls getPrice on the Oracle to price the order fairly
+              var op = oracle.getPrice(mt, tt);
+              var fairTotal = payAmount(n, oracle.mid, mt);
+              return '<div class="oracle-suggest">' +
+                '<div class="oracle-suggest__main">Oracle · getPrice(' + esc(mt) + ', ' + esc(tt) + ') → 1 ' + esc(mt) + ' = ' + op.price.toFixed(5) + ' ' + esc(tt) + '</div>' +
+                '<div class="oracle-suggest__row"><span>fair total ≈ ' + fmt(fairTotal, tokDp(tt)) + ' ' + esc(tt) + '</span>' +
+                '<button type="button" class="btn-oracle" data-action="use-oracle">Use</button></div>' +
+                '</div>';
+            })() +
+            '<div class="field"><label class="field__label" for="makerPrice">' + (standing ? 'Re-quote total' : 'Total you offer') + ' (' + esc(tt) + ')</label>' +
+              '<input id="makerPrice" class="field__input" inputmode="decimal" placeholder="' + fmt(payAmount(n, oracle.mid, mt), tokDp(tt)) + '" value="' + esc(state.makerPriceDraft) + '">' +
+              (state.makerPriceDraft
+                ? (function () { var dp = priceFromTotal(parsePrice(state.makerPriceDraft), n, mt);
+                    return '<div class="field__hint">' + unitLabel(dp) + ' · ' + fmtBps(oracle.bps(dp, r.side)) + ' vs oracle</div>'; })()
+                : '') +
             '</div>' +
             '<select id="makerTtl" class="ttl-select">' +
               ['15', '30', '60', '120'].map(function (s) { return '<option value="' + s + '"' + (state.makerTtl === s ? ' selected' : '') + '>Valid for ' + s + 's</option>'; }).join('') +
             '</select>' +
-            '<button type="button" class="btn-request" data-action="maker-submit">' + (standing ? 'Send re-quote' : 'Send quote') + '</button>';
+            '<button type="button" class="btn-request" data-action="maker-submit">' +
+              (isQuote ? (standing ? 'Send re-quote (indicative)' : 'Send indicative quote')
+                       : (standing ? 'Send signed re-quote' : 'Send signed order')) + '</button>';
         } else {
           // standing is the maker's own active quote → waiting on taker
-          action = '<p class="waiting">Quote standing at <b>$' + standing.price.toFixed(5) + '</b> — waiting for the taker to accept or counter.</p>';
+          action = '<p class="waiting">Quote standing at <b>' + totalLabel(r, standing.price) + '</b> (' + unitLabel(standing.price) + ') — waiting for the taker to accept or counter.</p>';
         }
 
         return head + summary + (rows ? '<div class="thread-list">' + rows + '</div>' : '') + '<div style="margin-top:18px;">' + action + '</div>';
@@ -1149,8 +1461,10 @@
         if (!el) return;
         var a = el.getAttribute('data-action');
         if (a === 'set-role') setRole(el.getAttribute('data-role'));
-        else if (a === 'set-side') setSide(el.getAttribute('data-side'));
-        else if (a === 'request') requestQuotes();
+        else if (a === 'get-quote') requestRfq('quote');
+        else if (a === 'request-order') requestRfq('order');
+        else if (a === 'new-rfq') reset();
+        else if (a === 'escalate') escalateOrder();
         else if (a === 'accept') accept(el.getAttribute('data-id'));
         else if (a === 'open-counter') { state.counterFor = el.getAttribute('data-maker'); render(); }
         else if (a === 'send-counter') takerCounter(el.getAttribute('data-maker'));
@@ -1160,7 +1474,17 @@
         else if (a === 'maker-back') makerBack();
         else if (a === 'maker-submit') makerSubmit();
         else if (a === 'maker-accept') makerAcceptCounter(el.getAttribute('data-id'));
+        else if (a === 'use-oracle') useOraclePrice();
       });
+
+      // Maker accepts the Oracle's fair price → fill the total input with it
+      function useOraclePrice() {
+        if (!state.rfq) return;
+        var mt = makerTokenOf(state.rfq), tt = takerTokenOf(state.rfq);
+        var fairTotal = payAmount(makerAmountOf(state.rfq), oracle.mid, mt);
+        state.makerPriceDraft = String(Number(fairTotal.toFixed(tokDp(tt))));
+        render();
+      }
 
       document.body.addEventListener('input', function (e) {
         var id = e.target.id;
@@ -1171,18 +1495,23 @@
       });
       document.body.addEventListener('change', function (e) {
         if (e.target.id === 'makerTtl') state.makerTtl = e.target.value;
+        else if (e.target.id === 'makerTokenSel') setMakerToken(e.target.value);
+        else if (e.target.id === 'takerTokenSel') setTakerToken(e.target.value);
       });
       // live bps hint under maker price without rebuilding the input
       function refreshHint() {
         var inp = document.getElementById('makerPrice'); if (!inp || !state.rfq) return;
         var hint = inp.parentNode.querySelector('.field__hint');
-        var p = parsePrice(state.makerPriceDraft);
-        var html = p > 0 ? fmtBps(oracle.bps(p, state.rfq.side)) + ' vs oracle · ' + fmt((Number(state.rfq.amount) || 0) * p) + ' ' + QUOTE : '';
+        var mt = makerTokenOf(state.rfq);
+        var total = parsePrice(state.makerPriceDraft);          // draft is the total
+        var p = priceFromTotal(total, makerAmountOf(state.rfq), mt);
+        var html = p > 0 ? unitLabel(p) + ' · ' + fmtBps(oracle.bps(p, state.rfq.side)) + ' vs oracle' : '';
         if (!hint && p > 0) { hint = document.createElement('div'); hint.className = 'field__hint'; inp.parentNode.appendChild(hint); }
         if (hint) hint.innerHTML = html;
       }
 
       // ---- boot ----
+      if (!state.address) { state.address = genAddress(); store.set('rfq_address', state.address); }
       setInterval(tick, 1000);
       if (state.role === 'maker') mountMaker(); else render();
     })();
