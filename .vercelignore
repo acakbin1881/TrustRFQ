@@ -1,0 +1,8 @@
+# Vercel only serves the static frontend. Exclude everything else so the
+# upload stays small (the Rust build dir alone is ~400MB).
+contracts/
+target/
+.claude/
+.agents/
+skills-lock.json
+*.log
