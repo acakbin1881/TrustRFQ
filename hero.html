@@ -89,6 +89,28 @@
       line-height: 1.55;
     }
 
+    /* top-right OTC launch button */
+    .otc-nav {
+      position: absolute;
+      top: 28px;
+      right: 72px;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 999px;
+      background: #E5B567;
+      color: #0a0a0c;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .otc-nav:hover { opacity: 0.88; }
+
     /* ===== shared section bits ===== */
     .section {
       position: relative;
@@ -308,6 +330,8 @@
       <source src="https://drive.usercontent.google.com/download?id=1FjdfoQPPhA9X0rWLgUEosbtrtlNZ7Tfn&export=download&confirm=t" type="video/mp4">
     </video>
     <div class="hero__overlay"></div>
+
+    <a href="otc.html" class="otc-nav">OTC →</a>
 
     <div class="hero__inner">
       <div class="hero__badge">

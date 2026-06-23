@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OTC Desk — RFQ negotiation</title>
+  <title>OTC — Off-chain RFQ</title>
+  <link rel="icon" href="data:,">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,1650 +13,939 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     ::selection { background: rgba(229, 181, 103, 0.3); }
-    input::placeholder { color: rgba(255, 255, 255, 0.3); }
 
     body {
-      width: 100%;
       min-height: 100vh;
-      background: #000000;
+      background: #000;
+      color: #fff;
       font-family: 'Hanken Grotesk', sans-serif;
-      color: #fff;
     }
+    a { color: inherit; }
 
-    /* ===== nav ===== */
-    .nav {
+    /* ===== top bar ===== */
+    .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 22px 48px;
+      padding: 22px 40px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-      gap: 18px;
-      flex-wrap: wrap;
     }
-    .nav__left { display: flex; align-items: center; gap: 14px; }
-    .nav__home {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: rgba(255, 255, 255, 0.6);
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .nav__home:hover { color: rgba(255, 255, 255, 0.9); }
-    .nav__divider { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.12); }
-    .nav__brand {
+    .topbar__brand {
       font-family: 'Space Grotesk', sans-serif;
       font-weight: 600;
-      font-size: 18px;
-      letter-spacing: -0.3px;
-    }
-    .nav__right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-    .nav__chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(229, 181, 103, 0.28);
-      background: rgba(229, 181, 103, 0.06);
-    }
-    .nav__chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #E5B567; }
-    .nav__chip-text { color: #E5B567; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
-
-    /* role switch + identity */
-    .role-toggle {
-      display: inline-grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      padding: 4px;
-      background: #000;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .role-btn {
-      padding: 8px 20px;
-      border-radius: 7px;
-      border: none;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.55);
-      transition: all .15s;
-    }
-    .role-btn.is-active { background: #E5B567; color: #0a0a0c; }
-    .identity { display: inline-flex; align-items: center; gap: 10px; }
-    .identity__badge {
-      width: 32px; height: 32px; border-radius: 9px;
-      background: rgba(229, 181, 103, 0.1);
-      border: 1px solid rgba(229, 181, 103, 0.2);
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; color: #E5B567;
-    }
-    .name-input {
-      padding: 8px 12px; border-radius: 9px; background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.12); color: #fff;
-      font-size: 13px; font-family: 'Hanken Grotesk', sans-serif; outline: none; width: 150px;
-    }
-    .name-input:focus { border-color: rgba(229, 181, 103, 0.5); }
-    .conn { display: inline-flex; align-items: center; gap: 7px; color: rgba(255,255,255,0.45); font-size: 12px; }
-    .conn__dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: background .2s; }
-    .conn__dot.is-on { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.6); }
-
-    /* ===== page ===== */
-    .page { max-width: 1100px; margin: 0 auto; padding: 56px 48px 100px; }
-
-    .page__title {
-      margin: 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 40px;
-      letter-spacing: -1px;
-    }
-    .page__subtitle {
-      margin: 14px 0 0;
-      color: rgba(255, 255, 255, 0.55);
-      font-size: 17px;
-      max-width: 620px;
-      line-height: 1.6;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 0.85fr 1.15fr;
-      gap: 24px;
-      margin-top: 48px;
-      align-items: start;
-    }
-
-    .panel {
-      padding: 32px;
-      border-radius: 18px;
-      background: #0a0a0c;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .panel--offers { min-height: 420px; }
-
-    .panel__label {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      color: rgba(255, 255, 255, 0.5);
-    }
-
-    /* side toggle */
-    .side-toggle {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 24px;
-      padding: 5px;
-      background: #000;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .side-btn {
-      padding: 12px;
-      border-radius: 9px;
-      border: none;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      transition: all .15s;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.55);
-    }
-    .side-btn.is-active { background: #E5B567; color: #0a0a0c; }
-
-    /* fields */
-    .field { margin-top: 24px; }
-    .field__label { color: rgba(255, 255, 255, 0.5); font-size: 13px; font-weight: 500; }
-    .field__input {
-      width: 100%;
-      margin-top: 10px;
-      padding: 16px 18px;
-      border-radius: 12px;
-      background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #fff;
-      font-size: 22px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      outline: none;
-      transition: border-color .15s;
-    }
-    .field__input:focus { border-color: rgba(229, 181, 103, 0.5); }
-    .field__hint { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.4); }
-
-    .ttl-select {
-      width: 100%; margin-top: 10px; padding: 14px;
-      border-radius: 12px; background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;
-      font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; outline: none;
-    }
-
-    /* primary action button */
-    .btn-request {
-      width: 100%;
-      margin-top: 24px;
-      padding: 16px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      background: #E5B567;
-      color: #0a0a0c;
-      transition: opacity .15s;
-    }
-    .btn-request.is-busy, .btn-request:disabled { opacity: 0.6; pointer-events: none; }
-
-    /* token dropdowns (taker ticket) */
-    .token-select {
-      width: 100%; margin-top: 10px; padding: 16px 18px;
-      border-radius: 12px; background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;
-      font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600;
-      outline: none; cursor: pointer; transition: border-color .15s;
-    }
-    .token-select:focus { border-color: rgba(229, 181, 103, 0.5); }
-
-    /* dual ticket actions (quote vs firm order) */
-    .ticket-actions { display: grid; gap: 10px; margin-top: 24px; }
-    .ticket-actions .btn-request { margin-top: 0; }
-    .btn-quote {
-      width: 100%; padding: 16px; border-radius: 12px; cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600;
-      background: transparent; color: #E5B567;
-      border: 1px solid rgba(229, 181, 103, 0.45); transition: background .15s;
-    }
-    .btn-quote:hover { background: rgba(229, 181, 103, 0.08); }
-    .btn-quote.is-busy, .btn-quote:disabled { opacity: 0.6; pointer-events: none; }
-
-    /* signed-order badge */
-    .order-badge {
-      margin-top: 14px; display: inline-flex; align-items: center; gap: 8px;
-      padding: 7px 13px; border-radius: 9px;
-      border: 1px solid rgba(229, 181, 103, 0.28); background: rgba(229, 181, 103, 0.06);
-      color: #E5B567; font-size: 12px; font-family: 'Space Grotesk', sans-serif;
-      letter-spacing: 0.2px; word-break: break-all;
-    }
-
-    /* quote/order kind tag */
-    .kind-tag {
-      display: inline-flex; padding: 3px 9px; border-radius: 6px;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.6px; vertical-align: middle;
-    }
-    .kind-tag--quote { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6); }
-    .kind-tag--order { background: rgba(229, 181, 103, 0.16); color: #E5B567; }
-
-    /* Oracle: maker price suggestion */
-    .oracle-suggest {
-      margin-top: 24px; padding: 13px 15px; border-radius: 11px;
-      border: 1px solid rgba(229, 181, 103, 0.22); background: rgba(229, 181, 103, 0.05);
-    }
-    .oracle-suggest__main {
-      font-family: 'Space Grotesk', sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.6);
-      letter-spacing: 0.2px;
-    }
-    .oracle-suggest__row {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px;
-    }
-    .oracle-suggest__row span {
-      font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: #E5B567;
-    }
-    .btn-oracle {
-      flex: 0 0 auto; padding: 7px 16px; border-radius: 8px; cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600;
-      background: transparent; color: #E5B567; border: 1px solid rgba(229, 181, 103, 0.45);
-      transition: background .15s;
-    }
-    .btn-oracle:hover { background: rgba(229, 181, 103, 0.12); }
-
-    /* Oracle: taker fairness verdict on an offer */
-    .oracle-check {
-      margin-top: 12px; display: inline-flex; align-items: center;
-      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
-      font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.2px;
-    }
-    .oracle-check.is-ok   { background: rgba(74, 222, 128, 0.13); color: #4ade80; }
-    .oracle-check.is-warn { background: rgba(229, 181, 103, 0.14); color: #E5B567; }
-
-    /* offers header */
-    .offers__head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .offers__status { color: rgba(255, 255, 255, 0.4); font-size: 13px; }
-    .oracle-chip {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 5px 11px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);
-      color: rgba(255,255,255,0.65); font-size: 12px;
-    }
-    .oracle-chip b { color: #E5B567; font-family: 'Space Grotesk', sans-serif; }
-
-    /* centered states */
-    .state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 320px;
-      text-align: center;
-    }
-    .state__icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 24px;
-    }
-    .state__text {
-      margin: 20px 0 0;
-      color: rgba(255, 255, 255, 0.45);
-      font-size: 15px;
-      max-width: 300px;
-      line-height: 1.6;
-    }
-    .state__loading-title {
-      color: #E5B567;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px;
-      letter-spacing: 0.5px;
-    }
-    .state__loading-sub { margin: 12px 0 0; color: rgba(255, 255, 255, 0.4); font-size: 14px; }
-
-    /* lists */
-    .offers__list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 22px;
-    }
-    .offer {
-      padding: 18px;
-      border-radius: 14px;
-      transition: all .15s;
-      background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .offer.is-clickable { cursor: pointer; }
-    .offer.is-clickable:hover { border-color: rgba(229, 181, 103, 0.3); }
-    .offer.is-best { border-color: rgba(229, 181, 103, 0.4); background: rgba(229, 181, 103, 0.05); }
-    .offer.is-expired { opacity: 0.5; }
-    .offer__row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .offer__maker { display: flex; align-items: center; gap: 12px; }
-    .offer__avatar {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      background: rgba(229, 181, 103, 0.1);
-      border: 1px solid rgba(229, 181, 103, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      color: #E5B567;
-    }
-    .offer__name { font-size: 15px; font-weight: 600; color: #fff; }
-    .offer__meta { font-size: 12px; color: rgba(255, 255, 255, 0.4); margin-top: 2px; }
-    .offer__meta .bps-pos { color: #4ade80; }
-    .offer__meta .bps-neg { color: #f87171; }
-    .offer__priceblock { text-align: right; }
-    .offer__price {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 18px;
-      font-weight: 600;
-      color: #fff;
-    }
-    .offer__total { font-size: 12px; color: rgba(255, 255, 255, 0.45); }
-    .offer__best {
-      margin-top: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(229, 181, 103, 0.14);
-      color: #E5B567;
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 20px;
       letter-spacing: 0.3px;
+      text-decoration: none;
     }
+    .topbar__brand .dot { color: #E5B567; }
+    .wallet-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wallet-chip__addr {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+    .wallet-chip__addr .net { color: #E5B567; font-weight: 600; font-size: 12px; }
 
-    /* per-card actions */
-    .offer__actions { display: flex; gap: 10px; margin-top: 14px; }
-    .btn-accept {
-      flex: 1; padding: 12px; border-radius: 10px; border: none; cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
-      background: #E5B567; color: #0a0a0c;
-    }
-    .btn-accept:disabled, .btn-accept.is-disabled { opacity: 0.4; pointer-events: none; }
-    .btn-counter {
-      padding: 12px 16px; border-radius: 10px; cursor: pointer;
-      border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05); color: #fff;
-      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
-    }
-    .btn-counter:hover { background: rgba(255,255,255,0.1); }
-    .counter-box { margin-top: 12px; display: flex; gap: 10px; }
-    .counter-box input {
-      flex: 1; padding: 11px 13px; border-radius: 9px; background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.14); color: #fff;
-      font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; outline: none;
-    }
-    .counter-box input:focus { border-color: rgba(229, 181, 103, 0.5); }
-    .waiting { color: rgba(255, 255, 255, 0.45); font-size: 13px; margin-top: 14px; text-align: center; }
-
-    /* maker negotiation thread */
-    .thread-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-    .thread-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 14px; border-radius: 10px; background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    .thread-row.is-standing { border-color: rgba(229, 181, 103, 0.3); }
-    .thread-from {
-      font-size: 11px; letter-spacing: 0.4px; font-weight: 600;
-      text-transform: uppercase; color: rgba(255, 255, 255, 0.45);
-    }
-    .thread-price { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; }
-    .rfq-summary {
-      margin-top: 8px; padding: 16px; border-radius: 12px;
-      background: #000; border: 1px solid rgba(255,255,255,0.08);
-    }
-    .rfq-summary__amt { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; }
-    .rfq-summary__meta { color: rgba(255,255,255,0.45); font-size: 13px; margin-top: 4px; }
-
-    .badge-status { display: inline-flex; padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
-    .badge-accepted { background: rgba(74, 222, 128, 0.14); color: #4ade80; }
-    .badge-rejected { background: rgba(255, 255, 255, 0.08); color: rgba(255,255,255,0.5); }
-    .badge-side { background: rgba(229, 181, 103, 0.12); color: #E5B567; }
-
-    /* settle button */
-    .btn-settle {
-      width: 100%;
-      margin-top: 22px;
-      padding: 16px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      background: #E5B567;
-      color: #0a0a0c;
-      transition: opacity .15s;
-    }
-    .btn-settle.is-busy, .btn-settle:disabled { opacity: 0.6; pointer-events: none; }
-
-    /* settled state */
-    .settled__icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: rgba(229, 181, 103, 0.12);
-      border: 1px solid rgba(229, 181, 103, 0.35);
-      display: flex;
+    /* ===== buttons ===== */
+    .btn {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: #E5B567;
-      font-size: 30px;
-    }
-    .settled__title {
-      margin: 22px 0 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 24px;
-      font-weight: 600;
-      color: #fff;
-    }
-    .settled__summary {
-      margin: 12px 0 0;
-      color: rgba(255, 255, 255, 0.55);
-      font-size: 15px;
-      max-width: 340px;
-      line-height: 1.6;
-    }
-    .btn-reset {
-      margin-top: 28px;
+      gap: 8px;
       padding: 12px 24px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
+      border: none;
       cursor: pointer;
       font-family: 'Space Grotesk', sans-serif;
-    }
-    .btn-reset:hover { background: rgba(255, 255, 255, 0.1); }
-
-    .btn-ghost {
-      padding: 8px 16px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: #fff;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 600;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
+      transition: opacity .15s, background .15s, border-color .15s;
     }
-    .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); }
-    .btn-link {
-      background: none; border: none; cursor: pointer; padding: 0;
-      color: rgba(255,255,255,0.55); font-size: 13px; font-family: 'Hanken Grotesk', sans-serif;
-    }
-    .btn-link:hover { color: #fff; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn--gold { background: #E5B567; color: #0a0a0c; }
+    .btn--gold:not(:disabled):hover { opacity: 0.88; }
+    .btn--ghost { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14); color: #fff; }
+    .btn--ghost:not(:disabled):hover { border-color: rgba(255,255,255,0.3); }
+    .btn--danger { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.3); color: #FF8C8C; }
+    .btn--danger:not(:disabled):hover { background: rgba(255,107,107,0.2); }
+    .btn--sm { padding: 9px 18px; font-size: 14px; }
 
-    [hidden] { display: none !important; }
+    /* ===== layout ===== */
+    .wrap { max-width: 920px; margin: 0 auto; padding: 48px 40px 96px; }
+
+    /* ===== wallet gate ===== */
+    .gate {
+      max-width: 520px;
+      margin: 80px auto 0;
+      padding: 48px 40px;
+      border-radius: 20px;
+      background: linear-gradient(120deg, #0c0c10, #060608);
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: center;
+    }
+    .gate__eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px; margin-bottom: 24px;
+      border: 1px solid rgba(229,181,103,0.28); background: rgba(229,181,103,0.06);
+      font-size: 13px; font-weight: 600; color: #E5B567;
+    }
+    .gate__eyebrow .d { width: 6px; height: 6px; border-radius: 50%; background: #E5B567; }
+    .gate h1 {
+      margin: 0 0 14px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 34px; letter-spacing: -0.5px;
+    }
+    .gate p { margin: 0 0 30px; color: rgba(255,255,255,0.58); font-size: 16px; line-height: 1.6; }
+
+    /* ===== tabs ===== */
+    .tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .tab {
+      padding: 14px 4px; margin-right: 28px;
+      background: none; border: none; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .tab:hover { color: rgba(255,255,255,0.8); }
+    .tab.is-active { color: #fff; border-bottom-color: #E5B567; }
+    .tab__count {
+      min-width: 20px; padding: 1px 7px; border-radius: 999px;
+      background: rgba(229,181,103,0.14); color: #E5B567; font-size: 12px; font-weight: 600;
+    }
+    .panel { display: none; }
+    .panel.is-active { display: block; }
+
+    /* ===== form ===== */
+    .card {
+      padding: 30px; border-radius: 16px;
+      background: #0a0a0c; border: 1px solid rgba(255,255,255,0.07);
+    }
+    .field { margin-bottom: 22px; }
+    .field__label {
+      display: block; margin-bottom: 10px;
+      font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
+      color: rgba(255,255,255,0.55); text-transform: uppercase;
+    }
+    .leg { display: grid; grid-template-columns: 1fr 150px; gap: 12px; }
+    input[type="text"], input[type="number"], select {
+      width: 100%; padding: 14px 16px; border-radius: 12px;
+      background: #060608; border: 1px solid rgba(255,255,255,0.10);
+      color: #fff; font-family: 'Hanken Grotesk', sans-serif; font-size: 15px;
+    }
+    input::placeholder { color: rgba(255,255,255,0.3); }
+    input:focus, select:focus { outline: none; border-color: rgba(229,181,103,0.5); }
+    select { appearance: none; cursor: pointer; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hint { margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.4); }
+    .maker-addr {
+      padding: 12px 16px; border-radius: 12px;
+      background: rgba(229,181,103,0.06); border: 1px solid rgba(229,181,103,0.2);
+      font-size: 14px; color: #E5B567; word-break: break-all;
+    }
+    .form-actions { margin-top: 28px; display: flex; align-items: center; gap: 16px; }
+
+    /* ===== order cards ===== */
+    .order {
+      padding: 22px 24px; border-radius: 16px; margin-bottom: 14px;
+      background: #0a0a0c; border: 1px solid rgba(255,255,255,0.07);
+    }
+    .order__top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .order__party { font-size: 14px; color: rgba(255,255,255,0.55); }
+    .order__party b { color: #fff; font-family: 'Space Grotesk', sans-serif; }
+    .legs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+    .legbox { padding: 16px; border-radius: 12px; background: #060608; border: 1px solid rgba(255,255,255,0.06); }
+    .legbox__k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.45); }
+    .legbox__v { margin-top: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; }
+    .legbox--in .legbox__v { color: #6FE3A1; }
+    .legbox--out .legbox__v { color: #fff; }
+    .order__meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 13px; color: rgba(255,255,255,0.5); }
+    .order__actions { display: flex; gap: 10px; margin-top: 18px; }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .badge--pending { background: rgba(229,181,103,0.12); color: #E5B567; }
+    .badge--accepted { background: rgba(111,227,161,0.12); color: #6FE3A1; }
+    .badge--declined, .badge--cancelled { background: rgba(255,107,107,0.12); color: #FF8C8C; }
+    .badge--expired { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.5); }
+    .sig { font-size: 12px; color: rgba(255,255,255,0.4); display: inline-flex; align-items: center; gap: 6px; }
+    .sig b { color: #6FE3A1; }
+
+    .empty { padding: 56px 24px; text-align: center; color: rgba(255,255,255,0.4); font-size: 15px; }
+
+    /* settlement strip */
+    .settle { margin-top: 16px; padding: 16px 18px; border-radius: 12px; background: #060608; border: 1px solid rgba(255,255,255,0.08); }
+    .settle__title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.45); margin-bottom: 12px; }
+    .settle__steps { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .settle__step { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.55); }
+    .settle__step.is-done { color: #6FE3A1; border-color: rgba(111,227,161,0.3); background: rgba(111,227,161,0.08); }
+    .settle__msg { font-size: 13px; color: rgba(255,255,255,0.5); }
+    .settle__msg a { color: #E5B567; }
+    .settle__err { font-size: 13px; color: #FF8C8C; margin-top: 8px; word-break: break-word; }
+
+    /* ===== toast ===== */
+    #toast {
+      position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);
+      max-width: 90vw; padding: 14px 22px; border-radius: 12px;
+      background: #15151a; border: 1px solid rgba(255,255,255,0.12);
+      font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.err { border-color: rgba(255,107,107,0.4); }
+    #toast.ok { border-color: rgba(111,227,161,0.4); }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 18px 20px; }
+      .wrap { padding: 32px 20px 80px; }
+      .leg, .row2, .legs { grid-template-columns: 1fr; }
+    }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
 </head>
 <body>
+  <header class="topbar">
+    <a class="topbar__brand" href="hero.html">Nebula<span class="dot">.</span>OTC</a>
+    <div class="wallet-chip" id="walletChip"></div>
+  </header>
 
-  <!-- nav -->
-  <nav class="nav">
-    <div class="nav__left">
-      <a href="hero.html" class="nav__home">← Home</a>
-      <span class="nav__divider"></span>
-      <span class="nav__brand">OTC Desk</span>
-    </div>
-    <div class="nav__right">
-      <div class="role-toggle">
-        <button type="button" class="role-btn" data-action="set-role" data-role="taker">Taker</button>
-        <button type="button" class="role-btn" data-action="set-role" data-role="maker">Maker</button>
+  <main class="wrap">
+    <!-- wallet gate -->
+    <section class="gate" id="gate">
+      <div class="gate__eyebrow"><span class="d"></span> OFF-CHAIN RFQ · TESTNET</div>
+      <h1>Connect your wallet</h1>
+      <p>Your Stellar wallet is your identity here — there's no sign-up. Connect to send a
+         directed order to a counterparty, or to see orders addressed to you.</p>
+      <button class="btn btn--gold" id="connectBtn">Connect wallet</button>
+    </section>
+
+    <!-- app -->
+    <section id="app" style="display:none">
+      <div class="tabs">
+        <button class="tab is-active" data-tab="create">Create order</button>
+        <button class="tab" data-tab="incoming">Incoming <span class="tab__count" id="incCount">0</span></button>
+        <button class="tab" data-tab="sent">Sent <span class="tab__count" id="sentCount">0</span></button>
       </div>
-      <div class="identity">
-        <div class="identity__badge" id="idBadge">··</div>
-        <input class="name-input" id="nameInput" placeholder="Your name" autocomplete="off">
+
+      <!-- create -->
+      <div class="panel is-active" data-panel="create">
+        <form class="card" id="orderForm" autocomplete="off">
+          <div class="field">
+            <label class="field__label">You will send</label>
+            <div class="leg">
+              <input type="text" id="makerAmount" inputmode="decimal" placeholder="0.00">
+              <select id="makerToken"></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field__label">You will receive</label>
+            <div class="leg">
+              <input type="text" id="takerAmount" inputmode="decimal" placeholder="0.00">
+              <select id="takerToken"></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field__label">Counterparty wallet address</label>
+            <input type="text" id="takerAddress" placeholder="G…">
+            <div class="hint">The taker who has agreed to this trade off-platform.</div>
+          </div>
+
+          <div class="field">
+            <label class="field__label">Expires in</label>
+            <div class="row2">
+              <input type="number" id="expValue" min="1" step="1" value="60">
+              <select id="expUnit">
+                <option value="60000">Minutes</option>
+                <option value="3600000" selected>Hours</option>
+                <option value="86400000">Days</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field__label">Your address (maker)</label>
+            <div class="maker-addr" id="makerAddrBox">—</div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn--gold" id="sendBtn">Sign &amp; send order</button>
+            <span class="hint" id="formHint">You'll be asked to sign the order in your wallet.</span>
+          </div>
+        </form>
       </div>
-      <div class="conn"><span class="conn__dot" id="connDot"></span><span id="connText">offline</span></div>
-      <div class="nav__chip">
-        <span class="nav__chip-dot"></span>
-        <span class="nav__chip-text">OFF-CHAIN</span>
+
+      <!-- incoming -->
+      <div class="panel" data-panel="incoming">
+        <div id="incomingList"></div>
       </div>
-    </div>
-  </nav>
 
-  <div class="page">
-    <h1 class="page__title" id="pageTitle">Block trade — XLM / USDC</h1>
-    <p class="page__subtitle" id="pageSubtitle"></p>
+      <!-- sent -->
+      <div class="panel" data-panel="sent">
+        <div id="sentList"></div>
+      </div>
+    </section>
+  </main>
 
-    <div class="grid">
-      <div class="panel" id="leftPanel"></div>
-      <div class="panel panel--offers" id="rightPanel"></div>
-    </div>
-  </div>
+  <div id="toast"></div>
 
-  <script>
-    (function () {
-      // ---- config ----
-      // The Oracle service (whitepaper §4): an off-chain price feed both peers
-      // consult. getPrice/providePrice are suggestions only (not executable).
-      var oracle = {
-        mid: 0.1200,       // live USDC per XLM (gently drifts, see step())
-        base: 0.1200,      // anchor for the random walk
-        // signed spread vs mid where positive = better for the taker
-        bps: function (price, side) {
-          var raw = (price - this.mid) / this.mid * 10000;
-          return side === 'sell' ? raw : -raw;
-        },
-        // a starting maker quote `bps` away from mid, in the taker's favour direction
-        suggest: function (side, bps) {
-          return side === 'sell' ? this.mid * (1 - bps / 10000) : this.mid * (1 + bps / 10000);
-        },
-        // Oracle API — getPrice(makerToken, takerToken): price = takerToken per 1 makerToken
-        getPrice: function (makerToken, takerToken) {
-          var price = makerToken === takerToken ? 1
-                    : (makerToken === 'XLM' ? this.mid : 1 / this.mid);
-          return this.providePrice(makerToken, takerToken, price);
-        },
-        providePrice: function (makerToken, takerToken, price) {
-          return { makerToken: makerToken, takerToken: takerToken, price: price };
-        },
-        // gentle ±~4 bps drift per step, clamped to ±3% of base — feels like a live feed
-        step: function () {
-          var d = (Math.random() - 0.5) * this.base * 0.0008;
-          this.mid = Math.min(this.base * 1.03, Math.max(this.base * 0.97, this.mid + d));
-        }
-      };
+  <script src="supabase-config.js"></script>
+  <script src="otc-config.js"></script>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    // NOTE: must use esm.sh's ?bundle-deps — the default build leaves a CJS dep
+    // (tweetnacl-util) with broken named-export interop, which throws on import
+    // and stops the whole app from wiring up (Connect button does nothing).
+    import {
+      StellarWalletsKit,
+      WalletNetwork,
+      allowAllModules,
+      FREIGHTER_ID,
+    } from 'https://esm.sh/@creit.tech/stellar-wallets-kit@1.9.5?bundle-deps';
+    import * as Stellar from 'https://esm.sh/@stellar/stellar-sdk@16?bundle-deps';
+    import { Buffer } from 'https://esm.sh/buffer@6';
+    globalThis.Buffer = globalThis.Buffer || Buffer;
 
-      // localStorage can throw (file://, sandboxed, privacy mode) — degrade gracefully
-      var store = {
-        get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-        set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-      };
+    // --- config -----------------------------------------------------------
+    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
-      var sb = (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY &&
-                window.SUPABASE_URL.indexOf('YOUR-PROJECT') === -1)
-        ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
-        : null;
+    const kit = new StellarWalletsKit({
+      network: WalletNetwork.TESTNET,
+      selectedWalletId: localStorage.getItem('otc_wallet_id') || FREIGHTER_ID,
+      modules: allowAllModules(),
+    });
 
-      // ---- state ----
-      var state = {
-        role: store.get('rfq_role') || 'taker',
-        name: store.get('rfq_display_name') || '',
-        address: store.get('rfq_address') || '',
-        // taker
-        amount: '5000000',
-        makerToken: 'XLM',   // token the taker wants to receive (drives side: XLM=buy, USDC=sell)
-        takerToken: 'USDC',  // token the taker pays with
-        side: 'buy',
-        busy: false,
-        // shared focused rfq
-        rfq: null,            // the focused rfq row (taker's own, or maker's selected)
-        quotes: new Map(),    // id -> quote, for the focused rfq
-        connected: false,
-        // maker
-        openRfqs: [],
-        // indexer / intent layer
-        foundMakers: [],      // taker: active intents matching the current (makerToken, takerToken)
-        myIntents: [],        // maker: my own active intents
-        // ui drafts (not re-rendered while typing)
-        counterFor: null,     // maker_name whose counter box is open (taker view)
-        drafts: {},           // maker_name -> draft counter price (taker view)
-        makerPriceDraft: '',
-        makerTtl: '30'
-      };
-      var openCh = null, focusCh = null, intentCh = null;
-      var lastExpireCall = 0;
-      var lastOracleStep = 0;
-      var settleAnim = false;
+    // token value stored on the order = code, or `CODE:ISSUER` for non-native
+    const TOKENS = [
+      { value: 'XLM', label: 'XLM' },
+      { value: 'USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', label: 'USDC' },
+    ];
+    const tokenLabel = (v) => (v || '').split(':')[0] || v;
 
-      // ---- helpers ----
-      function num() { return Math.max(0, parseInt(String(state.amount).replace(/[^0-9]/g, ''), 10) || 0); }
-      function parsePrice(v) { return parseFloat(String(v).replace(/[^0-9.]/g, '')) || 0; }
-      function fmt(n, d) { d = d || 0; return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); }
-      function timeAgo(iso) {
-        var s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-        if (s < 60) return s + 's ago';
-        if (s < 3600) return Math.floor(s / 60) + 'm ago';
-        if (s < 86400) return Math.floor(s / 3600) + 'h ago';
-        return Math.floor(s / 86400) + 'd ago';
-      }
-      function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-      function initialsOf(name) {
-        var parts = (name || '').trim().split(/\s+/).filter(Boolean);
-        if (!parts.length) return '··';
-        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-      }
-      function fmtCountdown(rem) {
-        if (rem <= 0) return 'expired';
-        if (rem < 60) return rem + 's';
-        return Math.floor(rem / 60) + ':' + ('0' + (rem % 60)).slice(-2);
-      }
-      function fmtBps(v) {
-        var cls = v >= 0 ? 'bps-pos' : 'bps-neg';
-        return '<span class="' + cls + '">' + (v >= 0 ? '+' : '') + v.toFixed(1) + ' bps</span>';
-      }
-      function ensureClient() {
-        if (!sb) return false;
-        return true;
-      }
+    const ADDR_RE = /^G[A-Z2-7]{55}$/;
 
-      // ---- pure derivations (status is cosmetic; standing = newest row) ----
-      function quotesArr() {
-        var a = []; state.quotes.forEach(function (q) { a.push(q); }); return a;
-      }
-      function threadsOf(quotes) {
-        var m = new Map();
-        quotes.forEach(function (q) {
-          var arr = m.get(q.maker_name) || []; arr.push(q); m.set(q.maker_name, arr);
-        });
-        return m;
-      }
-      function standingOf(arr) {
-        var best = null;
-        arr.forEach(function (q) {
-          if (!best) { best = q; return; }
-          var t1 = new Date(q.created_at).getTime(), t2 = new Date(best.created_at).getTime();
-          if (t1 > t2 || (t1 === t2 && q.id > best.id)) best = q;
-        });
-        return best;
-      }
-      function isTerminal(s) { return s === 'accepted' || s === 'rejected' || s === 'expired'; }
-      function whoseTurn(standing) {
-        if (!standing) return 'maker';
-        if (isTerminal(standing.status)) return 'closed';
-        return standing.from_role === 'maker' ? 'taker' : 'maker';
-      }
-      function isExpired(standing) {
-        return !!standing && standing.status === 'active' &&
-               new Date(standing.expires_at).getTime() <= Date.now();
-      }
-      // [{ maker, standing, thread }] sorted best-first for the rfq's side
-      function rankedThreads() {
-        var side = state.rfq ? state.rfq.side : 'sell';
-        var out = [];
-        threadsOf(quotesArr()).forEach(function (arr, maker) {
-          out.push({ maker: maker, standing: standingOf(arr), thread: arr });
-        });
-        function acceptable(t) {
-          return t.standing && t.standing.status === 'active' &&
-                 t.standing.from_role === 'maker' && !isExpired(t.standing);
-        }
-        out.sort(function (a, b) {
-          var aa = acceptable(a), ba = acceptable(b);
-          if (aa !== ba) return aa ? -1 : 1;
-          if (aa && ba) {
-            return side === 'sell' ? b.standing.price - a.standing.price
-                                   : a.standing.price - b.standing.price;
-          }
-          return new Date(b.standing.created_at) - new Date(a.standing.created_at);
-        });
-        return out;
-      }
+    const state = {
+      address: localStorage.getItem('otc_address') || null,
+      channels: [],
+      incoming: [],
+      sent: [],
+    };
 
-      // ---- data layer (every transition guards on status + verifies row count) ----
-      // RFQ creation + quote/order submission live in the Peer API (above); these
-      // are the read + settlement helpers shared by both roles.
-      function listOpenRfqs() {
-        return sb.from('rfqs').select('*').eq('status', 'open')
-          .order('created_at', { ascending: false }).limit(50);
-      }
-      function listQuotesForRfq(rfqId) {
-        return sb.from('quotes').select('*').eq('rfq_id', rfqId)
-          .order('created_at', { ascending: true });
-      }
-      async function acceptStanding(quote, rfq) {
-        // settle the rfq FIRST, guarded on still-open
-        var r1 = await sb.from('rfqs').update({
-          status: 'settled', accepted_quote_id: quote.id, maker: quote.maker_name, price: quote.price
-        }).eq('id', rfq.id).eq('status', 'open').select();
-        if (r1.error) throw r1.error;
-        if (!r1.data || r1.data.length !== 1) return { raceLost: true };
-        // mark the accepted quote, then reject siblings (best-effort, cosmetic)
-        await sb.from('quotes').update({ status: 'accepted' }).eq('id', quote.id).eq('status', 'active');
-        await sb.from('quotes').update({ status: 'rejected' })
-          .eq('rfq_id', rfq.id).neq('id', quote.id).eq('status', 'active');
-        return { ok: true, rfq: r1.data[0] };
-      }
-      function expireStale(rfqId) {
-        return sb.from('quotes').update({ status: 'expired' })
-          .eq('rfq_id', rfqId).eq('status', 'active').lt('expires_at', new Date().toISOString());
-      }
+    // --- dom ---------------------------------------------------------------
+    const $ = (id) => document.getElementById(id);
+    const gate = $('gate'), app = $('app');
 
-      // ---- tokens & order envelope helpers ----
-      var TOKENS = ['XLM', 'USDC'];
-      function otherToken(t) { return t === 'XLM' ? 'USDC' : 'XLM'; }
-      // makerToken = the token the taker wants to RECEIVE; this fixes the trade direction
-      function sideForMakerToken(mt) { return mt === 'XLM' ? 'buy' : 'sell'; }
-      function makerTokenOf(r) { return (r && r.maker_token) || 'XLM'; }
-      function takerTokenOf(r) { return (r && r.taker_token) || 'USDC'; }
-      function makerAmountOf(r) { return Number(r && r.maker_amount != null ? r.maker_amount : (r ? r.amount : 0)) || 0; }
-      // amount the taker pays (in takerToken units) for `makerAmount` of makerToken at `price` USDC/XLM
-      function payAmount(makerAmount, price, makerToken) {
-        if (!price) return 0;
-        return makerToken === 'XLM' ? makerAmount * price : makerAmount / price;
+    // --- helpers -----------------------------------------------------------
+    const trunc = (a) => a ? `${a.slice(0, 5)}…${a.slice(-5)}` : '';
+    const isExpired = (o) => new Date(o.expiration).getTime() < Date.now();
+
+    function fmtRemaining(iso) {
+      let ms = new Date(iso).getTime() - Date.now();
+      if (ms <= 0) return 'expired';
+      const d = Math.floor(ms / 86400000); ms -= d * 86400000;
+      const h = Math.floor(ms / 3600000); ms -= h * 3600000;
+      const m = Math.floor(ms / 60000);
+      if (d) return `${d}d ${h}h`;
+      if (h) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
+
+    let toastTimer;
+    function toast(msg, kind = '') {
+      const t = $('toast');
+      t.textContent = msg;
+      t.className = `show ${kind}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => (t.className = ''), 4200);
+    }
+
+    // sign a UTF-8 message with the connected wallet. signMessage support is
+    // wallet-dependent in Stellar Wallets Kit, and the return shape varies by
+    // version, so feature-detect and normalise to a string.
+    async function walletSign(message) {
+      if (typeof kit.signMessage !== 'function') {
+        throw new Error('This wallet does not support message signing.');
       }
-      // inverse of payAmount: a total (in takerToken) → per-unit price (USDC/XLM)
-      function priceFromTotal(total, makerAmount, makerToken) {
-        if (!total || !makerAmount) return 0;
-        return makerToken === 'XLM' ? total / makerAmount   // buy:  USDC total / XLM amount
-                                    : makerAmount / total;  // sell: USDC amount / XLM total
+      const res = await kit.signMessage(message, { address: state.address });
+      let sig = res?.signedMessage ?? res?.signature ?? res;
+      if (sig && typeof sig !== 'string') {
+        // Buffer / Uint8Array -> base64
+        const bytes = sig instanceof Uint8Array ? sig : new Uint8Array(sig.data ?? sig);
+        sig = btoa(String.fromCharCode(...bytes));
       }
-      function tokDp(tok) { return tok === 'USDC' ? 2 : 0; }
-      // total headline (e.g. "615,000 USDC") and small per-unit reference ("$0.12300/XLM")
-      function totalLabel(r, price) {
-        return fmt(payAmount(makerAmountOf(r), price, makerTokenOf(r)), tokDp(takerTokenOf(r))) + ' ' + takerTokenOf(r);
-      }
-      function unitLabel(price) { return '$' + Number(price).toFixed(5) + '/XLM'; }
-      // Oracle fairness check (Taker side): is a quote/order within tolerance of the feed?
-      var ORACLE_TOL_BPS = 15;
-      function oracleVerdict(price, side) {           // bps signed: + = better for taker
-        var b = oracle.bps(price, side);
-        if (b >= -ORACLE_TOL_BPS)
-          return { ok: true,  text: 'Oracle ✓ ' + (b >= 0 ? 'at/above fair' : 'fair') };
-        return     { ok: false, text: 'Oracle ⚠ ' + Math.abs(b).toFixed(1) + ' bps over fair' };
-      }
-      // mock signing primitives (no wallet / no on-chain yet — values are placeholders)
-      function mockNonce() { return String(Math.floor(Math.random() * 1e15)); }
-      function mockSignature() {
-        var h = '0123456789abcdef', s = '0x';
-        for (var i = 0; i < 64; i++) s += h[Math.floor(Math.random() * 16)];
-        return s;
-      }
-      function genAddress() {
-        var b32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', s = 'G';
-        for (var i = 0; i < 55; i++) s += b32[Math.floor(Math.random() * 32)];
-        return s;
-      }
+      if (!sig || typeof sig !== 'string') throw new Error('Wallet returned no signature.');
+      return sig;
+    }
 
-      // ---- Peer Protocol API (off-chain, transport-agnostic RPCs over Supabase) ----
-      // Order API: executable, "signed" orders.  Quote API: indicative, not executable.
-      var Peer = {
-        // Taker → Maker: "I want to buy <makerAmount> <makerToken> using <takerToken>."
-        getOrder: function (makerAmount, makerToken, takerToken, takerAddress) {
-          return sb.from('rfqs').insert({
-            side: sideForMakerToken(makerToken),
-            amount: makerAmount, maker_amount: makerAmount,
-            maker_token: makerToken, taker_token: takerToken,
-            base_asset: makerToken, quote_asset: takerToken,
-            status: 'open', request_kind: 'order',
-            taker_name: state.name || null, taker_address: takerAddress || null
-          }).select().single();
-        },
-        // Taker → Maker: "How much would it cost to buy <makerAmount> <makerToken>?"
-        getQuote: function (makerAmount, makerToken, takerTokens) {
-          var takerToken = (takerTokens && takerTokens[0]) || otherToken(makerToken);
-          return sb.from('rfqs').insert({
-            side: sideForMakerToken(makerToken),
-            amount: makerAmount, maker_amount: makerAmount,
-            maker_token: makerToken, taker_token: takerToken,
-            base_asset: makerToken, quote_asset: takerToken,
-            status: 'open', request_kind: 'quote',
-            taker_name: state.name || null
-          }).select().single();
-        },
-        // Maker → Taker: a signed, executable order (carries expiration, nonce, signature).
-        // Also used for taker counter-offers (from_role='taker'), which carry no signature.
-        provideOrder: async function (o) {
-          var signed = (o.fromRole || 'maker') === 'maker';
-          await sb.from('quotes').update({ status: 'superseded' })
-            .eq('rfq_id', o.rfqId).eq('maker_name', o.makerName).eq('status', 'active');
-          return sb.from('quotes').insert({
-            rfq_id: o.rfqId, maker_name: o.makerName, maker_initials: o.makerInitials || null,
-            price: o.price, from_role: o.fromRole || 'maker', status: 'active',
-            response_kind: 'order',
-            expires_at: new Date(Date.now() + o.ttlSec * 1000).toISOString(),
-            maker_address: signed ? (o.makerAddress || null) : null,
-            taker_amount: o.takerAmount,
-            nonce: signed ? mockNonce() : null,
-            signature: signed ? mockSignature() : null,
-            parent_id: o.parentId || null
-          }).select().single();
-        },
-        // Maker → Taker: an indicative quote (not executable, no signature).
-        provideQuote: async function (o) {
-          await sb.from('quotes').update({ status: 'superseded' })
-            .eq('rfq_id', o.rfqId).eq('maker_name', o.makerName).eq('status', 'active');
-          return sb.from('quotes').insert({
-            rfq_id: o.rfqId, maker_name: o.makerName, maker_initials: o.makerInitials || null,
-            price: o.price, from_role: 'maker', status: 'active',
-            response_kind: 'quote',
-            expires_at: new Date(Date.now() + o.ttlSec * 1000).toISOString(),
-            taker_amount: o.takerAmount, parent_id: null
-          }).select().single();
-        },
-        // Taker turns an indicative request into a firm (signed) order request.
-        escalateToOrder: function (rfqId) {
-          return sb.from('rfqs').update({ request_kind: 'order' }).eq('id', rfqId).select().single();
-        }
-      };
-
-      // ---- Indexer Protocol API (intent layer — whitepaper §3) ----
-      // Makers announce/withdraw intent to trade a direction; Takers discover
-      // counterparties before negotiating over the Peer API above.
-      // makerToken = token the maker PROVIDES (taker receives); takerTokens = what the maker wants.
-      var Indexer = {
-        // Maker → Indexer: "I want to trade <makerToken> for <takerTokens>."  e.g. addIntent('XLM', ['USDC'])
-        addIntent: async function (makerToken, takerTokens) {
-          var takerToken = (takerTokens && takerTokens[0]) || otherToken(makerToken);
-          if (!state.address) { state.address = genAddress(); store.set('rfq_address', state.address); }
-          // idempotent: withdraw any existing active intent for this exact direction first
-          await sb.from('intents').update({ status: 'withdrawn' })
-            .eq('maker_name', state.name).eq('maker_token', makerToken)
-            .eq('taker_token', takerToken).eq('status', 'active');
-          return sb.from('intents').insert({
-            maker_name: state.name, maker_address: state.address,
-            maker_token: makerToken, taker_token: takerToken, status: 'active'
-          }).select().single();
-        },
-        // Maker → Indexer: "I am no longer interested in trading <makerToken> for <takerTokens>."
-        removeIntent: function (makerToken, takerTokens) {
-          var takerToken = (takerTokens && takerTokens[0]) || otherToken(makerToken);
-          return sb.from('intents').update({ status: 'withdrawn' })
-            .eq('maker_name', state.name).eq('maker_token', makerToken)
-            .eq('taker_token', takerToken).eq('status', 'active');
-        },
-        // any → Indexer: "List active intent associated with a maker."
-        getIntent: function (makerName) {
-          return sb.from('intents').select('*').eq('maker_name', makerName)
-            .eq('status', 'active').order('created_at', { ascending: false });
-        },
-        // Taker → Indexer: "Find someone trading <makerToken> for <takerToken>."  e.g. findIntent('XLM', 'USDC')
-        // The returned rows ARE the Indexer's foundIntent(maker, intentList) callback to the taker.
-        findIntent: function (makerToken, takerToken) {
-          return sb.from('intents').select('*')
-            .eq('maker_token', makerToken).eq('taker_token', takerToken)
-            .eq('status', 'active').order('created_at', { ascending: false });
-        }
-      };
-
-      // ---- realtime ----
-      function removeFocus() { if (focusCh) { try { sb.removeChannel(focusCh); } catch (e) {} focusCh = null; } }
-      function removeOpen() { if (openCh) { try { sb.removeChannel(openCh); } catch (e) {} openCh = null; } }
-      function removeIntents() { if (intentCh) { try { sb.removeChannel(intentCh); } catch (e) {} intentCh = null; } }
-      function teardownAll() { removeFocus(); removeOpen(); removeIntents(); state.connected = false; }
-
-      function subscribeFocus(rfqId) {
-        removeFocus();
-        focusCh = sb.channel('rfq-' + rfqId)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes', filter: 'rfq_id=eq.' + rfqId },
-            function (p) { if (p['new'] && p['new'].id) { state.quotes.set(p['new'].id, p['new']); render(); } })
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rfqs', filter: 'id=eq.' + rfqId },
-            function (p) {
-              if (!p['new']) return;
-              if (state.rfq && state.rfq.id === p['new'].id) state.rfq = p['new'];
-              upsertOpenRfq(p['new']);
-              render();
-            })
-          .subscribe(function (st) { state.connected = (st === 'SUBSCRIBED'); render(); });
-      }
-      function subscribeOpenFeed() {
-        removeOpen();
-        openCh = sb.channel('open-feed')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'rfqs' },
-            function (p) { if (p['new']) upsertOpenRfq(p['new']); render(); })
-          .subscribe(function (st) { state.connected = (st === 'SUBSCRIBED'); render(); });
-      }
-      function upsertOpenRfq(row) {
-        var i = -1;
-        for (var k = 0; k < state.openRfqs.length; k++) { if (state.openRfqs[k].id === row.id) { i = k; break; } }
-        if (row.status === 'open') {
-          if (i >= 0) state.openRfqs[i] = row; else state.openRfqs.unshift(row);
-        } else if (i >= 0) {
-          state.openRfqs.splice(i, 1);
-        }
-      }
-
-      // ---- indexer realtime (intent feed — both roles watch it live) ----
-      // Maker view loads its own intents (getIntent); Taker view loads makers for
-      // the chosen direction (findIntent → foundIntent). Re-runs on any intent change.
-      function loadIntents() {
-        if (!sb) return Promise.resolve();
-        if (state.role === 'maker') {
-          return Indexer.getIntent(state.name).then(function (r) {
-            if (!r.error) state.myIntents = r.data || [];
-          }, function () {});
-        }
-        return Indexer.findIntent(state.makerToken, state.takerToken).then(function (r) {
-          if (!r.error) state.foundMakers = r.data || [];
-        }, function () {});
-      }
-      function subscribeIntents() {
-        removeIntents();
-        intentCh = sb.channel('intents-feed')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'intents' },
-            function () { loadIntents().then(render); })
-          .subscribe(function (st) { state.connected = (st === 'SUBSCRIBED'); render(); });
-      }
-      function startIntents() {
-        if (!sb) return;
-        loadIntents().then(function () { subscribeIntents(); render(); });
-      }
-
-      // ---- actions ----
-      function setRole(role) {
-        if (role === state.role) return;
-        state.role = role;
-        store.set('rfq_role', role);
-        teardownAll();
-        state.openRfqs = [];
-        state.counterFor = null; state.drafts = {};
-        // Keep the focused RFQ + its quotes so a single operator can flip
-        // Taker ↔ Maker in one tab and watch both sides of the negotiation.
-        if (state.rfq) subscribeFocus(state.rfq.id);
-        startIntents();
-        if (role === 'maker') mountMaker(); else render();
-      }
-      function setName(v) {
-        state.name = v;
-        store.set('rfq_display_name', v);
-        var b = document.getElementById('idBadge'); if (b) b.textContent = initialsOf(v);
-      }
-      function setMakerToken(t) {
-        if (TOKENS.indexOf(t) < 0) return;
-        state.makerToken = t; state.takerToken = otherToken(t);
-        state.side = sideForMakerToken(t); render();
-        if (state.role === 'taker') loadIntents().then(render);   // refresh foundMakers for the new direction
-      }
-      function setTakerToken(t) {
-        if (TOKENS.indexOf(t) < 0) return;
-        state.takerToken = t; state.makerToken = otherToken(t);
-        state.side = sideForMakerToken(state.makerToken); render();
-        if (state.role === 'taker') loadIntents().then(render);
-      }
-
-      // kind: 'quote' (indicative) | 'order' (firm/signed)
-      async function requestRfq(kind) {
-        if (num() <= 0 || state.busy) return;
-        if (!ensureClient()) { render(); return; }
-        state.busy = true; removeFocus(); state.rfq = null; state.quotes = new Map(); render();
-        try {
-          var makerAmount = num();
-          var res = kind === 'quote'
-            ? await Peer.getQuote(makerAmount, state.makerToken, [state.takerToken])
-            : await Peer.getOrder(makerAmount, state.makerToken, state.takerToken, state.address);
-          if (res.error) throw res.error;
-          state.rfq = res.data;
-          state.busy = false;
-          subscribeFocus(res.data.id);
-          render();
-        } catch (e) {
-          state.busy = false; render();
-          alert('Could not open RFQ: ' + (e.message || e));
-        }
-      }
-
-      async function escalateOrder() {
-        if (!state.rfq || state.rfq.request_kind === 'order') return;
-        try {
-          var r = await Peer.escalateToOrder(state.rfq.id);
-          if (r.error) throw r.error;
-          if (r.data) state.rfq = r.data;
-          render();
-        } catch (e) { alert('Could not request a firm order: ' + (e.message || e)); }
-      }
-
-      async function takerCounter(makerName) {
-        // draft now holds the TOTAL the taker offers (in takerToken)
-        var total = parsePrice(state.drafts[makerName]);
-        if (total <= 0 || !state.rfq) return;
-        var price = priceFromTotal(total, num(), makerTokenOf(state.rfq));
-        if (price <= 0) return;
-        // find the maker's current standing to carry initials forward
-        var arr = threadsOf(quotesArr()).get(makerName) || [];
-        var st = standingOf(arr);
-        try {
-          var res = await Peer.provideOrder({
-            rfqId: state.rfq.id, makerName: makerName,
-            makerInitials: st ? st.maker_initials : initialsOf(makerName),
-            price: price, fromRole: 'taker', ttlSec: 60, parentId: st ? st.id : null,
-            takerAmount: total
-          });
-          if (res.error) throw res.error;
-          state.quotes.set(res.data.id, res.data);
-          state.counterFor = null; state.drafts[makerName] = '';
-          render();
-        } catch (e) { alert('Counter failed: ' + (e.message || e)); }
-      }
-
-      async function accept(quoteId) {
-        var q = state.quotes.get(quoteId);
-        if (!q || !state.rfq) return;
-        if (isExpired(q)) { alert('That quote has expired.'); return; }
-        settleAnim = true; render();
-        try {
-          var r = await acceptStanding(q, state.rfq);
-          settleAnim = false;
-          if (r.raceLost) {
-            alert('That quote is no longer available — refreshing.');
-            await rehydrateFocus();
-            return;
-          }
-          if (r.rfq) state.rfq = r.rfq;
-          render();
-        } catch (e) { settleAnim = false; render(); alert('Accept failed: ' + (e.message || e)); }
-      }
-
-      function reset() {
-        removeFocus();
-        state.rfq = null; state.quotes = new Map(); state.counterFor = null; state.drafts = {};
-        render();
-      }
-
-      // ---- indexer actions (maker announces/withdraws intent) ----
-      function intentActive(makerToken, takerToken) {
-        return (state.myIntents || []).some(function (it) {
-          return it.maker_token === makerToken && it.taker_token === takerToken && it.status === 'active';
-        });
-      }
-      async function toggleIntent(makerToken, takerToken) {
-        if (!ensureClient()) { render(); return; }
-        if (!state.name) { alert('Enter a maker name in the top bar first.'); return; }
-        try {
-          var r = intentActive(makerToken, takerToken)
-            ? await Indexer.removeIntent(makerToken, [takerToken])
-            : await Indexer.addIntent(makerToken, [takerToken]);
-          if (r.error) throw r.error;
-          await loadIntents();   // realtime will also fire; this gives instant feedback
-          render();
-        } catch (e) { alert('Intent update failed: ' + (e.message || e)); }
-      }
-
-      // maker
-      async function mountMaker() {
-        render();
-        if (!ensureClient()) return;
-        try {
-          var res = await listOpenRfqs();
-          if (res.error) throw res.error;
-          state.openRfqs = res.data || [];
-        } catch (e) { state.openRfqs = []; }
-        subscribeOpenFeed();
-        render();
-      }
-      async function selectRfq(rfqId) {
-        var row = null;
-        for (var i = 0; i < state.openRfqs.length; i++) if (state.openRfqs[i].id === rfqId) row = state.openRfqs[i];
-        if (!row) return;
-        state.rfq = row; state.quotes = new Map();
-        render();
-        await rehydrateFocus();
-        subscribeFocus(rfqId);
-      }
-      function makerBack() { removeFocus(); state.rfq = null; state.quotes = new Map(); render(); }
-
-      async function makerSubmit() {
-        if (!state.rfq) return;
-        if (!state.name) { alert('Enter a maker name in the top bar first.'); return; }
-        var r = state.rfq;
-        var makerAmount = makerAmountOf(r), makerToken = makerTokenOf(r);
-        // draft now holds the TOTAL the maker offers (in takerToken)
-        var takerAmount = parsePrice(state.makerPriceDraft);
-        if (takerAmount <= 0) { alert('Enter a total.'); return; }
-        var price = priceFromTotal(takerAmount, makerAmount, makerToken);
-        if (price <= 0) { alert('Enter a total.'); return; }
-        var ttl = parseInt(state.makerTtl, 10) || 30;
-        try {
-          var res;
-          if (r.request_kind === 'quote') {
-            // indicative response — provideQuote (not executable)
-            res = await Peer.provideQuote({
-              rfqId: r.id, makerName: state.name, makerInitials: initialsOf(state.name),
-              price: price, takerAmount: takerAmount, ttlSec: ttl
-            });
-          } else {
-            // firm response — provideOrder (signed, executable)
-            res = await Peer.provideOrder({
-              rfqId: r.id, makerName: state.name, makerInitials: initialsOf(state.name),
-              makerAddress: state.address, makerAmount: makerAmount, makerToken: makerToken,
-              takerAddress: r.taker_address, takerAmount: takerAmount, takerToken: takerTokenOf(r),
-              price: price, ttlSec: ttl, fromRole: 'maker'
-            });
-          }
-          if (res.error) throw res.error;
-          state.quotes.set(res.data.id, res.data);
-          state.makerPriceDraft = '';
-          render();
-        } catch (e) { alert('Quote failed: ' + (e.message || e)); }
-      }
-      async function makerAcceptCounter(quoteId) {
-        var q = state.quotes.get(quoteId);
-        if (!q || !state.rfq) return;
-        if (isExpired(q)) { alert('That counter has expired.'); return; }
-        try {
-          var r = await acceptStanding(q, state.rfq);
-          if (r.raceLost) { alert('No longer available — refreshing.'); await rehydrateFocus(); return; }
-          if (r.rfq) state.rfq = r.rfq;
-          render();
-        } catch (e) { alert('Accept failed: ' + (e.message || e)); }
-      }
-
-      async function rehydrateFocus() {
-        if (!state.rfq || !sb) { render(); return; }
-        try {
-          var rq = await sb.from('rfqs').select('*').eq('id', state.rfq.id).single();
-          if (!rq.error && rq.data) state.rfq = rq.data;
-          var res = await listQuotesForRfq(state.rfq.id);
-          if (!res.error) {
-            state.quotes = new Map();
-            (res.data || []).forEach(function (q) { state.quotes.set(q.id, q); });
-          }
-        } catch (e) {}
-        render();
-      }
-
-      async function refresh() {
-        if (state.role === 'maker' && !state.rfq) {
-          var res = await listOpenRfqs();
-          if (!res.error) state.openRfqs = res.data || [];
-        } else {
-          await rehydrateFocus();
-        }
-        render();
-      }
-
-      // ---- countdown tick (no full re-render) ----
-      function tick() {
-        var now = Date.now();
-        // gently move the Oracle feed and refresh bps/badges (render preserves focus)
-        if (now - lastOracleStep > 4000) { lastOracleStep = now; oracle.step(); render(); }
-        document.querySelectorAll('[data-expires]').forEach(function (el) {
-          var exp = Number(el.getAttribute('data-expires'));
-          el.textContent = fmtCountdown(Math.max(0, Math.floor((exp - now) / 1000)));
-        });
-        document.querySelectorAll('[data-accept-exp]').forEach(function (btn) {
-          if (Number(btn.getAttribute('data-accept-exp')) <= now) {
-            btn.disabled = true; btn.classList.add('is-disabled');
-            var card = btn.closest('.offer'); if (card) card.classList.add('is-expired');
-          }
-        });
-        // opportunistic, debounced cosmetic expiry
-        if (sb && state.rfq && now - lastExpireCall > 4000) {
-          var hasStale = false;
-          state.quotes.forEach(function (q) {
-            if (q.status === 'active' && new Date(q.expires_at).getTime() <= now) hasStale = true;
-          });
-          if (hasStale) { lastExpireCall = now; expireStale(state.rfq.id); }
-        }
-      }
-
-      // ---- render ----
-      function render() {
-        // preserve focus across innerHTML rebuilds
-        var active = document.activeElement;
-        var activeId = active && active.id ? active.id : null;
-        var caret = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
-
-        syncNav();
-        document.getElementById('leftPanel').innerHTML = state.role === 'taker' ? leftTaker() : leftMaker();
-        document.getElementById('rightPanel').innerHTML = state.role === 'taker' ? rightTaker() : rightMaker();
-
-        if (activeId) {
-          var el = document.getElementById(activeId);
-          if (el) { el.focus(); if (caret != null && el.setSelectionRange) { try { el.setSelectionRange(caret, caret); } catch (e) {} } }
-        }
-      }
-
-      function syncNav() {
-        document.querySelectorAll('.role-btn').forEach(function (b) {
-          b.classList.toggle('is-active', b.getAttribute('data-role') === state.role);
-        });
-        var name = document.getElementById('nameInput');
-        if (name && document.activeElement !== name) name.value = state.name;
-        document.getElementById('idBadge').textContent = initialsOf(state.name);
-        document.getElementById('connDot').classList.toggle('is-on', state.connected);
-        document.getElementById('connText').textContent = state.connected ? 'live' : (sb ? 'connecting…' : 'no backend');
-        document.getElementById('pageTitle').textContent = state.role === 'taker'
-          ? 'Request quotes — XLM / USDC' : 'Provide liquidity — XLM / USDC';
-        document.getElementById('pageSubtitle').textContent = state.role === 'taker'
-          ? 'Open an RFQ, let makers compete with time-limited quotes, counter for a better price, and accept the best one. Off-chain negotiation only.'
-          : 'Browse open requests broadcast by takers, quote a price, and negotiate counters in real time. Off-chain negotiation only.';
-      }
-
-      function noBackendBlock() {
-        return '<div class="state"><div class="state__icon">⚠</div>' +
-          '<p class="state__text">Supabase is not configured. Add your project URL and anon key to <b>supabase-config.js</b>, then reload.</p></div>';
-      }
-
-      // ---------- TAKER ----------
-      function tokenSelect(id, label, value) {
-        return '<div class="field"><label class="field__label" for="' + id + '">' + label + '</label>' +
-          '<select id="' + id + '" class="token-select">' +
-            TOKENS.map(function (t) { return '<option value="' + t + '"' + (t === value ? ' selected' : '') + '>' + t + '</option>'; }).join('') +
-          '</select></div>';
-      }
-
-      // Taker discovery: findIntent → foundIntent (live makers for the chosen direction)
-      function counterpartiesPanel() {
-        var mt = state.makerToken, tt = state.takerToken;
-        var head = '<div class="field"><div class="field__label">Counterparties · findIntent(' + esc(mt) + ', ' + esc(tt) + ')</div>';
-        if (!sb) return head + '<div class="field__hint">Backend not configured.</div></div>';
-        var makers = state.foundMakers || [];
-        if (!makers.length) {
-          return head + '<div class="field__hint">No makers have announced intent for ' + esc(mt) +
-            ' ← ' + esc(tt) + ' yet — you can still broadcast an RFQ and makers may respond.</div></div>';
-        }
-        var rows = makers.map(function (it) {
-          var ad = it.maker_address
-            ? esc(String(it.maker_address).slice(0, 6) + '…' + String(it.maker_address).slice(-4)) : '—';
-          return '<div class="offer" style="padding:12px 14px;">' +
-            '<div class="offer__row">' +
-              '<div class="offer__maker">' +
-                '<div class="offer__avatar">' + esc(initialsOf(it.maker_name)) + '</div>' +
-                '<div><div class="offer__name">' + esc(it.maker_name || 'Anon maker') + '</div>' +
-                '<div class="offer__meta">provides ' + esc(it.maker_token) + ' · wants ' + esc(it.taker_token) + ' · ' + ad + '</div></div>' +
-              '</div>' +
-              '<div class="offer__priceblock"><span class="kind-tag kind-tag--order">LIVE</span></div>' +
-            '</div></div>';
-        }).join('');
-        return head +
-          '<div class="field__hint">' + makers.length + ' maker' + (makers.length > 1 ? 's' : '') +
-            ' live for ' + esc(mt) + ' ← ' + esc(tt) + ' · foundIntent</div>' +
-          '<div class="offers__list" style="margin-top:12px;">' + rows + '</div></div>';
-      }
-
-      function leftTaker() {
-        var busy = state.busy;
-        var live = state.rfq && state.rfq.status === 'open';
-        var mt = state.makerToken, tt = state.takerToken;
-        var refPay = payAmount(num(), oracle.mid, mt);
-        var ticket = '' +
-          '<div class="panel__label">RFQ TICKET</div>' +
-          tokenSelect('makerTokenSel', 'Token I want to receive', mt) +
-          '<div class="field">' +
-            '<label class="field__label" for="amountInput">Amount (' + esc(mt) + ')</label>' +
-            '<input id="amountInput" class="field__input" inputmode="numeric" value="' + esc(state.amount) + '">' +
-            '<div class="field__hint">Oracle mid $' + oracle.mid.toFixed(5) + ' · pay ≈ ' + fmt(refPay, tokDp(tt)) + ' ' + esc(tt) + ' at mid</div>' +
-          '</div>' +
-          tokenSelect('takerTokenSel', 'Token I will pay with', tt) +
-          counterpartiesPanel();
-
-        if (live) {
-          return ticket +
-            '<button type="button" class="btn-quote" style="margin-top:24px;" data-action="new-rfq">Start a new RFQ</button>' +
-            '<p class="field__hint">RFQ #' + esc(String(state.rfq.id).slice(0, 8)) + ' live · ' +
-              (state.rfq.request_kind === 'quote' ? 'indicative quote' : 'firm order') +
-              ' · waiting for makers.</p>';
-        }
-        return ticket +
-          '<div class="ticket-actions">' +
-            '<button type="button" class="btn-quote ' + (busy ? 'is-busy' : '') + '" data-action="get-quote">' +
-              (busy ? 'Opening…' : 'Get indicative quote') + '</button>' +
-            '<button type="button" class="btn-request ' + (busy ? 'is-busy' : '') + '" data-action="request-order">' +
-              (busy ? 'Opening…' : 'Request firm order') + '</button>' +
-          '</div>' +
-          '<p class="field__hint">A <b>quote</b> is indicative pricing; a <b>firm order</b> is a signed, executable order you can accept.</p>';
-      }
-
-      function rightTaker() {
-        if (!sb) return offersHead('') + noBackendBlock();
-        if (!state.rfq) {
-          return offersHead('') +
-            '<div class="state"><div class="state__icon">⇄</div>' +
-            '<p class="state__text">Set your size and request quotes. Makers respond with time-limited offers you can accept or counter.</p></div>';
-        }
-        if (state.rfq.status === 'settled') return rightTaker_settled();
-
-        var ranked = rankedThreads();
-        var live = ranked.filter(function (t) { return t.standing && t.standing.status === 'active' && t.standing.from_role === 'maker' && !isExpired(t.standing); }).length;
-        var head = offersHead(live + ' live · ' + ranked.length + ' makers');
-        if (settleAnim) {
-          return head + '<div class="state"><div class="state__loading-title">Settling…</div><p class="state__loading-sub">Locking in the accepted quote</p></div>';
-        }
-        if (!ranked.length) {
-          return head + '<div class="state"><div class="state__loading-title">Collecting quotes…</div><p class="state__loading-sub">RFQ broadcast to the maker network</p></div>';
-        }
-        var cards = ranked.map(function (t, i) { return takerCard(t, i === 0 && t.standing.from_role === 'maker' && t.standing.response_kind === 'order' && t.standing.status === 'active' && !isExpired(t.standing)); }).join('');
-        return head + '<div class="offers__list">' + cards + '</div>';
-      }
-
-      function offersHead(status) {
-        return '<div class="offers__head">' +
-          '<div class="panel__label">MAKER OFFERS</div>' +
-          '<div style="display:flex;align-items:center;gap:12px;">' +
-            '<span class="oracle-chip">Oracle mid <b>$' + oracle.mid.toFixed(5) + '</b></span>' +
-            '<span class="offers__status">' + esc(status) + '</span>' +
-            (sb ? '<button type="button" class="btn-ghost" data-action="refresh">↻</button>' : '') +
-          '</div></div>';
-      }
-
-      function takerCard(t, isBest) {
-        var s = t.standing, n = num();
-        var r = state.rfq;
-        var makerToken = makerTokenOf(r), takerToken = takerTokenOf(r);
-        var expired = isExpired(s);
-        var pay = payAmount(n, s.price, makerToken);
-        var side = r.side;
-        var indicative = s.response_kind === 'quote';
-        var turn = whoseTurn(s);
-        var kindTag = indicative
-          ? '<span class="kind-tag kind-tag--quote">INDICATIVE</span>'
-          : '<span class="kind-tag kind-tag--order">SIGNED ORDER</span>';
-        var meta;
-        if (s.status === 'active' && !isTerminal(s.status)) {
-          meta = kindTag + ' · ' + fmtBps(oracle.bps(s.price, side)) +
-            ' · ' + (s.from_role === 'taker' ? 'your counter' : (indicative ? 'maker quote' : 'maker order')) +
-            ' · <span data-expires="' + new Date(s.expires_at).getTime() + '">' + fmtCountdown(Math.max(0, Math.floor((new Date(s.expires_at).getTime() - Date.now()) / 1000))) + '</span>';
-        } else {
-          meta = kindTag + ' · ' + fmtBps(oracle.bps(s.price, side)) + ' · ' + esc(s.status);
-        }
-
-        var actions = '';
-        if (indicative) {
-          // not executable; offer to lock terms with a firm signed order
-          if (r.request_kind === 'quote' && !expired) {
-            actions = '<div class="offer__actions"><button type="button" class="btn-accept" data-action="escalate">Request firm order</button></div>' +
-              '<p class="waiting">Indicative only — request a firm signed order to lock these terms.</p>';
-          } else {
-            actions = '<p class="waiting">Indicative quote — waiting for a signed order from ' + esc(t.maker) + '.</p>';
-          }
-        } else if (turn === 'taker' && !expired) {
-          actions =
-            '<div class="offer__actions">' +
-              '<button type="button" class="btn-accept" data-action="accept" data-id="' + esc(s.id) + '" data-accept-exp="' + new Date(s.expires_at).getTime() + '">Accept</button>' +
-              '<button type="button" class="btn-counter" data-action="open-counter" data-maker="' + esc(t.maker) + '">Counter</button>' +
-            '</div>';
-        } else if (turn === 'maker') {
-          actions = '<p class="waiting">Countered ' + totalLabel(r, s.price) + ' — waiting for ' + esc(t.maker) + ' to re-quote.</p>';
-        } else if (expired) {
-          actions = '<div class="offer__actions"><button type="button" class="btn-counter" data-action="open-counter" data-maker="' + esc(t.maker) + '">Re-engage / counter</button></div>';
-        }
-        if (state.counterFor === t.maker) {
-          actions +=
-            '<div class="counter-box">' +
-              '<input id="counter-' + esc(t.maker) + '" inputmode="decimal" placeholder="Total you offer (' + esc(takerToken) + ')" value="' + esc(state.drafts[t.maker] || '') + '">' +
-              '<button type="button" class="btn-accept" style="flex:0 0 auto;padding:11px 18px;" data-action="send-counter" data-maker="' + esc(t.maker) + '">Send</button>' +
-            '</div>';
-        }
-
-        var badge = (!indicative && s.from_role === 'maker' && s.nonce)
-          ? '<div class="order-badge">🔏 Signed order · nonce ' + esc(String(s.nonce).slice(0, 8)) +
-            ' · sig ' + esc(String(s.signature || '').slice(0, 10)) + '…</div>'
-          : '';
-
-        // Oracle verification (Taker calls getPrice to check the order is fair)
-        var v = oracleVerdict(s.price, side);
-        var oracleChip = '<div class="oracle-check ' + (v.ok ? 'is-ok' : 'is-warn') + '">' +
-          esc(v.text) + ' · feed ' + unitLabel(oracle.mid) + '</div>';
-
-        return '<div class="offer ' + (isBest ? 'is-best' : '') + ' ' + (expired ? 'is-expired' : '') + '">' +
-          '<div class="offer__row">' +
-            '<div class="offer__maker">' +
-              '<div class="offer__avatar">' + esc(s.maker_initials || initialsOf(t.maker)) + '</div>' +
-              '<div><div class="offer__name">' + esc(t.maker) + '</div>' +
-              '<div class="offer__meta">' + meta + '</div></div>' +
-            '</div>' +
-            '<div class="offer__priceblock">' +
-              '<div class="offer__price">' + fmt(pay, tokDp(takerToken)) + ' ' + esc(takerToken) + '</div>' +
-              '<div class="offer__total">≈ ' + unitLabel(s.price) + '</div>' +
-            '</div>' +
-          '</div>' +
-          oracleChip +
-          (isBest ? '<div class="offer__best">★ BEST QUOTE</div>' : '') +
-          badge +
-          actions +
-        '</div>';
-      }
-
-      function rightTaker_settled() {
-        var r = state.rfq;
-        var mt = makerTokenOf(r), tt = takerTokenOf(r);
-        var makerAmount = makerAmountOf(r);
-        var pay = payAmount(makerAmount, Number(r.price), mt);
-        var summary = 'Received ' + fmt(makerAmount, tokDp(mt)) + ' ' + esc(mt) + ' for ' +
-          fmt(pay, tokDp(tt)) + ' ' + esc(tt) + ' at $' + Number(r.price).toFixed(5) +
-          ' via ' + esc(r.maker) + ' — signed order accepted off-chain.';
-        return offersHead('settled') +
-          '<div class="state">' +
-            '<div class="settled__icon">✓</div>' +
-            '<h3 class="settled__title">Quote accepted</h3>' +
-            '<p class="settled__summary">' + summary + '</p>' +
-            '<button type="button" class="btn-reset" data-action="reset">New RFQ</button>' +
-          '</div>';
-      }
-
-      // ---------- MAKER ----------
-      function leftMaker() {
-        var inThread = !!state.rfq;
-        var xlmOn = intentActive('XLM', 'USDC'), usdcOn = intentActive('USDC', 'XLM');
-        var addrShort = state.address
-          ? esc(String(state.address).slice(0, 6) + '…' + String(state.address).slice(-4)) : '—';
-        var liveN = (state.myIntents || []).length;
-        var intentCard =
-          '<div class="field"><div class="field__label">Market making · addIntent / removeIntent</div>' +
-            '<div class="side-toggle">' +
-              '<button type="button" class="side-btn ' + (xlmOn ? 'is-active' : '') + '" data-action="toggle-intent" data-mt="XLM" data-tt="USDC">XLM → USDC</button>' +
-              '<button type="button" class="side-btn ' + (usdcOn ? 'is-active' : '') + '" data-action="toggle-intent" data-mt="USDC" data-tt="XLM">USDC → XLM</button>' +
-            '</div>' +
-            '<div class="field__hint">' +
-              (state.name
-                ? 'Announce the direction(s) you make markets in · ' + addrShort + ' · ' +
-                  (liveN ? liveN + ' live intent' + (liveN > 1 ? 's' : '') : 'no live intent')
-                : 'Set your maker name above to announce intent.') +
-            '</div></div>';
-        return '' +
-          '<div class="panel__label">MAKER DESK</div>' +
-          '<div class="field"><div class="field__label">Quoting as</div>' +
-            '<div style="margin-top:10px;font-family:\'Space Grotesk\',sans-serif;font-size:20px;font-weight:600;">' +
-            (state.name ? esc(state.name) : '<span style="color:rgba(255,255,255,0.4)">set your name above →</span>') + '</div></div>' +
-          '<div class="field"><div class="field__label">Oracle reference</div>' +
-            '<div style="margin-top:10px;font-family:\'Space Grotesk\',sans-serif;font-size:20px;font-weight:600;color:#E5B567;">$' + oracle.mid.toFixed(5) + '</div></div>' +
-          intentCard +
-          (inThread
-            ? '<button type="button" class="btn-ghost" style="margin-top:24px;" data-action="maker-back">← All open requests</button>'
-            : '<p class="field__hint">Pick an open request on the right to quote. Open a second tab as a Taker to see both sides.</p>');
-      }
-
-      function rightMaker() {
-        if (!sb) return '<div class="offers__head"><div class="panel__label">OPEN REQUESTS</div></div>' + noBackendBlock();
-        if (state.rfq) return makerThread();
-        var head = '<div class="offers__head"><div class="panel__label">OPEN REQUESTS</div>' +
-          '<div style="display:flex;align-items:center;gap:12px;">' +
-          '<span class="offers__status">' + state.openRfqs.length + ' open</span>' +
-          '<button type="button" class="btn-ghost" data-action="refresh">↻ Refresh</button></div></div>';
-        if (!state.openRfqs.length) {
-          return head + '<div class="state"><div class="state__icon">⇄</div><p class="state__text">No open requests yet. Open a tab as a Taker and post one.</p></div>';
-        }
-        var cards = state.openRfqs.map(function (r) {
-          var mt = makerTokenOf(r), tt = takerTokenOf(r);
-          var amt = makerAmountOf(r);
-          var isQuote = r.request_kind === 'quote';
-          var kindTag = '<span class="kind-tag ' + (isQuote ? 'kind-tag--quote">QUOTE' : 'kind-tag--order">ORDER') + '</span>';
-          return '<div class="offer is-clickable" data-action="select-rfq" data-id="' + esc(r.id) + '">' +
-            '<div class="offer__row">' +
-              '<div class="offer__maker">' +
-                '<div class="offer__avatar">' + initialsOf(r.taker_name || mt) + '</div>' +
-                '<div><div class="offer__name">' + fmt(amt, tokDp(mt)) + ' ' + esc(mt) + '</div>' +
-                '<div class="offer__meta">wants ' + esc(mt) + ' · pays ' + esc(tt) + ' · ' + esc(r.taker_name || 'Anon taker') + ' · ' + timeAgo(r.created_at) + '</div></div>' +
-              '</div>' +
-              '<div class="offer__priceblock">' + kindTag + '</div>' +
-            '</div></div>';
-        }).join('');
-        return head + '<div class="offers__list">' + cards + '</div>';
-      }
-
-      function makerThread() {
-        var r = state.rfq;
-        var mt = makerTokenOf(r), tt = takerTokenOf(r);
-        var n = makerAmountOf(r);
-        var isQuote = r.request_kind === 'quote';
-        var mine = state.name ? (threadsOf(quotesArr()).get(state.name) || []) : [];
-        var standing = standingOf(mine);
-        var turn = whoseTurn(standing);
-        var expired = isExpired(standing);
-
-        var head = '<div class="offers__head"><div class="panel__label">NEGOTIATION</div>' +
-          '<div style="display:flex;align-items:center;gap:12px;">' +
-          '<span class="oracle-chip">Oracle mid <b>$' + oracle.mid.toFixed(5) + '</b></span>' +
-          '<button type="button" class="btn-ghost" data-action="refresh">↻</button></div></div>';
-
-        var kindTag = '<span class="kind-tag ' + (isQuote ? 'kind-tag--quote">QUOTE REQUEST' : 'kind-tag--order">ORDER REQUEST') + '</span>';
-        var summary = '<div class="rfq-summary">' +
-          '<div class="rfq-summary__amt">' + fmt(n, tokDp(mt)) + ' ' + esc(mt) + ' ' + kindTag + '</div>' +
-          '<div class="rfq-summary__meta">wants ' + esc(mt) + ' · pays ' + esc(tt) + ' · ' + esc(r.taker_name || 'Anon taker') + ' · #' + esc(String(r.id).slice(0, 8)) +
-          (r.status === 'settled' ? ' · <span class="badge-status badge-accepted">SETTLED</span>' : '') + '</div></div>';
-
-        var rows = mine.slice().sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); }).map(function (q) {
-          var isStanding = standing && q.id === standing.id;
-          var who = q.from_role === 'maker' ? 'You' : 'Taker';
-          var cd = (isStanding && q.status === 'active')
-            ? ' · <span data-expires="' + new Date(q.expires_at).getTime() + '">' + fmtCountdown(Math.max(0, Math.floor((new Date(q.expires_at).getTime() - Date.now()) / 1000))) + '</span>'
-            : (isTerminal(q.status) ? ' · ' + esc(q.status) : '');
-          var pay = payAmount(n, q.price, mt);
-          return '<div class="thread-row ' + (isStanding ? 'is-standing' : '') + '">' +
-            '<div><div class="thread-from">' + who + cd + '</div>' +
-            '<div class="offer__meta">' + fmtBps(oracle.bps(q.price, r.side)) + ' · ' + unitLabel(q.price) +
-            (q.from_role === 'maker' && q.response_kind === 'order' && q.nonce ? ' · <span class="kind-tag kind-tag--order">SIGNED</span>' : '') + '</div></div>' +
-            '<div class="thread-price">' + fmt(pay, tokDp(tt)) + ' ' + esc(tt) + '</div></div>';
-        }).join('');
-
-        // taker upgraded an indicative request to a firm order → prompt a signed order
-        var needsSign = standing && standing.from_role === 'maker' && standing.response_kind === 'quote' &&
-                        !isQuote && standing.status === 'active' && !expired;
-
-        var action = '';
-        if (r.status === 'settled') {
-          // a maker "won" if the accepted quote belongs to their thread
-          var acceptedMine = mine.some(function (q) { return q.id === r.accepted_quote_id; });
-          action = '<p class="waiting"><span class="badge-status ' + (acceptedMine ? 'badge-accepted">Your quote was accepted ✓' : 'badge-rejected">Settled with another maker') + '</span></p>';
-        } else if (!standing || turn === 'maker' || expired || needsSign) {
-          // empty thread, OR taker countered, OR expired, OR escalation to a signed order → maker acts
-          var counterPending = standing && standing.from_role === 'taker' && standing.status === 'active' && !expired;
-          action =
-            (needsSign
-              ? '<p class="waiting">Taker upgraded this to a <b>firm order</b> — send a signed order to lock the trade.</p>'
-              : '') +
-            (counterPending
-              ? '<p class="waiting">Taker countered at <b>' + totalLabel(r, standing.price) + '</b> (' + unitLabel(standing.price) + '). Accept it or re-quote.</p>' +
-                '<button type="button" class="btn-settle" data-action="maker-accept" data-id="' + esc(standing.id) + '" data-accept-exp="' + new Date(standing.expires_at).getTime() + '">Accept taker\'s ' + totalLabel(r, standing.price) + '</button>'
-              : '') +
-            (function () {
-              // Maker calls getPrice on the Oracle to price the order fairly
-              var op = oracle.getPrice(mt, tt);
-              var fairTotal = payAmount(n, oracle.mid, mt);
-              return '<div class="oracle-suggest">' +
-                '<div class="oracle-suggest__main">Oracle · getPrice(' + esc(mt) + ', ' + esc(tt) + ') → 1 ' + esc(mt) + ' = ' + op.price.toFixed(5) + ' ' + esc(tt) + '</div>' +
-                '<div class="oracle-suggest__row"><span>fair total ≈ ' + fmt(fairTotal, tokDp(tt)) + ' ' + esc(tt) + '</span>' +
-                '<button type="button" class="btn-oracle" data-action="use-oracle">Use</button></div>' +
-                '</div>';
-            })() +
-            '<div class="field"><label class="field__label" for="makerPrice">' + (standing ? 'Re-quote total' : 'Total you offer') + ' (' + esc(tt) + ')</label>' +
-              '<input id="makerPrice" class="field__input" inputmode="decimal" placeholder="' + fmt(payAmount(n, oracle.mid, mt), tokDp(tt)) + '" value="' + esc(state.makerPriceDraft) + '">' +
-              (state.makerPriceDraft
-                ? (function () { var dp = priceFromTotal(parsePrice(state.makerPriceDraft), n, mt);
-                    return '<div class="field__hint">' + unitLabel(dp) + ' · ' + fmtBps(oracle.bps(dp, r.side)) + ' vs oracle</div>'; })()
-                : '') +
-            '</div>' +
-            '<select id="makerTtl" class="ttl-select">' +
-              ['15', '30', '60', '120'].map(function (s) { return '<option value="' + s + '"' + (state.makerTtl === s ? ' selected' : '') + '>Valid for ' + s + 's</option>'; }).join('') +
-            '</select>' +
-            '<button type="button" class="btn-request" data-action="maker-submit">' +
-              (isQuote ? (standing ? 'Send re-quote (indicative)' : 'Send indicative quote')
-                       : (standing ? 'Send signed re-quote' : 'Send signed order')) + '</button>';
-        } else {
-          // standing is the maker's own active quote → waiting on taker
-          action = '<p class="waiting">Quote standing at <b>' + totalLabel(r, standing.price) + '</b> (' + unitLabel(standing.price) + ') — waiting for the taker to accept or counter.</p>';
-        }
-
-        return head + summary + (rows ? '<div class="thread-list">' + rows + '</div>' : '') + '<div style="margin-top:18px;">' + action + '</div>';
-      }
-
-      // ---- event wiring (delegated; panels are rebuilt on render) ----
-      document.body.addEventListener('click', function (e) {
-        var el = e.target.closest('[data-action]');
-        if (!el) return;
-        var a = el.getAttribute('data-action');
-        if (a === 'set-role') setRole(el.getAttribute('data-role'));
-        else if (a === 'get-quote') requestRfq('quote');
-        else if (a === 'request-order') requestRfq('order');
-        else if (a === 'new-rfq') reset();
-        else if (a === 'escalate') escalateOrder();
-        else if (a === 'accept') accept(el.getAttribute('data-id'));
-        else if (a === 'open-counter') { state.counterFor = el.getAttribute('data-maker'); render(); }
-        else if (a === 'send-counter') takerCounter(el.getAttribute('data-maker'));
-        else if (a === 'reset') reset();
-        else if (a === 'refresh') refresh();
-        else if (a === 'select-rfq') selectRfq(el.getAttribute('data-id'));
-        else if (a === 'maker-back') makerBack();
-        else if (a === 'maker-submit') makerSubmit();
-        else if (a === 'maker-accept') makerAcceptCounter(el.getAttribute('data-id'));
-        else if (a === 'use-oracle') useOraclePrice();
-        else if (a === 'toggle-intent') toggleIntent(el.getAttribute('data-mt'), el.getAttribute('data-tt'));
+    // exact bytes the maker signs — fixed key order = deterministic
+    function canonicalPayload(o) {
+      return JSON.stringify({
+        maker_address: o.maker_address,
+        maker_amount: o.maker_amount,
+        maker_token: o.maker_token,
+        taker_address: o.taker_address,
+        taker_amount: o.taker_amount,
+        taker_token: o.taker_token,
+        expiration: o.expiration,
+        nonce: o.nonce,
       });
+    }
 
-      // Maker accepts the Oracle's fair price → fill the total input with it
-      function useOraclePrice() {
-        if (!state.rfq) return;
-        var mt = makerTokenOf(state.rfq), tt = takerTokenOf(state.rfq);
-        var fairTotal = payAmount(makerAmountOf(state.rfq), oracle.mid, mt);
-        state.makerPriceDraft = String(Number(fairTotal.toFixed(tokDp(tt))));
-        render();
+    // --- wallet ------------------------------------------------------------
+    function renderWalletChip() {
+      const chip = $('walletChip');
+      if (state.address) {
+        chip.innerHTML = `
+          <span class="wallet-chip__addr"><span class="net">TESTNET</span> ${trunc(state.address)}</span>
+          <button class="btn btn--ghost btn--sm" id="disconnectBtn">Disconnect</button>`;
+        $('disconnectBtn').onclick = disconnect;
+      } else {
+        chip.innerHTML = '';
+      }
+    }
+
+    async function connect() {
+      try {
+        await kit.openModal({
+          onWalletSelected: async (option) => {
+            kit.setWallet(option.id);
+            const { address } = await kit.getAddress();
+            state.address = address;
+            localStorage.setItem('otc_address', address);
+            localStorage.setItem('otc_wallet_id', option.id);
+            await onConnected();
+          },
+        });
+      } catch (e) {
+        toast(e?.message || 'Wallet connection cancelled.', 'err');
+      }
+    }
+
+    function disconnect() {
+      teardownRealtime();
+      state.address = null;
+      state.incoming = []; state.sent = [];
+      localStorage.removeItem('otc_address');
+      localStorage.removeItem('otc_wallet_id');
+      gate.style.display = '';
+      app.style.display = 'none';
+      renderWalletChip();
+    }
+
+    async function onConnected() {
+      renderWalletChip();
+      $('makerAddrBox').textContent = state.address;
+      gate.style.display = 'none';
+      app.style.display = '';
+      await Promise.all([loadIncoming(), loadSent()]);
+      setupRealtime();
+    }
+
+    // --- create order ------------------------------------------------------
+    function validAmount(v) { return /^\d+(\.\d{1,7})?$/.test(v) && parseFloat(v) > 0; }
+
+    async function submitOrder(e) {
+      e.preventDefault();
+      const maker_amount = $('makerAmount').value.trim();
+      const taker_amount = $('takerAmount').value.trim();
+      const maker_token = $('makerToken').value;
+      const taker_token = $('takerToken').value;
+      const taker_address = $('takerAddress').value.trim();
+      const expValue = parseInt($('expValue').value, 10);
+      const expUnit = parseInt($('expUnit').value, 10);
+
+      if (!validAmount(maker_amount)) return toast('Enter a valid "send" amount (max 7 decimals).', 'err');
+      if (!validAmount(taker_amount)) return toast('Enter a valid "receive" amount (max 7 decimals).', 'err');
+      if (!ADDR_RE.test(taker_address)) return toast('Counterparty address is not a valid Stellar address.', 'err');
+      if (taker_address === state.address) return toast('Counterparty cannot be your own address.', 'err');
+      if (!(expValue > 0)) return toast('Expiry must be greater than zero.', 'err');
+
+      const order = {
+        maker_address: state.address,
+        maker_amount, maker_token,
+        taker_address, taker_amount, taker_token,
+        expiration: new Date(Date.now() + expValue * expUnit).toISOString(),
+        nonce: crypto.randomUUID(),
+      };
+
+      const btn = $('sendBtn');
+      btn.disabled = true; btn.textContent = 'Waiting for signature…';
+      try {
+        const signed_payload = canonicalPayload(order);
+        const signature = await walletSign(signed_payload);
+
+        const { error } = await supabase.from('orders').insert({
+          ...order, signature, signed_payload, status: 'pending',
+        });
+        if (error) throw error;
+
+        $('orderForm').reset();
+        $('makerAddrBox').textContent = state.address;
+        toast('Order signed and sent.', 'ok');
+        await loadSent();
+        switchTab('sent');
+      } catch (err) {
+        toast(err?.message || 'Could not send order.', 'err');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Sign & send order';
+      }
+    }
+
+    // --- load / render -----------------------------------------------------
+    async function loadIncoming() {
+      const { data, error } = await supabase.from('orders')
+        .select('*').eq('taker_address', state.address)
+        .order('created_at', { ascending: false });
+      if (error) return toast('Failed to load incoming orders.', 'err');
+      state.incoming = data || [];
+      renderIncoming();
+    }
+
+    async function loadSent() {
+      const { data, error } = await supabase.from('orders')
+        .select('*').eq('maker_address', state.address)
+        .order('created_at', { ascending: false });
+      if (error) return toast('Failed to load sent orders.', 'err');
+      state.sent = data || [];
+      renderSent();
+    }
+
+    function statusBadge(o) {
+      const expired = o.status === 'pending' && isExpired(o);
+      const s = expired ? 'expired' : o.status;
+      return `<span class="badge badge--${s}">${s}</span>`;
+    }
+
+    function renderIncoming() {
+      const pending = state.incoming.filter((o) => o.status === 'pending' && !isExpired(o)).length;
+      $('incCount').textContent = pending;
+      const el = $('incomingList');
+      if (!state.incoming.length) {
+        el.innerHTML = `<div class="empty">No orders addressed to your wallet yet.</div>`;
+        return;
+      }
+      el.innerHTML = state.incoming.map((o) => {
+        const expired = o.status === 'pending' && isExpired(o);
+        const canAct = o.status === 'pending' && !expired;
+        return `
+          <div class="order">
+            <div class="order__top">
+              <div class="order__party">From maker <b>${trunc(o.maker_address)}</b></div>
+              ${statusBadge(o)}
+            </div>
+            <div class="legs">
+              <div class="legbox legbox--in">
+                <div class="legbox__k">You receive</div>
+                <div class="legbox__v">${o.maker_amount} ${tokenLabel(o.maker_token)}</div>
+              </div>
+              <div class="legbox legbox--out">
+                <div class="legbox__k">You send</div>
+                <div class="legbox__v">${o.taker_amount} ${tokenLabel(o.taker_token)}</div>
+              </div>
+            </div>
+            <div class="order__meta">
+              <span>⏳ ${o.status === 'pending' ? fmtRemaining(o.expiration) : '—'}</span>
+              <span class="sig">✎ maker signed</span>
+            </div>
+            ${canAct ? `
+              <div class="order__actions">
+                <button class="btn btn--gold btn--sm" data-accept="${o.id}">Accept</button>
+                <button class="btn btn--danger btn--sm" data-decline="${o.id}">Decline</button>
+              </div>` : ''}
+            ${o.status === 'accepted' ? settlementStrip(o, 'taker') : ''}
+          </div>`;
+      }).join('');
+
+      el.querySelectorAll('[data-accept]').forEach((b) =>
+        (b.onclick = () => takerAction(b.getAttribute('data-accept'), 'accept')));
+      el.querySelectorAll('[data-decline]').forEach((b) =>
+        (b.onclick = () => takerAction(b.getAttribute('data-decline'), 'decline')));
+      wireSettlement(el);
+    }
+
+    function renderSent() {
+      $('sentCount').textContent = state.sent.filter((o) => o.status === 'pending' && !isExpired(o)).length;
+      const el = $('sentList');
+      if (!state.sent.length) {
+        el.innerHTML = `<div class="empty">You haven't sent any orders yet.</div>`;
+        return;
+      }
+      el.innerHTML = state.sent.map((o) => {
+        const expired = o.status === 'pending' && isExpired(o);
+        const canCancel = o.status === 'pending' && !expired;
+        return `
+          <div class="order">
+            <div class="order__top">
+              <div class="order__party">To taker <b>${trunc(o.taker_address)}</b></div>
+              ${statusBadge(o)}
+            </div>
+            <div class="legs">
+              <div class="legbox legbox--out">
+                <div class="legbox__k">You send</div>
+                <div class="legbox__v">${o.maker_amount} ${tokenLabel(o.maker_token)}</div>
+              </div>
+              <div class="legbox legbox--in">
+                <div class="legbox__k">You receive</div>
+                <div class="legbox__v">${o.taker_amount} ${tokenLabel(o.taker_token)}</div>
+              </div>
+            </div>
+            <div class="order__meta">
+              <span>⏳ ${o.status === 'pending' ? fmtRemaining(o.expiration) : '—'}</span>
+              ${o.taker_signature ? '<span class="sig"><b>✓ taker signed</b></span>' : ''}
+            </div>
+            ${canCancel ? `
+              <div class="order__actions">
+                <button class="btn btn--danger btn--sm" data-cancel="${o.id}">Cancel order</button>
+              </div>` : ''}
+            ${o.status === 'accepted' ? settlementStrip(o, 'maker') : ''}
+          </div>`;
+      }).join('');
+
+      el.querySelectorAll('[data-cancel]').forEach((b) =>
+        (b.onclick = () => cancelOrder(b.getAttribute('data-cancel'))));
+      wireSettlement(el);
+    }
+
+    // --- taker / maker actions --------------------------------------------
+    async function takerAction(orderId, action) {
+      const order = state.incoming.find((o) => o.id === orderId);
+      if (!order) return;
+      if (isExpired(order)) return toast('This order has expired.', 'err');
+      try {
+        const taker_signature = await walletSign(JSON.stringify({ order_id: orderId, action }));
+        const status = action === 'accept' ? 'accepted' : 'declined';
+        const { error } = await supabase.from('orders')
+          .update({ status, taker_signature, updated_at: new Date().toISOString() })
+          .eq('id', orderId).eq('status', 'pending');
+        if (error) throw error;
+        toast(action === 'accept' ? 'Order accepted.' : 'Order declined.', 'ok');
+        await loadIncoming();
+      } catch (err) {
+        toast(err?.message || 'Action failed.', 'err');
+      }
+    }
+
+    async function cancelOrder(orderId) {
+      try {
+        const { error } = await supabase.from('orders')
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+          .eq('id', orderId).eq('status', 'pending');
+        if (error) throw error;
+        toast('Order cancelled.', 'ok');
+        await loadSent();
+      } catch (err) {
+        toast(err?.message || 'Could not cancel order.', 'err');
+      }
+    }
+
+    // --- on-chain settlement (approve + fill) -----------------------------
+    const RPC_URL = window.RPC_URL || 'https://soroban-testnet.stellar.org';
+    const HORIZON_URL = window.HORIZON_URL || 'https://horizon-testnet.stellar.org';
+    const PASSPHRASE = window.NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015';
+    const OTC_CONTRACT_ID = (window.OTC_CONTRACT_ID || '').trim();
+    const settlementEnabled = /^C[A-Z2-7]{55}$/.test(OTC_CONTRACT_ID);
+    const EXPLORER = 'https://stellar.expert/explorer/testnet';
+
+    const rpc = () => new Stellar.rpc.Server(RPC_URL);
+    const horizon = () => new Stellar.Horizon.Server(HORIZON_URL);
+    let txBusy = false;
+
+    const findOrder = (id) =>
+      state.incoming.find((o) => o.id === id) || state.sent.find((o) => o.id === id);
+    const refreshLists = () => Promise.all([loadIncoming(), loadSent()]);
+
+    // token string ('XLM' | 'CODE:ISSUER') -> Asset
+    function assetFor(tokenStr) {
+      if (!tokenStr || tokenStr.toUpperCase() === 'XLM') return { asset: Stellar.Asset.native(), native: true };
+      const [code, issuer] = tokenStr.split(':');
+      return { asset: new Stellar.Asset(code, issuer), native: false };
+    }
+    // Asset -> Stellar Asset Contract id ('C...'), normalising older return shapes
+    function sacIdFor(tokenStr) {
+      let id = assetFor(tokenStr).asset.contractId(PASSPHRASE);
+      if (id instanceof Uint8Array) id = Stellar.StrKey.encodeContract(id);
+      else if (typeof id === 'string' && !id.startsWith('C')) id = Stellar.StrKey.encodeContract(Buffer.from(id, 'hex'));
+      return id;
+    }
+    // decimal string -> i128 stroops (7 dp) as BigInt
+    function toStroops(s) {
+      const [whole, frac = ''] = String(s).split('.');
+      return BigInt(whole || '0') * 10000000n + BigInt((frac + '0000000').slice(0, 7));
+    }
+    async function sha256Bytes(str) {
+      return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)));
+    }
+
+    // address ('G…'/'C…') behind an address-credential auth entry, else null
+    function entryAddr(e) {
+      try { return Stellar.Address.fromScAddress(e.credentials().address().address()).toString(); }
+      catch { return null; }
+    }
+
+    // canonical `fill` arguments, derived deterministically from the order so
+    // both parties sign — and the submitter calls — byte-identical terms. This
+    // binding is what makes settlement safe: the on-chain amounts cannot differ
+    // from what each party signed.
+    async function fillCanonicalArgs(order) {
+      const idBytes = await sha256Bytes(order.id);
+      const expSec = Math.floor(new Date(order.expiration).getTime() / 1000);
+      return [
+        Stellar.Address.fromString(order.maker_address).toScVal(),
+        Stellar.Address.fromString(order.taker_address).toScVal(),
+        Stellar.Address.fromString(sacIdFor(order.maker_token)).toScVal(),
+        Stellar.Address.fromString(sacIdFor(order.taker_token)).toScVal(),
+        Stellar.nativeToScVal(toStroops(order.maker_amount), { type: 'i128' }),
+        Stellar.nativeToScVal(toStroops(order.taker_amount), { type: 'i128' }),
+        Stellar.nativeToScVal(BigInt(expSec), { type: 'u64' }),
+        Stellar.nativeToScVal(Buffer.from(idBytes), { type: 'bytes' }),
+      ];
+    }
+    const fillHostFn = (args) =>
+      new Stellar.Contract(OTC_CONTRACT_ID).call('fill', ...args).body().invokeHostFunctionOp().hostFunction();
+
+    async function waitForTx(server, hash) {
+      for (let i = 0; i < 30; i++) {
+        const r = await server.getTransaction(hash);
+        if (r.status === 'SUCCESS') return hash;
+        if (r.status === 'FAILED') throw new Error('Transaction failed on-chain.');
+        await new Promise((res) => setTimeout(res, 1500));
+      }
+      throw new Error('Timed out waiting for confirmation.');
+    }
+
+    // make sure `address` can receive the (non-native) asset they're owed
+    async function ensureTrustline(tokenStr, address) {
+      const { asset, native } = assetFor(tokenStr);
+      if (native) return;
+      const h = horizon();
+      const acct = await h.loadAccount(address);
+      if (acct.balances.some((b) => b.asset_code === asset.code && b.asset_issuer === asset.issuer)) return;
+      const tx = new Stellar.TransactionBuilder(acct, { fee: Stellar.BASE_FEE, networkPassphrase: PASSPHRASE })
+        .addOperation(Stellar.Operation.changeTrust({ asset })).setTimeout(180).build();
+      const { signedTxXdr } = await kit.signTransaction(tx.toXDR(), { address, networkPassphrase: PASSPHRASE });
+      await h.submitTransaction(Stellar.TransactionBuilder.fromXDR(signedTxXdr, PASSPHRASE));
+    }
+
+    // ledger until which a signed auth entry stays valid (≈ order expiry + buffer)
+    async function authValidUntil(order) {
+      const { sequence } = await rpc().getLatestLedger();
+      const remainMs = Math.max(0, new Date(order.expiration).getTime() - Date.now());
+      return sequence + Math.min(Math.ceil(remainMs / 5000) + 120, 535670);
+    }
+
+    // side: 'maker' | 'taker'. Off-chain sign THIS party's authorization over the
+    // exact order terms (replaces the old SAC `approve`). Simulated with the
+    // counterparty as source so our own auth comes back as a signable address
+    // credential; the signed entry (base64) is stored for a permissionless fill.
+    async function signOrderAuth(order, side) {
+      if (!settlementEnabled) return toast('Settlement contract not configured (otc-config.js).', 'err');
+      if (txBusy) return;
+      const isMaker = side === 'maker';
+      const myAddr = isMaker ? order.maker_address : order.taker_address;
+      const otherAddr = isMaker ? order.taker_address : order.maker_address;
+      if (myAddr !== state.address) return toast('Connect the wallet for this leg first.', 'err');
+      const recvToken = isMaker ? order.taker_token : order.maker_token;
+
+      txBusy = true;
+      try {
+        toast('Preparing your signature — check your wallet…');
+        await ensureTrustline(recvToken, myAddr);
+
+        const server = rpc();
+        const args = await fillCanonicalArgs(order);
+        // counterparty as source → our require_auth surfaces as a signable entry
+        const src = await server.getAccount(otherAddr);
+        const tx = new Stellar.TransactionBuilder(src, { fee: Stellar.BASE_FEE, networkPassphrase: PASSPHRASE })
+          .addOperation(new Stellar.Contract(OTC_CONTRACT_ID).call('fill', ...args)).setTimeout(180).build();
+        const sim = await server.simulateTransaction(tx);
+        if (Stellar.rpc.Api.isSimulationError(sim)) throw new Error(sim.error);
+        const mine = (sim.result?.auth || []).find((e) => entryAddr(e) === myAddr);
+        if (!mine) throw new Error('No authorization entry for your address in the simulation.');
+
+        const validUntil = await authValidUntil(order);
+        const signed = await Stellar.authorizeEntry(
+          mine,
+          async (preimage) => {
+            const { signedAuthEntry } = await kit.signAuthEntry(preimage.toXDR('base64'),
+              { address: myAddr, networkPassphrase: PASSPHRASE });
+            return Buffer.from(signedAuthEntry, 'base64');
+          },
+          validUntil, PASSPHRASE,
+        );
+
+        const col = isMaker ? 'maker_auth' : 'taker_auth';
+        const otherSigned = isMaker ? order.taker_auth : order.maker_auth;
+        const { error } = await supabase.from('orders').update({
+          [col]: signed.toXDR('base64'),
+          settlement_status: otherSigned ? 'ready' : 'signing',
+          updated_at: new Date().toISOString(),
+        }).eq('id', order.id);
+        if (error) throw error;
+        toast('Your authorization is signed.', 'ok');
+        await refreshLists();
+      } catch (err) {
+        toast(err?.message || 'Signing failed.', 'err');
+      } finally {
+        txBusy = false;
+      }
+    }
+
+    // settle: assemble both signed auth entries into one permissionless `fill`.
+    // Whoever holds both signatures can submit; the signatures fix every term.
+    async function fillOrder(order) {
+      if (!settlementEnabled) return toast('Settlement contract not configured (otc-config.js).', 'err');
+      if (txBusy) return;
+      if (!order.maker_auth || !order.taker_auth) return toast('Both parties must sign first.', 'err');
+      txBusy = true;
+      try {
+        await supabase.from('orders').update({ settlement_status: 'settling', updated_at: new Date().toISOString() }).eq('id', order.id);
+        await refreshLists();
+        toast('Submitting settlement — check your wallet…');
+
+        const server = rpc();
+        const hostFn = fillHostFn(await fillCanonicalArgs(order));
+        const auth = [
+          Stellar.xdr.SorobanAuthorizationEntry.fromXDR(order.maker_auth, 'base64'),
+          Stellar.xdr.SorobanAuthorizationEntry.fromXDR(order.taker_auth, 'base64'),
+        ];
+        const mkOp = () => Stellar.Operation.invokeHostFunction({ func: hostFn, auth });
+
+        // enforcing-mode simulation (auth pre-attached) → footprint + resource fee
+        const probe = new Stellar.TransactionBuilder(await server.getAccount(state.address),
+          { fee: Stellar.BASE_FEE, networkPassphrase: PASSPHRASE })
+          .addOperation(mkOp()).setTimeout(180).build();
+        const sim = await server.simulateTransaction(probe);
+        if (Stellar.rpc.Api.isSimulationError(sim)) throw new Error(sim.error);
+
+        const fee = (BigInt(Stellar.BASE_FEE) + BigInt(sim.minResourceFee)).toString();
+        const finalTx = new Stellar.TransactionBuilder(await server.getAccount(state.address),
+          { fee, networkPassphrase: PASSPHRASE })
+          .addOperation(mkOp()).setSorobanData(sim.transactionData.build()).setTimeout(180).build();
+        const { signedTxXdr } = await kit.signTransaction(finalTx.toXDR(), { address: state.address, networkPassphrase: PASSPHRASE });
+        const sent = await server.sendTransaction(Stellar.TransactionBuilder.fromXDR(signedTxXdr, PASSPHRASE));
+        if (sent.status === 'ERROR') throw new Error('Submit rejected: ' + JSON.stringify(sent.errorResult ?? sent.status));
+        const hash = await waitForTx(server, sent.hash);
+
+        await supabase.from('orders').update({
+          settlement_status: 'settled', settle_tx_hash: hash, settle_error: null,
+          settled_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }).eq('id', order.id);
+        toast('Settled on-chain 🎉', 'ok');
+        await refreshLists();
+      } catch (err) {
+        await supabase.from('orders').update({
+          settlement_status: 'failed', settle_error: String(err?.message || err).slice(0, 400),
+          updated_at: new Date().toISOString(),
+        }).eq('id', order.id);
+        toast(err?.message || 'Settlement failed.', 'err');
+        await refreshLists();
+      } finally {
+        txBusy = false;
+      }
+    }
+
+    // settlement UI for an accepted order. side = my role in this list.
+    function settlementStrip(o, side) {
+      if (!settlementEnabled) {
+        return `<div class="settle"><div class="settle__msg">On-chain settlement isn't configured yet — set <b>OTC_CONTRACT_ID</b> in otc-config.js.</div></div>`;
+      }
+      const st = o.settlement_status || 'idle';
+      const makerOk = !!o.maker_auth, takerOk = !!o.taker_auth;
+      const myOk = side === 'maker' ? makerOk : takerOk;
+      const otherOk = side === 'maker' ? takerOk : makerOk;
+
+      if (st === 'settled') {
+        return `<div class="settle"><div class="settle__title">Settlement</div>
+          <div class="settle__steps"><span class="settle__step is-done">✓ Settled on-chain</span></div>
+          ${o.settle_tx_hash ? `<div class="settle__msg"><a href="${EXPLORER}/tx/${o.settle_tx_hash}" target="_blank" rel="noopener">View transaction ↗</a></div>` : ''}
+        </div>`;
       }
 
-      document.body.addEventListener('input', function (e) {
-        var id = e.target.id;
-        if (id === 'nameInput') setName(e.target.value);
-        else if (id === 'amountInput') state.amount = e.target.value;
-        else if (id === 'makerPrice') { state.makerPriceDraft = e.target.value; refreshHint(); }
-        else if (id && id.indexOf('counter-') === 0) state.drafts[id.slice(8)] = e.target.value;
-      });
-      document.body.addEventListener('change', function (e) {
-        if (e.target.id === 'makerTtl') state.makerTtl = e.target.value;
-        else if (e.target.id === 'makerTokenSel') setMakerToken(e.target.value);
-        else if (e.target.id === 'takerTokenSel') setTakerToken(e.target.value);
-      });
-      // live bps hint under maker price without rebuilding the input
-      function refreshHint() {
-        var inp = document.getElementById('makerPrice'); if (!inp || !state.rfq) return;
-        var hint = inp.parentNode.querySelector('.field__hint');
-        var mt = makerTokenOf(state.rfq);
-        var total = parsePrice(state.makerPriceDraft);          // draft is the total
-        var p = priceFromTotal(total, makerAmountOf(state.rfq), mt);
-        var html = p > 0 ? unitLabel(p) + ' · ' + fmtBps(oracle.bps(p, state.rfq.side)) + ' vs oracle' : '';
-        if (!hint && p > 0) { hint = document.createElement('div'); hint.className = 'field__hint'; inp.parentNode.appendChild(hint); }
-        if (hint) hint.innerHTML = html;
-      }
+      const steps = `<div class="settle__steps">
+          <span class="settle__step ${makerOk ? 'is-done' : ''}">${makerOk ? '✓' : '•'} Maker signed</span>
+          <span class="settle__step ${takerOk ? 'is-done' : ''}">${takerOk ? '✓' : '•'} Taker signed</span>
+        </div>`;
+      let actions;
+      if (st === 'settling') actions = `<div class="settle__msg">Submitting settlement…</div>`;
+      else if (!myOk) actions = `<div class="order__actions"><button class="btn btn--gold btn--sm" data-sign="${o.id}" data-side="${side}">Sign order</button></div>`;
+      else if (!otherOk) actions = `<div class="settle__msg">Waiting for the counterparty to sign…</div>`;
+      else actions = `<div class="order__actions"><button class="btn btn--gold btn--sm" data-fill="${o.id}">Settle now</button></div>`;
+      const err = st === 'failed' && o.settle_error ? `<div class="settle__err">Last attempt failed: ${o.settle_error}</div>` : '';
+      return `<div class="settle"><div class="settle__title">On-chain settlement</div>${steps}${actions}${err}</div>`;
+    }
 
-      // ---- boot ----
-      if (!state.address) { state.address = genAddress(); store.set('rfq_address', state.address); }
-      setInterval(tick, 1000);
-      startIntents();
-      if (state.role === 'maker') mountMaker(); else render();
-    })();
+    function wireSettlement(el) {
+      el.querySelectorAll('[data-sign]').forEach((b) => (b.onclick = () => {
+        const o = findOrder(b.getAttribute('data-sign'));
+        if (o) signOrderAuth(o, b.getAttribute('data-side'));
+      }));
+      el.querySelectorAll('[data-fill]').forEach((b) => (b.onclick = () => {
+        const o = findOrder(b.getAttribute('data-fill'));
+        if (o) fillOrder(o);
+      }));
+    }
+
+    // --- realtime ----------------------------------------------------------
+    function setupRealtime() {
+      teardownRealtime();
+      const inc = supabase.channel('otc-incoming')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `taker_address=eq.${state.address}` },
+          () => loadIncoming())
+        .subscribe();
+      const sent = supabase.channel('otc-sent')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `maker_address=eq.${state.address}` },
+          () => loadSent())
+        .subscribe();
+      state.channels = [inc, sent];
+    }
+    function teardownRealtime() {
+      state.channels.forEach((c) => supabase.removeChannel(c));
+      state.channels = [];
+    }
+
+    // --- tabs --------------------------------------------------------------
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach((t) =>
+        t.classList.toggle('is-active', t.dataset.tab === name));
+      document.querySelectorAll('.panel').forEach((p) =>
+        p.classList.toggle('is-active', p.dataset.panel === name));
+    }
+
+    // --- init --------------------------------------------------------------
+    function fillTokenSelect(sel, defaultValue) {
+      sel.innerHTML = TOKENS.map((t) => `<option value="${t.value}">${t.label}</option>`).join('');
+      sel.value = defaultValue;
+    }
+
+    function init() {
+      fillTokenSelect($('makerToken'), 'XLM');
+      fillTokenSelect($('takerToken'), TOKENS[1].value); // USDC
+      $('connectBtn').onclick = connect;
+      $('orderForm').onsubmit = submitOrder;
+      document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
+
+      // refresh countdowns each minute
+      setInterval(() => { renderIncoming(); renderSent(); }, 60000);
+
+      if (state.address) {
+        kit.setWallet(localStorage.getItem('otc_wallet_id') || FREIGHTER_ID);
+        onConnected();
+      } else {
+        renderWalletChip();
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>

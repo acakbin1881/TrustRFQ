@@ -2,3 +2,6 @@
 .claude/settings.local.json
 
 .vercel
+
+# Rust / Soroban build artifacts
+target/

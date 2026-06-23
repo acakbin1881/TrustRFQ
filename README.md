@@ -1,251 +1,188 @@
-# TrustRFQ
+# Nebula OTC — off-chain RFQ for Stellar
 
-Off-chain RFQ negotiation desk for block-trading XLM / USDC. Static frontend
-(`otc.html`) backed by Supabase as a real, shared backend. Implements the
-off-chain half of the AirSwap-style *Swap* protocol — **no wallet, no signatures,
-no on-chain settlement** (acceptance is a mock terminal state).
+A peer-to-peer OTC layer for Stellar (XLM/USDC), modeled on the Swap/AirSwap peer protocol:
+parties negotiate **off-chain** and settle **on-chain**. Both halves are implemented: the
+off-chain RFQ (create / sign / deliver / accept a directed order) and on-chain **atomic
+settlement** via a Soroban contract using AirSwap-style **off-chain-signed authorizations** + a
+permissionless `fill` (no separate on-chain `approve` step).
 
-One app, two peer roles via a top-bar **role switcher**:
+## Pages
 
-- **Taker** — builds an RFQ ticket by choosing the **token to receive**
-  (`makerToken`) + amount and the **token to pay** (`takerToken`) — XLM or USDC —
-  **discovers live makers** for that direction (`findIntent` → `foundIntent`),
-  then either **gets an indicative quote** (`getQuote`) or **requests a firm,
-  signed order** (`getOrder`). Watches makers compete with time-limited
-  responses, **counters** for a better price, and **accepts** a signed order.
-- **Maker** — **announces intent** to make markets in a direction
-  (`addIntent` / `removeIntent`), browses open requests, and responds in kind:
-  `provideQuote` (indicative) to a quote request, or `provideOrder` (a signed,
-  executable order carrying `expiration` / `nonce` / `signature`) to an order
-  request, negotiating counters back and forth in real time.
+| File | What it is |
+|------|------------|
+| `hero.html` | Marketing landing page. Top-right **OTC** button opens the app. |
+| `otc.html` | The OTC app — wallet gate, create order, incoming/sent inboxes, on-chain settlement. |
+| `supabase-config.js` | Sets `window.SUPABASE_URL` / `window.SUPABASE_ANON_KEY`. |
+| `otc-config.js` | Sets `RPC_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID` for settlement. |
+| `contracts/otc_swap/` | Soroban contract (`fill`) that settles an accepted order atomically. |
+| `vercel.json` | `cleanUrls` + rewrites `/` → `/hero`. |
 
-### Peer Protocol (off-chain RPCs)
+## How it works
 
-Implemented as a `Peer` namespace in `otc.html`, with spec-faithful signatures:
+- **No sign-in.** Connecting a Stellar wallet (via [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit))
+  is the only gate — the connected address *is* your identity.
+- **Maker** fills an order — what they send, what they want back, an expiry, and the
+  **taker's wallet address** — then **signs the order with their wallet** and sends it.
+- The order is stored in Supabase and **routed by `taker_address`**. The **taker** (whoever
+  connects that wallet) sees it live in **Incoming** and either **Accept** (signs) or
+  **Decline**. Accept just flips the status off-chain; settlement is the next phase.
+- Because routing is by address, the two parties connect **separately** — no link to share.
 
-| RPC | Caller → Callee | Meaning |
-| --- | --- | --- |
-| `getOrder(makerAmount, makerToken, takerToken, takerAddress)` | Taker → Maker | "I want to buy 10 XLM using USDC." |
-| `provideOrder(makerAddress, makerAmount, makerToken, takerAddress, takerAmount, takerToken, expiration, nonce, signature)` | Maker → Taker | "I'll sell you 10 XLM for 5 USDC." (signed) |
-| `getQuote(makerAmount, makerToken, takerTokens)` | Taker → Maker | "How much to buy 10 XLM using USDC?" |
-| `provideQuote(makerAmount, makerToken, takerAmounts)` | Maker → Taker | "It'll cost you 5 USDC for 10 XLM." (indicative) |
-| `getPrice(makerToken, takerToken)` | Maker/Taker → Oracle | "What is the price of XLM for USDC?" |
-| `providePrice(makerToken, takerToken, price)` | Oracle → Maker/Taker | "The price of XLM for USDC is 0.12." (suggestion) |
+### Order fields
 
-> Tokens are limited to **XLM** and **USDC** on Soroban. `expiration` / `nonce` /
-> `signature` are **mocked** (no wallet, no on-chain settlement yet) and shown on
-> the order card as a "Signed order" badge. An indicative quote is not
-> executable; the taker can **escalate** it to a firm order (`request_kind`
-> flips `quote → order`), prompting the maker to send a signed order.
+`maker_address`, `maker_amount`, `maker_token`, `taker_address`, `taker_amount`,
+`taker_token`, `expiration` (absolute), `nonce` (unique per maker). The maker's wallet
+`signature` over the canonical payload and the exact `signed_payload` are stored alongside;
+`taker_signature` is captured on accept/decline.
 
-Quotes carry a live **countdown** (expiry), an **Oracle** mid-price reference
-with bps spread, and a full **counter-offer** loop. Updates stream live over
-Supabase realtime — demo it by opening **two browser tabs**, one per role.
+### Trust model
 
-The **Oracle** is a gently-live mock price feed (drifts a few bps every few
-seconds). A **Maker** consults `getPrice` while pricing — the desk shows the fair
-total with a one-click **Use** button. A **Taker** consults `getPrice` to verify
-a received order — each offer card shows a live fairness badge (**Oracle ✓ fair**
-within ±15 bps, else **⚠ N bps over fair**). Oracle prices are suggestions only,
-never executable.
-
-### Indexer Protocol (intent layer)
-
-The off-chain discovery layer (whitepaper §3). Instead of makers passively
-watching the open feed, **makers announce intent** to trade a direction and
-**takers discover counterparties** before negotiating. Implemented as an
-`Indexer` namespace in `otc.html`, backed by a new `intents` table.
-`makerToken` is the token the maker **provides** (the taker receives);
-`takerTokens` is what the maker wants in return.
-
-| RPC | Caller → Callee | Meaning |
-| --- | --- | --- |
-| `addIntent(makerToken, takerTokens)` | Maker → Indexer | "I want to trade XLM for USDC." → `addIntent('XLM', ['USDC'])` |
-| `removeIntent(makerToken, takerTokens)` | Maker → Indexer | "No longer trading XLM for USDC." → `removeIntent('XLM', ['USDC'])` |
-| `getIntent(maker)` | any → Indexer | "List active intent for this maker." |
-| `findIntent(makerToken, takerToken)` | Taker → Indexer | "Find someone trading XLM for USDC." → `findIntent('XLM', 'USDC')` |
-| `foundIntent(maker, intentList)` | Indexer → Taker | The matching makers returned to the taker. |
-
-A **Maker** toggles *Market making · XLM → USDC / USDC → XLM* to `addIntent` /
-`removeIntent` (their mock `G…` address is attached). A **Taker** sees a live
-**Counterparties** panel (`findIntent` → `foundIntent`) listing makers who
-announced the chosen direction. Discovery is **additive** — the RFQ is still
-broadcast, so makers without a standing intent can still respond.
-
-> No accounts: identity is just a display name you type, persisted in
-> `localStorage`. Acceptance / "settlement" is mocked; the negotiation lifecycle
-> (RFQ → quotes → counters → accept) is persisted in Supabase.
+There is no server-side auth, so RLS **cannot** prove a request comes from a wallet's owner.
+Integrity instead comes from **wallet signatures** on the order and on the accept/decline
+action. Order rows are readable with the anon key (not secret) — acceptable for a testnet
+off-chain MVP. A future Sign-In-With-Stellar flow (sign a nonce → Edge Function mints a JWT)
+would enable true per-wallet RLS and private reads.
 
 ## Setup
 
-1. Create a project at https://supabase.com.
-2. In the SQL Editor, run the schema (extends `rfqs`, adds `quotes`, opens RLS,
-   and enables realtime on both tables):
+### 1. Supabase schema
 
-   ```sql
-   -- base table
-   create table if not exists public.rfqs (
-     id uuid primary key default gen_random_uuid(),
-     created_at timestamptz not null default now(),
-     side text not null check (side in ('sell','buy')),
-     amount numeric not null check (amount > 0),
-     status text not null default 'open' check (status in ('open','settled','cancelled')),
-     maker text,
-     price numeric
-   );
+In your Supabase project → **SQL Editor**, run:
 
-   -- negotiation columns
-   alter table public.rfqs add column if not exists base_asset        text default 'XLM';
-   alter table public.rfqs add column if not exists quote_asset       text default 'USDC';
-   alter table public.rfqs add column if not exists taker_name        text;
-   alter table public.rfqs add column if not exists accepted_quote_id uuid;
+```sql
+create table public.orders (
+  id uuid primary key default gen_random_uuid(),
+  maker_address text not null,
+  maker_amount numeric not null,
+  maker_token text not null,
+  taker_address text not null,
+  taker_amount numeric not null,
+  taker_token text not null,
+  expiration timestamptz not null,
+  nonce text not null,
+  signature text not null,         -- maker signature over signed_payload
+  signed_payload text not null,    -- exact canonical message the maker signed
+  taker_signature text,            -- taker signature over the accept/decline action
+  status text not null default 'pending'
+    check (status in ('pending','accepted','declined','cancelled','expired')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (maker_address, nonce)
+);
+create index on public.orders (taker_address);
+create index on public.orders (maker_address);
 
-   -- one row per price proposal; a "thread" = all rows sharing (rfq_id, maker_name)
-   create table if not exists public.quotes (
-     id             uuid primary key default gen_random_uuid(),
-     created_at     timestamptz not null default now(),
-     rfq_id         uuid not null references public.rfqs(id) on delete cascade,
-     maker_name     text not null,
-     maker_initials text,
-     price          numeric not null check (price > 0),
-     from_role      text not null default 'maker' check (from_role in ('maker','taker')),
-     status         text not null default 'active'
-                      check (status in ('active','superseded','accepted','rejected','expired')),
-     expires_at     timestamptz not null,
-     parent_id      uuid references public.quotes(id)
-   );
-   create index if not exists quotes_rfq_created_idx on public.quotes (rfq_id, created_at);
-   create index if not exists quotes_maker_idx        on public.quotes (maker_name);
+alter table public.orders enable row level security;
 
-   -- Row Level Security (demo only, no auth)
-   alter table public.rfqs   enable row level security;
-   alter table public.quotes enable row level security;
+-- anon (no auth): explicit, permissive; integrity is enforced by signatures, not RLS
+create policy orders_anon_select on public.orders for select to anon using (true);
+create policy orders_anon_insert on public.orders for insert to anon with check (status = 'pending');
+create policy orders_anon_update on public.orders for update to anon using (true) with check (true);
 
-   drop policy if exists "anon read rfqs"     on public.rfqs;
-   drop policy if exists "anon insert rfqs"   on public.rfqs;
-   drop policy if exists "anon update rfqs"   on public.rfqs;
-   drop policy if exists "anon read quotes"   on public.quotes;
-   drop policy if exists "anon insert quotes" on public.quotes;
-   drop policy if exists "anon update quotes" on public.quotes;
+-- stream new offers + status changes to clients
+alter publication supabase_realtime add table public.orders;
+```
 
-   create policy "anon read rfqs"     on public.rfqs   for select using (true);
-   create policy "anon insert rfqs"   on public.rfqs   for insert with check (true);
-   create policy "anon update rfqs"   on public.rfqs   for update using (true) with check (true);
-   create policy "anon read quotes"   on public.quotes for select using (true);
-   create policy "anon insert quotes" on public.quotes for insert with check (true);
-   create policy "anon update quotes" on public.quotes for update using (true) with check (true);
+### 2. Config
 
-   -- realtime (guarded so re-running won't error if already added)
-   do $$
-   begin
-     if not exists (select 1 from pg_publication_tables
-                    where pubname='supabase_realtime' and schemaname='public' and tablename='rfqs') then
-       alter publication supabase_realtime add table public.rfqs;
-     end if;
-     if not exists (select 1 from pg_publication_tables
-                    where pubname='supabase_realtime' and schemaname='public' and tablename='quotes') then
-       alter publication supabase_realtime add table public.quotes;
-     end if;
-   end $$;
+Put your project URL and **anon** key in `supabase-config.js` (anon key is browser-safe).
 
-   -- peer-protocol columns (Order / Quote APIs)
-   alter table public.rfqs add column if not exists maker_token   text default 'XLM';
-   alter table public.rfqs add column if not exists taker_token   text default 'USDC';
-   alter table public.rfqs add column if not exists maker_amount  numeric;
-   alter table public.rfqs add column if not exists taker_address text;
-   alter table public.rfqs add column if not exists request_kind  text default 'order' check (request_kind in ('quote','order'));
-   alter table public.quotes add column if not exists response_kind text default 'order' check (response_kind in ('quote','order'));
-   alter table public.quotes add column if not exists maker_address text;
-   alter table public.quotes add column if not exists taker_amount  numeric;
-   alter table public.quotes add column if not exists nonce         text;
-   alter table public.quotes add column if not exists signature     text;
+### 3. Run locally
 
-   -- Indexer (intent) layer — makers announce intent, takers discover counterparties
-   create table if not exists public.intents (
-     id            uuid primary key default gen_random_uuid(),
-     created_at    timestamptz not null default now(),
-     maker_name    text not null,
-     maker_address text,
-     maker_token   text not null,   -- token the maker provides (taker receives)
-     taker_token   text not null,   -- token the maker wants in return
-     status        text not null default 'active' check (status in ('active','withdrawn')),
-     expires_at    timestamptz
-   );
-   create index if not exists intents_dir_idx   on public.intents (maker_token, taker_token, status);
-   create index if not exists intents_maker_idx on public.intents (maker_name);
+Any static server works (the app is plain HTML + ES-module CDN imports, no build step):
 
-   alter table public.intents enable row level security;
-   drop policy if exists "anon read intents"   on public.intents;
-   drop policy if exists "anon insert intents" on public.intents;
-   drop policy if exists "anon update intents" on public.intents;
-   create policy "anon read intents"   on public.intents for select using (true);
-   create policy "anon insert intents" on public.intents for insert with check (true);
-   create policy "anon update intents" on public.intents for update using (true) with check (true);
+```bash
+npx serve .
+# or
+vercel dev
+```
 
-   do $$
-   begin
-     if not exists (select 1 from pg_publication_tables
-                    where pubname='supabase_realtime' and schemaname='public' and tablename='intents') then
-       alter publication supabase_realtime add table public.intents;
-     end if;
-   end $$;
-   ```
+Open the served URL → **OTC** → **Connect wallet**.
 
-3. Project Settings → API → copy the **Project URL** and **anon public** key into
-   `supabase-config.js`.
-4. Serve the folder and open `otc.html`:
+## End-to-end test
 
-   ```
-   npx serve
-   ```
+Use two Stellar wallets (two browsers / two extension accounts), e.g. Freighter on Testnet.
 
-## Demo flow (two tabs)
+1. **Wallet A** → Connect (`G_A`).
+2. **Wallet B** → in a separate browser → Connect (`G_B`).
+3. **A** (Create order): set send/receive amounts + tokens, an expiry, counterparty `= G_B`
+   → **Sign & send** → sign in the wallet → appears in A's **Sent** as `pending`.
+4. **B** sees it appear **live** in **Incoming** → **Accept** (signs) → status `accepted`; A
+   sees the flip live. Repeat with **Decline**.
+5. An order created while B is disconnected shows up as soon as B connects `G_B`.
+6. An order past its `expiration` shows as **expired** and can't be accepted.
 
-1. **Tab A — Taker:** type a name, keep role **Taker**. In the RFQ ticket pick
-   the token to **receive** (`makerToken`, XLM or USDC) and an amount — the
-   **pay** token auto-sets to the other. The **Counterparties** panel lists makers
-   who announced this direction (`findIntent` → `foundIntent`). Click *Get
-   indicative quote* (`getQuote`) or *Request firm order* (`getOrder`). The RFQ
-   goes `open`.
-2. **Tab B — Maker:** type a maker name, switch role to **Maker**. Toggle
-   **Market making · XLM → USDC** (or **USDC → XLM**) to announce intent
-   (`addIntent`) — your maker shows up live in the taker's **Counterparties**
-   panel. The request shows in the open feed tagged **QUOTE** or **ORDER**; click
-   it and respond — *Send indicative quote* or *Send signed order* — with a short
-   validity.
-3. Tab A sees the response arrive **live** with its bps-vs-oracle spread and a
-   ticking countdown. A signed order shows a **Signed order** badge (nonce + sig).
-   Open more maker tabs to make offers compete — the best price floats to the top
-   with a `★ BEST QUOTE` tag.
-4. **Escalate:** if Tab A only asked for an indicative quote, click *Request firm
-   order* on the card to flip it to an order — Tab B is then prompted to send a
-   signed order.
-5. **Counter:** Tab A clicks *Counter* and sends a price; Tab B sees it and can
-   *Accept* it or *Re-quote*. Repeat as a real back-and-forth.
-6. **Accept:** Tab A accepts a standing signed order → both tabs show the result;
-   the RFQ leaves every maker's open feed. Expired quotes dim and can't be
-   accepted until re-quoted.
+## On-chain settlement (Phase 2)
 
-## How it maps to the whitepaper
+Once an order is **accepted**, it settles atomically on Testnet via the Soroban contract in
+`contracts/otc_swap/` (AirSwap-style signed `fill`). There is **no separate `approve` step**:
+each party signs an **off-chain Soroban authorization entry** over the *exact* order terms
+(counterparty, tokens, **amounts**, expiration, order id); a permissionless `fill` then carries
+both signatures and moves the two legs in one transaction. Because the signatures pin every
+term, the submitter (either party) cannot alter amounts, tokens or recipients.
 
-- *Indexer* (intent to trade) → the `Indexer` namespace over the `intents` table:
-  makers `addIntent` / `removeIntent` a direction, takers `findIntent` to receive
-  `foundIntent` (the matching makers). The shared `rfqs` open-feed remains the RFQ
-  broadcast — each row carries the order envelope (`maker_token`, `taker_token`,
-  `maker_amount`, `taker_address`, `request_kind`).
-- *Order API* (`getOrder` / `provideOrder`) → an `rfqs` row with
-  `request_kind='order'` + `quotes` rows with `response_kind='order'` carrying
-  `expiration` / `nonce` / `signature` (mocked).
-- *Quote API* (`getQuote` / `provideQuote`) → `request_kind='quote'` +
-  `response_kind='quote'`, indicative and non-executable.
-- *Oracle* (`getPrice` / `providePrice`) → the `oracle` service: a gently-live
-  mock mid + bps spread. Maker uses it to price (fair-total + **Use**); Taker uses
-  it to verify (per-card fairness badge). Suggestions only, not executable.
-- *Smart Contract* `fillOrder` → a mock "accepted" terminal state (out of scope).
+### 1. Extend the schema
 
-## Files
+In Supabase → **SQL Editor**:
 
-- `otc.html` — the OTC desk app: role switcher, Taker & Maker views, Supabase
-  data layer, realtime, oracle, countdown, counter-offer negotiation.
-- `hero.html` — marketing landing page.
-- `supabase-config.js` — your Supabase URL + anon key (edit this).
+```sql
+alter table public.orders
+  add column settlement_status text not null default 'idle'
+    check (settlement_status in ('idle','signing','ready','settling','settled','failed')),
+  add column maker_auth text,   -- base64 XDR of the maker's signed SorobanAuthorizationEntry
+  add column taker_auth text,   -- base64 XDR of the taker's signed SorobanAuthorizationEntry
+  add column settle_tx_hash text,
+  add column settle_error text,
+  add column settled_at timestamptz;
+```
+
+### 2. Build, test & deploy the contract
+
+Needs the [Stellar CLI](https://developers.stellar.org/docs/tools/cli) + the wasm target.
+
+```bash
+rustup target add wasm32v1-none           # soroban-sdk 26 requires wasm32v1-none, NOT wasm32-unknown-unknown
+cd contracts/otc_swap
+cargo test                 # 6 unit tests: swap, replay, expiry, zero-amount, scoped-auth, amount-tampering
+stellar contract build
+stellar keys generate deployer --network testnet --fund
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/otc_swap.wasm \
+  --source deployer --network testnet
+# (once) ensure the USDC asset has a SAC on testnet:
+stellar contract asset deploy --asset USDC:<issuer> --source deployer --network testnet
+```
+
+Paste the deployed `C…` id into `OTC_CONTRACT_ID` in `otc-config.js`. The XLM/USDC SAC ids are
+derived in-app from the asset + network passphrase.
+
+> **wasm target:** soroban-sdk 26 rejects `wasm32-unknown-unknown` (it now needs `wasm32v1-none`,
+> Rust 1.84+). `stellar contract build` selects it automatically.
+> **Native `cargo test` on Windows** needs a working linker — MSVC Build Tools, or rustup's GNU
+> toolchain (`cargo +stable-x86_64-pc-windows-gnu test`) invoked from an **ASCII-only** path
+> (MinGW's `ld` chokes on non-ASCII paths like `…\Masaüstü\…`), with the temp copy's `Cargo.toml`
+> set to `crate-type = ["rlib"]` (the real `cdylib` triggers a MinGW "export ordinal" error).
+
+### 3. On-chain E2E
+
+Both wallets funded via friendbot. Start with an **XLM↔XLM** order (native — no trustlines).
+After **Accept**, the accepted order shows a settlement strip in each party's view:
+
+1. **Maker** → *Sign order* (signs an off-chain authorization entry; receive trustline is
+   auto-created for non-native legs).
+2. **Taker** → *Sign order* (independently, from their own browser).
+3. Either party → *Settle now* → one permissionless `fill` tx → balances move; the card flips to
+   **Settled** with a link to the transaction on stellar.expert.
+
+Replay is blocked on-chain (`Filled` guard + the Soroban auth-entry nonces); expired orders are
+rejected. Each party's signature binds the **exact amounts**, so a tampered `fill` is rejected.
+
+> **USDC (non-native) legs** require *both* parties' receive trustlines to exist *before* signing
+> (the signing simulation runs the transfers). XLM↔XLM avoids this; broaden to USDC after the
+> first native E2E works.
+
+## Out of scope (later)
+
+- Mainnet; fees/spread, partial fills, on-chain order registry.
+- A relayer / fee-sponsorship so the filler needn't hold XLM for fees.
+- Sign-In-With-Stellar session + per-wallet RLS / private reads.

@@ -5,11 +5,13 @@
 // 2. Project Settings -> API -> copy "Project URL" and the "anon public" key
 // 3. Paste them below, then reload otc.html
 //
-// The anon key is safe to expose in the browser; access is protected by the
-// Row Level Security (RLS) policies defined on the `rfqs` and `quotes` tables
-// (see README.md). Both tables must also be added to the `supabase_realtime`
-// publication so quotes, counters, and settlements stream live. There is no
-// auth — identity is just a display name the user types (kept in localStorage).
+// The anon key is safe to expose in the browser; access is governed by the
+// Row Level Security (RLS) policies on the `orders` table (see README.md), and
+// `orders` must be added to the `supabase_realtime` publication so new offers
+// and status changes stream live.
+//
+// There is NO sign-in: identity is the connected Stellar wallet address.
+// Integrity comes from wallet signatures on each order and on accept/decline.
 // ---------------------------------------------------------------------------
 
 window.SUPABASE_URL = 'https://zaflldqvenbgfaxtzbjc.supabase.co';
