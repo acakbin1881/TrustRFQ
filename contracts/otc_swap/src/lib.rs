@@ -11,6 +11,11 @@
 
 use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, BytesN, Env};
 
+// NOTE: `contractmeta!` is intentionally omitted — it adds a wasm custom section
+// that changes the bytecode hash, which would break the invariant that the
+// deployed `OTC_CONTRACT_ID` byte-matches this source (see CLAUDE.md). Add it only
+// alongside a redeploy.
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -66,6 +71,16 @@ impl OtcSwap {
         // token `transfer` sub-calls (which each call `from.require_auth()`) are
         // covered by the same per-party auth tree, so a single signature per
         // party authorizes both this contract call and moving their own funds.
+        //
+        // Replay / staleness is layered (STELLAR.md §0.5). Two layers are
+        // enforced by the *host* before these calls even return and are therefore
+        // intentionally NOT re-checked here (re-implementing them would be a bug —
+        // §3.4/§3.7): the per-signature **nonce** (consumed on verify, blocks
+        // replay of a signed entry) and **signature_expiration_ledger** (the
+        // signed entry's on-ledger lifetime, set client-side in `signOrderAuth`).
+        // The contract adds the two application layers: `Filled(order_id)` above
+        // (per-order double-fill) and the `expiration` timestamp check (business
+        // deadline). All four must stay in place.
         maker.require_auth();
         taker.require_auth();
 

@@ -11,11 +11,12 @@ permissionless `fill` (no separate on-chain `approve` step).
 | File | What it is |
 |------|------------|
 | `hero.html` | Marketing landing page. Top-right **OTC** button opens the app. |
-| `otc.html` | The OTC app — wallet gate, create order, incoming/sent inboxes, on-chain settlement. |
+| `otc.html` | The OTC app shell — wallet gate, create order, incoming/sent inboxes, settlement UI (markup + inline styles). |
+| `otc.js` | The OTC app logic (ES module) — externalized from `otc.html` so the CSP needs no `'unsafe-inline'` for scripts. |
 | `supabase-config.js` | Sets `window.SUPABASE_URL` / `window.SUPABASE_ANON_KEY`. |
 | `otc-config.js` | Sets `RPC_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID` for settlement. |
 | `contracts/otc_swap/` | Soroban contract (`fill`) that settles an accepted order atomically. |
-| `vercel.json` | `cleanUrls` + rewrites `/` → `/hero`. |
+| `vercel.json` | `cleanUrls` + rewrites `/` → `/hero` + HTTP security headers (CSP, HSTS, X-Frame-Options). |
 
 ## How it works
 
@@ -98,6 +99,18 @@ vercel dev
 ```
 
 Open the served URL → **OTC** → **Connect wallet**.
+
+### 4. Security headers (production)
+
+`vercel.json` ships a `headers` block: a strict **Content-Security-Policy** (the primary defense
+against a script injected via the CDN/DNS rewriting a transaction before the wallet prompts), plus
+HSTS, `X-Frame-Options: DENY`, `X-Content-Type-Options`, and `Referrer-Policy`. The CSP is an
+**allow-list** — if you add a new external origin the app talks to (RPC/Horizon/Supabase →
+`connect-src`; fonts → `style-src`/`font-src`; landing video → `media-src`; a wallet module beyond
+Freighter → its relay in `connect-src`), add it there or the browser silently blocks it. Verify with
+zero CSP violations in the browser console, and optionally via [Mozilla
+Observatory](https://observatory.mozilla.org). The app JS is kept in `otc.js` (not inlined) so the
+CSP needs no `'unsafe-inline'` for scripts — don't move it back inline.
 
 ## End-to-end test
 

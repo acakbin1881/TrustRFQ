@@ -39,6 +39,15 @@ and moves the legs in one tx (no separate on-chain `approve`).
   `replica identity full` (verified).
 - **Pending to go live:** two-wallet **XLM↔XLM** E2E in the browser (verifies wallet
   `signAuthEntry` end-to-end). Targets **Testnet** only.
+- **STELLAR.md compliance audit (2026-06-30): passed.** Every fund/signature-critical path —
+  contract auth (both `require_auth` over full args), `Filled(order_id)` + `expiration` replay/
+  staleness, deterministic signed `fill` (`fillCanonicalArgs`, never `Date.now()`), enforcing-mode
+  submit, derived SAC ids, i128 BigInt math, `?bundle-deps` imports — verified compliant. Fixed the
+  **web-infra gaps (§11)**: added `vercel.json` security headers + a strict **CSP** (which required
+  externalizing `otc.html`'s module to `otc.js`). Hardened contract tests with an `env.auths()`
+  assertion + host-enforced-layer notes. **Accepted risks** (Testnet MVP): Supabase anon-key public
+  reads; off-chain RFQ signatures (`canonicalPayload`) are stored but **unverified** — the on-chain
+  auth entries are the real integrity boundary; no SRI on esm.sh imports (dynamic; versions pinned).
 
 ## Stack
 
@@ -55,10 +64,11 @@ and moves the legs in one tx (no separate on-chain `approve`).
 | Path | What |
 |------|------|
 | `hero.html` | Landing page; top-right **OTC** button → `otc.html`. |
-| `otc.html` | The app: wallet gate, Create order, Incoming, Sent, on-chain settlement. One inline ES module. |
+| `otc.html` | The app shell: wallet gate, Create/Incoming/Sent, settlement UI. Markup + inline `<style>`; the JS is loaded from `otc.js`. |
+| `otc.js` | The app logic (one ES module): wallet, RFQ, `signOrderAuth`/`fillOrder`. Externalized from `otc.html` so the CSP can drop `'unsafe-inline'` for scripts. |
 | `supabase-config.js` | `window.SUPABASE_URL` / `SUPABASE_ANON_KEY`. |
 | `otc-config.js` | `window.RPC_URL` / `HORIZON_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID`. |
-| `vercel.json` | `cleanUrls` + rewrite `/` → `/hero`. |
+| `vercel.json` | `cleanUrls` + rewrite `/` → `/hero`; security **headers** (CSP, HSTS, X-Frame-Options, …). |
 | `contracts/otc_swap/` | Soroban contract: `fill(...)` + unit tests (`src/lib.rs`, `src/test.rs`). |
 | `README.md` | Setup, schema SQL, Phase-2 deploy steps, E2E. |
 
@@ -98,7 +108,7 @@ both legs via SAC `transfer` — atomic and permissionless. `require_auth` over 
 security boundary: a `fill` with tampered amounts has no valid signature and reverts. Replay
 guarded by a `Filled(order_id)` key + Soroban auth-entry nonces; staleness by `expiration`.
 
-Client (`otc.html`): `signOrderAuth` simulates `fill` with the **counterparty as source** so the
+Client (`otc.js`): `signOrderAuth` simulates `fill` with the **counterparty as source** so the
 signer's auth surfaces as a signable address credential, signs it via `kit.signAuthEntry`
 (SEP-43) wrapped in `Stellar.authorizeEntry`, and stores the base64 entry. `fillOrder` parses both
 stored entries, attaches them, runs an **enforcing-mode** simulation (auth pre-attached → correct
@@ -111,6 +121,13 @@ footprint), then assembles + submits. **`fillCanonicalArgs` must stay determinis
   esm.sh builds leave a CJS dep with broken named-export interop (e.g. `tweetnacl-util`,
   `tweetnacl`) that **throws on import and kills the whole module** — symptom: the Connect button
   does nothing because `init()` never runs. Also keep the `globalThis.Buffer = Buffer` shim.
+- **The CSP in `vercel.json` is an allow-list — keep it in sync with the code.** The strict policy
+  (`script-src 'self' https://esm.sh`) only works because the app JS lives in `otc.js`, **not**
+  inlined in `otc.html` — do not move it back inline. Any new external origin the app talks to must
+  be added to the matching directive or the browser **silently blocks it**: RPC/Horizon/Supabase →
+  `connect-src`; fonts → `style-src`/`font-src`; the landing video → `media-src`; a wallet module
+  beyond Freighter (e.g. WalletConnect) → its relay in `connect-src`. Test in the browser console
+  (zero CSP violations) after any change.
 - **macOS (aarch64) toolchain works natively — no workarounds.** Set up 2026-06-30: rustc 1.96.1,
   `wasm32v1-none` target, Stellar CLI 27 (`~/.local/bin/stellar`). `cargo test`, `stellar contract
   build`, and `stellar contract deploy --source-account deployer` all run directly from the repo

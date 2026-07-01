@@ -1,8 +1,16 @@
 #![cfg(test)]
 
+// The crate is `#![no_std]`; the test harness links std, so opt it back into
+// scope for `std::vec!` in the env.auths() assertion below.
+extern crate std;
+
 use crate::{OtcSwap, OtcSwapClient};
 use soroban_sdk::{
-    testutils::{Address as _, Ledger as _, MockAuth, MockAuthInvoke},
+    symbol_short,
+    testutils::{
+        Address as _, AuthorizedFunction, AuthorizedInvocation, Ledger as _, MockAuth,
+        MockAuthInvoke,
+    },
     token, Address, BytesN, Env, IntoVal, Val, Vec,
 };
 
@@ -116,6 +124,14 @@ fn fill_rejects_zero_amount() {
 // prove the agreed fill settles while any fill that tampers with an amount is
 // rejected. Each party's auth entry is rooted at `fill(100, 250, ...)` with
 // that party's own `transfer` sub-call.
+//
+// Coverage boundary (STELLAR.md §0.5): these tests use mocked auth, which
+// bypasses the host's signature machinery. Two of the four replay/staleness
+// layers are therefore *not* exercisable here and are host-enforced by design —
+// the per-signature **nonce** and **signature_expiration_ledger** (see the
+// matching note in `lib.rs`). This suite covers the two *contract* layers:
+// `Filled(order_id)` double-fill (`fill_is_not_replayable`) and the `expiration`
+// business deadline (`fill_rejects_expired_order`).
 
 #[test]
 fn fill_with_scoped_auth_succeeds() {
@@ -139,7 +155,7 @@ fn fill_with_scoped_auth_succeeds() {
         contract: &s.contract_id, fn_name: "fill", args: fill_args.clone(), sub_invokes: &maker_transfer,
     };
     let taker_root = MockAuthInvoke {
-        contract: &s.contract_id, fn_name: "fill", args: fill_args, sub_invokes: &taker_transfer,
+        contract: &s.contract_id, fn_name: "fill", args: fill_args.clone(), sub_invokes: &taker_transfer,
     };
     let auths = [
         MockAuth { address: &s.maker, invoke: &maker_root },
@@ -148,6 +164,34 @@ fn fill_with_scoped_auth_succeeds() {
 
     s.client.mock_auths(&auths).fill(
         &s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &exp, &id,
+    );
+
+    // Defense-in-depth (STELLAR.md §10): assert env.auths() to prove BOTH parties
+    // authorized the *exact* `fill` root invocation (all args, amounts included),
+    // each carrying only their own `transfer` leg as a sub-invocation. This is the
+    // on-ledger equivalent of the two off-chain-signed auth entries `fill` carries.
+    // Must run before any further contract call (e.g. `balance`) resets env.auths().
+    let root_authz = |token: &Address, from: &Address, to: &Address, amount: i128| AuthorizedInvocation {
+        function: AuthorizedFunction::Contract((
+            s.contract_id.clone(),
+            symbol_short!("fill"),
+            fill_args.clone(),
+        )),
+        sub_invocations: std::vec![AuthorizedInvocation {
+            function: AuthorizedFunction::Contract((
+                token.clone(),
+                symbol_short!("transfer"),
+                (from.clone(), to.clone(), amount).into_val(&s.env),
+            )),
+            sub_invocations: std::vec![],
+        }],
+    };
+    assert_eq!(
+        s.env.auths(),
+        std::vec![
+            (s.maker.clone(), root_authz(&s.token_a, &s.maker, &s.taker, 100)),
+            (s.taker.clone(), root_authz(&s.token_b, &s.taker, &s.maker, 250)),
+        ],
     );
 
     assert_eq!(s.ta.balance(&s.taker), 100);
