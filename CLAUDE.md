@@ -4,9 +4,18 @@ Guidance for Claude Code sessions working in this repo. This file is **auto-load
 at the start of every session** — no command needed. Run **`/init`** to regenerate/refresh it as
 the project evolves.
 
+## Required reading (auto-loaded)
+
+@STELLAR.md
+
+The import above pulls in **[STELLAR.md](STELLAR.md)** — a curated Stellar/Soroban development
+reference distilled from the full `developers.stellar.org/docs/build` tree (Introduction → Securing
+web-based projects). It loads every session alongside this file. **Read it before doing any Stellar
+work.** When it and this file disagree on a repo-specific detail, this file wins.
+
 ## Project
 
-**Nebula OTC** — a peer-to-peer OTC dApp on **Stellar** (XLM/USDC), modeled on the Swap/AirSwap
+**Trust OTC** — a peer-to-peer OTC dApp on **Stellar** (XLM/USDC), modeled on the Swap/AirSwap
 peer protocol: parties agree **off-chain** (RFQ negotiation) and settle **on-chain**
 (atomic swap). On-chain settlement is **AirSwap-style**: each party signs an **off-chain Soroban
 authorization entry** over the exact terms; a permissionless **`fill`** carries both signatures
@@ -18,7 +27,10 @@ and moves the legs in one tx (no separate on-chain `approve`).
   Accept/Decline, all live via Supabase realtime.
 - **On-chain settlement: deployed (AirSwap-style signed `fill`).** Soroban contract rewritten to
   `require_auth` + direct `transfer` (no allowances) + **6/6 unit tests pass** (incl. amount-tamper
-  rejection). Deployed to Testnet: `OTC_CONTRACT_ID = CBLKKVX3LIANP4LZCSIHUIU6UR6HGXQ5OEPATXW3PVHKTHGF5DSREIUS`.
+  rejection). Deployed to Testnet: `OTC_CONTRACT_ID = CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ`
+  (redeployed 2026-06-30 from macOS under the local `deployer` identity, built with rustc 1.96.1 /
+  soroban-sdk 26.1.0 — on-chain bytecode provably matches `src/lib.rs`; supersedes the prior
+  `CBLKKVX3…` deploy, which was the same source built with rustc 1.96.0).
   `otc.html` rewritten to `signOrderAuth` (off-chain auth entry) + enforcing-mode assemble/submit;
   proven end-to-end on Testnet via standalone spikes.
 - **DB migrated (live).** Supabase project `zaflldqvenbgfaxtzbjc` (TrustRFQ) transitioned to the
@@ -99,6 +111,10 @@ footprint), then assembles + submits. **`fillCanonicalArgs` must stay determinis
   esm.sh builds leave a CJS dep with broken named-export interop (e.g. `tweetnacl-util`,
   `tweetnacl`) that **throws on import and kills the whole module** — symptom: the Connect button
   does nothing because `init()` never runs. Also keep the `globalThis.Buffer = Buffer` shim.
+- **macOS (aarch64) toolchain works natively — no workarounds.** Set up 2026-06-30: rustc 1.96.1,
+  `wasm32v1-none` target, Stellar CLI 27 (`~/.local/bin/stellar`). `cargo test`, `stellar contract
+  build`, and `stellar contract deploy --source-account deployer` all run directly from the repo
+  path. The Windows traps below are **Windows-only**; ignore them on this Mac.
 - **Windows native build/test linker traps:**
   - Default toolchain is **MSVC but `link.exe` is missing** → `cargo test` can't link.
   - Workaround: a **GNU toolchain run from an ASCII-only path** — the repo path contains
