@@ -1,4 +1,4 @@
-# Nebula OTC — off-chain RFQ for Stellar
+# TrustRFQ — peer-to-peer OTC on Stellar
 
 A peer-to-peer OTC layer for Stellar (XLM/USDC), modeled on the Swap/AirSwap peer protocol:
 parties negotiate **off-chain** and settle **on-chain**. Both halves are implemented: the
@@ -10,9 +10,12 @@ permissionless `fill` (no separate on-chain `approve` step).
 
 | File | What it is |
 |------|------------|
-| `hero.html` | Marketing landing page. Top-right **OTC** button opens the app. |
-| `otc.html` | The OTC app shell — wallet gate, create order, incoming/sent inboxes, settlement UI (markup + inline styles). |
-| `otc.js` | The OTC app logic (ES module) — externalized from `otc.html` so the CSP needs no `'unsafe-inline'` for scripts. |
+| `hero.html` | Landing page (self-contained animated hero — no external media). "Launch the desk" opens the app. |
+| `otc.html` | The desk shell — wallet gate, RFQ ticket, incoming/sent inboxes, settlement UI (markup only; styles in `styles.css`). |
+| `otc.js` | The app logic (ES module) — externalized from `otc.html` so the CSP needs no `'unsafe-inline'` for scripts. |
+| `styles.css` | The shared design system (tokens + all component/page styles for both pages). |
+| `hero.js` | Landing-only canvas starfield (self-hosted; honors `prefers-reduced-motion`). |
+| `favicon.svg` | The TrustRFQ swap-mark. |
 | `supabase-config.js` | Sets `window.SUPABASE_URL` / `window.SUPABASE_ANON_KEY`. |
 | `otc-config.js` | Sets `RPC_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID` for settlement. |
 | `contracts/otc_swap/` | Soroban contract (`fill`) that settles an accepted order atomically. |
@@ -106,8 +109,8 @@ Open the served URL → **OTC** → **Connect wallet**.
 against a script injected via the CDN/DNS rewriting a transaction before the wallet prompts), plus
 HSTS, `X-Frame-Options: DENY`, `X-Content-Type-Options`, and `Referrer-Policy`. The CSP is an
 **allow-list** — if you add a new external origin the app talks to (RPC/Horizon/Supabase →
-`connect-src`; fonts → `style-src`/`font-src`; landing video → `media-src`; a wallet module beyond
-Freighter → its relay in `connect-src`), add it there or the browser silently blocks it. Verify with
+`connect-src`; fonts → `style-src`/`font-src`; a wallet module beyond Freighter → its relay in
+`connect-src`), add it there or the browser silently blocks it. Verify with
 zero CSP violations in the browser console, and optionally via [Mozilla
 Observatory](https://observatory.mozilla.org). The app JS is kept in `otc.js` (not inlined) so the
 CSP needs no `'unsafe-inline'` for scripts — don't move it back inline.
@@ -148,6 +151,38 @@ alter table public.orders
   add column settle_error text,
   add column settled_at timestamptz;
 ```
+
+#### Harden the anon policies (recommended)
+
+The anon role can read and write every row, so integrity lives on-chain (in the signed auth
+entries), not in the DB. Two cheap, defense-in-depth measures make the *off-chain* layer much
+harder to abuse — run them once all columns above exist:
+
+```sql
+-- 1. Freeze the order TERMS after insert. The anon role may only advance workflow
+--    columns; it can never rewrite addresses / amounts / tokens / expiration / nonce
+--    (so a row can't be mutated between accept and sign).
+revoke update on public.orders from anon;
+grant  update (status, taker_signature, updated_at,
+               settlement_status, maker_auth, taker_auth,
+               settle_tx_hash, settle_error, settled_at) on public.orders to anon;
+
+-- 2. Reject markup / malformed values at the database (defense in depth behind the
+--    client's HTML-escaping), and enforce positive amounts + address/token shape.
+--    Clean up any pre-existing rows that violate these before adding the constraints.
+alter table public.orders
+  add constraint maker_amount_pos  check (maker_amount > 0),
+  add constraint taker_amount_pos  check (taker_amount > 0),
+  add constraint maker_addr_shape  check (maker_address ~ '^G[A-Z2-7]{55}$'),
+  add constraint taker_addr_shape  check (taker_address ~ '^G[A-Z2-7]{55}$'),
+  add constraint maker_token_shape check (maker_token ~ '^[A-Z0-9]{1,12}(:G[A-Z2-7]{55})?$'),
+  add constraint taker_token_shape check (taker_token ~ '^[A-Z0-9]{1,12}(:G[A-Z2-7]{55})?$');
+```
+
+Note these are DB-side backstops; the client also (a) escapes every stored field before it
+touches the DOM, and (b) refuses to Accept or Sign an order whose token isn't on its recognized
+allow-list (a look-alike asset with an attacker-controlled issuer otherwise renders like the real
+one). Keep both layers.
 
 ### 2. Build, test & deploy the contract
 

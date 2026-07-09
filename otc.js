@@ -42,8 +42,30 @@
     const gate = $('gate'), app = $('app');
 
     // --- helpers -----------------------------------------------------------
-    const trunc = (a) => a ? `${a.slice(0, 5)}…${a.slice(-5)}` : '';
+    // Escape any DB-sourced string before it enters innerHTML. Order rows are
+    // writable by anyone holding the anon key (integrity is enforced on-chain,
+    // not in the DB), so treat every stored field as attacker-controlled. The
+    // CSP blocks injected <script>, but not injected markup/links — escape anyway.
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const trunc = (a) => a ? esc(`${a.slice(0, 5)}…${a.slice(-5)}`) : '';
     const isExpired = (o) => new Date(o.expiration).getTime() < Date.now();
+    const isTxHash = (h) => /^[0-9a-f]{64}$/i.test(h || '');
+
+    // Only these tokens are recognized. `tokenLabel` drops the issuer, so a
+    // look-alike asset with an attacker-controlled issuer (e.g. USDC:GATTACKER…)
+    // renders identically to the real one. Orders referencing an unknown token
+    // are quarantined — no Accept, no Sign — and shown with a warning plus the
+    // raw issuer so the user can see something is off.
+    const TOKEN_VALUES = new Set(TOKENS.map((t) => t.value));
+    const isKnownToken = (v) => TOKEN_VALUES.has(v);
+    const orderTokensKnown = (o) => isKnownToken(o.maker_token) && isKnownToken(o.taker_token);
+    function renderToken(v) {
+      if (isKnownToken(v)) return esc(tokenLabel(v));
+      const issuer = (v || '').split(':')[1];
+      return `<span class="tok-warn" title="Unrecognized asset — verify the issuer before trading">⚠ ${esc(tokenLabel(v))}`
+        + (issuer ? ` <span class="tok-iss">${trunc(issuer)}</span>` : '') + `</span>`;
+    }
 
     function fmtRemaining(iso) {
       let ms = new Date(iso).getTime() - Date.now();
@@ -102,7 +124,7 @@
       const chip = $('walletChip');
       if (state.address) {
         chip.innerHTML = `
-          <span class="wallet-chip__addr"><span class="net">TESTNET</span> ${trunc(state.address)}</span>
+          <span class="wallet-chip__addr"><span class="wallet-chip__dot"></span>${trunc(state.address)}</span>
           <button class="btn btn--ghost btn--sm" id="disconnectBtn">Disconnect</button>`;
         $('disconnectBtn').onclick = disconnect;
       } else {
@@ -232,6 +254,7 @@
       }
       el.innerHTML = state.incoming.map((o) => {
         const expired = o.status === 'pending' && isExpired(o);
+        const known = orderTokensKnown(o);
         const canAct = o.status === 'pending' && !expired;
         return `
           <div class="order">
@@ -242,20 +265,23 @@
             <div class="legs">
               <div class="legbox legbox--in">
                 <div class="legbox__k">You receive</div>
-                <div class="legbox__v">${o.maker_amount} ${tokenLabel(o.maker_token)}</div>
+                <div class="legbox__v">${esc(o.maker_amount)}<span class="legbox__t">${renderToken(o.maker_token)}</span></div>
               </div>
+              <div class="legs__swap" aria-hidden="true">⇄</div>
               <div class="legbox legbox--out">
                 <div class="legbox__k">You send</div>
-                <div class="legbox__v">${o.taker_amount} ${tokenLabel(o.taker_token)}</div>
+                <div class="legbox__v">${esc(o.taker_amount)}<span class="legbox__t">${renderToken(o.taker_token)}</span></div>
               </div>
             </div>
             <div class="order__meta">
-              <span>⏳ ${o.status === 'pending' ? fmtRemaining(o.expiration) : '—'}</span>
+              <span>${o.status === 'pending' ? (expired ? 'Expired' : `Expires in ${fmtRemaining(o.expiration)}`) : ''}</span>
               <span class="sig">✎ maker signed</span>
             </div>
+            ${canAct && !known ? `
+              <div class="settle__err">⚠ Unrecognized asset — verify the issuer shown above before trading. Accept is disabled.</div>` : ''}
             ${canAct ? `
               <div class="order__actions">
-                <button class="btn btn--gold btn--sm" data-accept="${o.id}">Accept</button>
+                ${known ? `<button class="btn btn--gold btn--sm" data-accept="${o.id}">Accept</button>` : ''}
                 <button class="btn btn--danger btn--sm" data-decline="${o.id}">Decline</button>
               </div>` : ''}
             ${o.status === 'accepted' ? settlementStrip(o, 'taker') : ''}
@@ -288,16 +314,17 @@
             <div class="legs">
               <div class="legbox legbox--out">
                 <div class="legbox__k">You send</div>
-                <div class="legbox__v">${o.maker_amount} ${tokenLabel(o.maker_token)}</div>
+                <div class="legbox__v">${esc(o.maker_amount)}<span class="legbox__t">${renderToken(o.maker_token)}</span></div>
               </div>
+              <div class="legs__swap" aria-hidden="true">⇄</div>
               <div class="legbox legbox--in">
                 <div class="legbox__k">You receive</div>
-                <div class="legbox__v">${o.taker_amount} ${tokenLabel(o.taker_token)}</div>
+                <div class="legbox__v">${esc(o.taker_amount)}<span class="legbox__t">${renderToken(o.taker_token)}</span></div>
               </div>
             </div>
             <div class="order__meta">
-              <span>⏳ ${o.status === 'pending' ? fmtRemaining(o.expiration) : '—'}</span>
-              ${o.taker_signature ? '<span class="sig"><b>✓ taker signed</b></span>' : ''}
+              <span>${o.status === 'pending' ? (expired ? 'Expired' : `Expires in ${fmtRemaining(o.expiration)}`) : ''}</span>
+              ${o.taker_signature ? '<span class="sig is-done">✓ taker signed</span>' : ''}
             </div>
             ${canCancel ? `
               <div class="order__actions">
@@ -317,6 +344,8 @@
       const order = state.incoming.find((o) => o.id === orderId);
       if (!order) return;
       if (isExpired(order)) return toast('This order has expired.', 'err');
+      if (action === 'accept' && !orderTokensKnown(order))
+        return toast('Unrecognized asset — verify the issuer before accepting.', 'err');
       try {
         const taker_signature = await walletSign(JSON.stringify({ order_id: orderId, action }));
         const status = action === 'accept' ? 'accepted' : 'declined';
@@ -450,6 +479,7 @@
       const myAddr = isMaker ? order.maker_address : order.taker_address;
       const otherAddr = isMaker ? order.taker_address : order.maker_address;
       if (myAddr !== state.address) return toast('Connect the wallet for this leg first.', 'err');
+      if (!orderTokensKnown(order)) return toast('This order references an unrecognized asset — refusing to sign.', 'err');
       const recvToken = isMaker ? order.taker_token : order.maker_token;
 
       txBusy = true;
@@ -502,6 +532,7 @@
       if (!settlementEnabled) return toast('Settlement contract not configured (otc-config.js).', 'err');
       if (txBusy) return;
       if (!order.maker_auth || !order.taker_auth) return toast('Both parties must sign first.', 'err');
+      if (order.settlement_status === 'settled') return toast('This order is already settled.', 'ok');
       txBusy = true;
       try {
         await supabase.from('orders').update({ settlement_status: 'settling', updated_at: new Date().toISOString() }).eq('id', order.id);
@@ -539,11 +570,22 @@
         toast('Settled on-chain 🎉', 'ok');
         await refreshLists();
       } catch (err) {
-        await supabase.from('orders').update({
-          settlement_status: 'failed', settle_error: String(err?.message || err).slice(0, 400),
-          updated_at: new Date().toISOString(),
-        }).eq('id', order.id);
-        toast(err?.message || 'Settlement failed.', 'err');
+        // A concurrent submitter (either party can settle) may have already filled
+        // this order — our fill then reverts (contract `AlreadyFilled`, or a
+        // waitForTx timeout while it lands). Never downgrade a settled order to
+        // failed: re-check first, and scope the failure write to a still-'settling'
+        // row so the winner's 'settled' is never clobbered.
+        const { data: fresh } = await supabase.from('orders')
+          .select('settlement_status').eq('id', order.id).single();
+        if (fresh?.settlement_status === 'settled') {
+          toast('Already settled on-chain 🎉', 'ok');
+        } else {
+          await supabase.from('orders').update({
+            settlement_status: 'failed', settle_error: String(err?.message || err).slice(0, 400),
+            updated_at: new Date().toISOString(),
+          }).eq('id', order.id).eq('settlement_status', 'settling');
+          toast(err?.message || 'Settlement failed.', 'err');
+        }
         await refreshLists();
       } finally {
         txBusy = false;
@@ -559,25 +601,29 @@
       const makerOk = !!o.maker_auth, takerOk = !!o.taker_auth;
       const myOk = side === 'maker' ? makerOk : takerOk;
       const otherOk = side === 'maker' ? takerOk : makerOk;
+      const settled = st === 'settled';
 
-      if (st === 'settled') {
-        return `<div class="settle"><div class="settle__title">Settlement</div>
-          <div class="settle__steps"><span class="settle__step is-done">✓ Settled on-chain</span></div>
-          ${o.settle_tx_hash ? `<div class="settle__msg"><a href="${EXPLORER}/tx/${o.settle_tx_hash}" target="_blank" rel="noopener">View transaction ↗</a></div>` : ''}
+      const step = (done, current, label, extra = '') =>
+        `<div class="stepper__step${done ? ' is-done' : ''}${current ? ' is-current' : ''}${extra}">
+            <span class="stepper__dot">${done ? '✓' : ''}</span><span class="stepper__label">${label}</span>
+          </div>`;
+      const bar = (done) => `<div class="stepper__bar${done ? ' is-done' : ''}"></div>`;
+      const stepper = `<div class="stepper">
+          ${step(makerOk || settled, !makerOk && !settled, 'Maker signed')}
+          ${bar((makerOk && takerOk) || settled)}
+          ${step(takerOk || settled, !takerOk && !settled, 'Taker signed')}
+          ${bar(settled)}
+          ${step(settled, makerOk && takerOk && !settled, 'Settled', ' is-final')}
         </div>`;
-      }
 
-      const steps = `<div class="settle__steps">
-          <span class="settle__step ${makerOk ? 'is-done' : ''}">${makerOk ? '✓' : '•'} Maker signed</span>
-          <span class="settle__step ${takerOk ? 'is-done' : ''}">${takerOk ? '✓' : '•'} Taker signed</span>
-        </div>`;
       let actions;
-      if (st === 'settling') actions = `<div class="settle__msg">Submitting settlement…</div>`;
+      if (settled) actions = isTxHash(o.settle_tx_hash) ? `<div class="settle__msg"><a href="${EXPLORER}/tx/${esc(o.settle_tx_hash)}" target="_blank" rel="noopener">View transaction ↗</a></div>` : '';
+      else if (st === 'settling') actions = `<div class="settle__msg">Submitting settlement…</div>`;
       else if (!myOk) actions = `<div class="order__actions"><button class="btn btn--gold btn--sm" data-sign="${o.id}" data-side="${side}">Sign order</button></div>`;
       else if (!otherOk) actions = `<div class="settle__msg">Waiting for the counterparty to sign…</div>`;
       else actions = `<div class="order__actions"><button class="btn btn--gold btn--sm" data-fill="${o.id}">Settle now</button></div>`;
-      const err = st === 'failed' && o.settle_error ? `<div class="settle__err">Last attempt failed: ${o.settle_error}</div>` : '';
-      return `<div class="settle"><div class="settle__title">On-chain settlement</div>${steps}${actions}${err}</div>`;
+      const err = st === 'failed' && o.settle_error ? `<div class="settle__err">Last attempt failed: ${esc(o.settle_error)}</div>` : '';
+      return `<div class="settle"><div class="settle__title">On-chain settlement</div>${stepper}${actions}${err}</div>`;
     }
 
     function wireSettlement(el) {

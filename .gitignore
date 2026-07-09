@@ -1,6 +1,9 @@
 # Claude Code — machine-specific local permissions (do not commit)
 .claude/settings.local.json
 
+# Claude Code — MCP config contains a live Supabase access token (do not commit)
+.mcp.json
+
 .vercel
 
 # Rust / Soroban build artifacts

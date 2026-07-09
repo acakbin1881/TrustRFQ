@@ -3,455 +3,294 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nebula Core — Decentralized crypto protocol</title>
+  <title>TrustRFQ — Peer-to-peer OTC on Stellar</title>
+  <meta name="description" content="TrustRFQ is a private over-the-counter desk for Stellar. Agree terms peer-to-peer, sign the exact amounts with both wallets, and settle atomically on-chain — no order book, no slippage, no custody.">
+  <meta name="theme-color" content="#050505">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    ::selection { background: rgba(229, 181, 103, 0.3); }
-
-    body {
-      width: 100%;
-      background: #000000;
-      font-family: 'Hanken Grotesk', sans-serif;
-    }
-
-    /* ===== HERO ===== */
-    .hero {
-      position: relative;
-      width: 100%;
-      min-height: 100vh;
-      background: #000000;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-    }
-    .hero__video {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: 0;
-    }
-    .hero__overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      background: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.3) 100%);
-    }
-    .hero__inner {
-      position: relative;
-      z-index: 2;
-      padding: 0 72px;
-      max-width: 640px;
-    }
-    .hero__badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      padding: 6px 16px 6px 6px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.10);
-    }
-    .hero__badge-tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 5px 12px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.10);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-    }
-    .hero__badge-text {
-      color: rgba(255, 255, 255, 0.72);
-      font-size: 14px;
-    }
-    .hero__heading {
-      margin: 30px 0 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 78px;
-      line-height: 1.02;
-      letter-spacing: -1px;
-      color: #ffffff;
-    }
-    .hero__paragraph {
-      margin: 30px 0 0;
-      max-width: 330px;
-      color: rgba(255, 255, 255, 0.62);
-      font-size: 16px;
-      line-height: 1.55;
-    }
-
-    /* top-right OTC launch button */
-    .otc-nav {
-      position: absolute;
-      top: 28px;
-      right: 72px;
-      z-index: 3;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border-radius: 999px;
-      background: #E5B567;
-      color: #0a0a0c;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      text-decoration: none;
-      transition: opacity .15s;
-    }
-    .otc-nav:hover { opacity: 0.88; }
-
-    /* ===== shared section bits ===== */
-    .section {
-      position: relative;
-      width: 100%;
-      padding: 140px 72px;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    .section--problem { background: #000000; }
-    .section--solution { background: #050507; }
-    .section--how { background: #000000; padding-bottom: 160px; }
-    .section__wrap { max-width: 1200px; margin: 0 auto; }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      margin-bottom: 28px;
-    }
-    .eyebrow__dot { width: 6px; height: 6px; border-radius: 50%; }
-    .eyebrow__text { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; }
-    .eyebrow--problem { border: 1px solid rgba(255,107,107,0.25); background: rgba(255,107,107,0.06); }
-    .eyebrow--problem .eyebrow__dot { background: #FF6B6B; }
-    .eyebrow--problem .eyebrow__text { color: #FF8C8C; }
-    .eyebrow--solution { border: 1px solid rgba(229,181,103,0.28); background: rgba(229,181,103,0.06); }
-    .eyebrow--solution .eyebrow__dot { background: #E5B567; }
-    .eyebrow--solution .eyebrow__text { color: #E5B567; }
-    .eyebrow--how { border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); }
-    .eyebrow--how .eyebrow__dot { background: #fff; }
-    .eyebrow--how .eyebrow__text { color: rgba(255,255,255,0.8); }
-
-    .section__h2 {
-      margin: 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 52px;
-      line-height: 1.05;
-      letter-spacing: -1px;
-      color: #ffffff;
-    }
-    .section__lead {
-      color: rgba(255, 255, 255, 0.58);
-      font-size: 17px;
-      line-height: 1.6;
-    }
-
-    /* problem header */
-    .problem__head {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 48px;
-      align-items: end;
-    }
-    .problem__head .section__lead { margin: 0; }
-
-    /* stat cards */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: 64px;
-    }
-    .stat-card {
-      padding: 32px;
-      border-radius: 16px;
-      background: #0a0a0c;
-      border: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .stat-card__label { color: rgba(255,255,255,0.55); font-size: 14px; font-weight: 500; }
-    .stat-card__value {
-      margin-top: 18px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 46px;
-      font-weight: 600;
-      color: #FF6B6B;
-      letter-spacing: -1px;
-    }
-    .stat-card__sub { margin-top: 6px; color: rgba(255,255,255,0.45); font-size: 15px; }
-
-    /* contrast bar */
-    .contrast {
-      margin-top: 20px;
-      padding: 28px 32px;
-      border-radius: 16px;
-      background: linear-gradient(90deg, rgba(229,181,103,0.08), rgba(229,181,103,0.02));
-      border: 1px solid rgba(229,181,103,0.18);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-    .contrast__text { color: rgba(255,255,255,0.78); font-size: 17px; }
-    .contrast__text strong { color: #fff; }
-    .contrast__text .gold { color: #E5B567; }
-    .contrast__badge {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 22px;
-      font-weight: 600;
-      color: #E5B567;
-      white-space: nowrap;
-    }
-
-    /* solution lead + feature cards */
-    .section__h2--wide { max-width: 760px; }
-    .solution__lead { margin: 24px 0 0; max-width: 620px; }
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: 64px;
-    }
-    .feature-card {
-      padding: 34px;
-      border-radius: 16px;
-      background: #0a0a0c;
-      border: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .feature-card__icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: rgba(229,181,103,0.12);
-      border: 1px solid rgba(229,181,103,0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Space Grotesk', sans-serif;
-      color: #E5B567;
-      font-size: 20px;
-      font-weight: 600;
-    }
-    .feature-card__title {
-      margin: 24px 0 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 21px;
-      font-weight: 600;
-      color: #fff;
-    }
-    .feature-card__body { margin: 12px 0 0; color: rgba(255,255,255,0.55); font-size: 15px; line-height: 1.6; }
-
-    /* how it works steps */
-    .section__h2--how { max-width: 680px; }
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0;
-      margin-top: 72px;
-    }
-    .step { position: relative; }
-    .step--1 { padding: 0 36px 0 0; }
-    .step--2 { padding: 0 36px; }
-    .step--3 { padding: 0 0 0 36px; }
-    .step__num {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      color: #E5B567;
-      letter-spacing: 1px;
-    }
-    .step__rule { margin-top: 20px; height: 1px; background: linear-gradient(90deg, #E5B567, rgba(229,181,103,0.05)); }
-    .step__title {
-      margin: 24px 0 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 24px;
-      font-weight: 600;
-      color: #fff;
-    }
-    .step__body { margin: 14px 0 0; color: rgba(255,255,255,0.55); font-size: 15px; line-height: 1.65; }
-
-    /* footer cta */
-    .cta {
-      margin-top: 96px;
-      padding: 48px;
-      border-radius: 20px;
-      background: linear-gradient(120deg, #0c0c10, #060608);
-      border: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 32px;
-      flex-wrap: wrap;
-    }
-    .cta__title {
-      margin: 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 30px;
-      font-weight: 600;
-      color: #fff;
-      letter-spacing: -0.5px;
-    }
-    .cta__sub { margin: 12px 0 0; color: rgba(255,255,255,0.55); font-size: 16px; }
-    .cta__btn {
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 16px 30px;
-      border-radius: 999px;
-      background: #E5B567;
-      color: #0a0a0c;
-      font-size: 16px;
-      font-weight: 600;
-      text-decoration: none;
-      font-family: 'Space Grotesk', sans-serif;
-      transition: opacity .15s;
-    }
-    .cta__btn:hover { opacity: 0.88; }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="hero.js" defer></script>
 </head>
 <body>
 
-  <!-- ============ HERO ============ -->
-  <section class="hero">
-    <video class="hero__video" autoplay loop muted playsinline>
-      <source src="https://drive.usercontent.google.com/download?id=1FjdfoQPPhA9X0rWLgUEosbtrtlNZ7Tfn&export=download&confirm=t" type="video/mp4">
-    </video>
-    <div class="hero__overlay"></div>
-
-    <a href="otc.html" class="otc-nav">OTC →</a>
-
-    <div class="hero__inner">
-      <div class="hero__badge">
-        <span class="hero__badge-tag">New</span>
-        <span class="hero__badge-text">Introducing our new most advanced Web3 hosting</span>
-      </div>
-      <h1 class="hero__heading">Build on decentralized crypto protocol</h1>
-      <p class="hero__paragraph">Nebula Core is a leading provider of cutting-edge decentralized solutions, powering the next generation of NFT, GameFi, and Metaverse projects.</p>
+  <header class="topbar">
+    <a class="brand" href="hero.html">
+      <svg width="24" height="24" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
+        <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="15" cy="32" r="8" fill="#E5B567"/>
+        <circle cx="49" cy="32" r="8" stroke="#E5B567" stroke-width="4"/>
+      </svg>
+      TrustRFQ
+    </a>
+    <span class="net-pill">Testnet</span>
+    <div class="topbar__right">
+      <a class="btn btn--gold btn--sm" href="otc.html">Launch the desk →</a>
     </div>
-  </section>
+  </header>
 
-  <!-- ============ THE PROBLEM ============ -->
-  <section class="section section--problem">
-    <div class="section__wrap">
-      <div class="eyebrow eyebrow--problem">
-        <span class="eyebrow__dot"></span>
-        <span class="eyebrow__text">THE PROBLEM</span>
+  <main>
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="hero__stars-css starfield" aria-hidden="true"></div>
+      <canvas id="stars" aria-hidden="true"></canvas>
+
+      <div class="eyebrow"><span class="eyebrow__dot"></span>Peer-to-peer OTC · Built on Stellar</div>
+      <h1>Move size. <span class="gold-line">Keep the price.</span></h1>
+      <p class="hero__sub">TrustRFQ is a private over-the-counter desk for Stellar. Agree terms directly
+        with your counterparty, sign the <b>exact amounts</b> with both wallets, and settle atomically
+        on-chain — <b>no order book, no slippage, no custody</b>.</p>
+      <div class="hero__ctas">
+        <a class="btn btn--gold" href="otc.html">Open the desk →</a>
+        <a class="btn btn--ghost" href="#how">See how it works</a>
       </div>
 
-      <div class="problem__head">
+      <!-- the deal, drawn: both legs flow through fill() at once -->
+      <div class="swap-scene" aria-hidden="true">
+        <svg viewBox="0 0 760 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- rails -->
+          <path class="rail" d="M124 132 C 240 56, 520 56, 636 132"/>
+          <path class="rail" d="M636 168 C 520 244, 240 244, 124 168"/>
+          <!-- animated flows (send: maker → taker, receive: taker → maker) -->
+          <path class="flow flow--send" d="M124 132 C 240 56, 520 56, 636 132"/>
+          <path class="flow flow--recv" d="M636 168 C 520 244, 240 244, 124 168"/>
+
+          <!-- amounts -->
+          <text class="amt amt--send" x="380" y="50">250,000 XLM</text>
+          <text class="amt amt--recv" x="380" y="264">62,500 USDC</text>
+
+          <!-- maker node -->
+          <circle class="node__ring" cx="90" cy="150" r="34"/>
+          <circle class="node__core--maker" cx="90" cy="150" r="26"/>
+          <text class="node__letter node__letter--maker" x="90" y="157">M</text>
+
+          <!-- taker node -->
+          <circle class="node__ring" cx="670" cy="150" r="34"/>
+          <circle class="node__core--taker" cx="670" cy="150" r="26"/>
+          <text class="node__letter node__letter--taker" x="670" y="157">T</text>
+
+          <!-- contract chip -->
+          <rect class="chip__bg" x="302" y="121" width="156" height="58" rx="15"/>
+          <text class="chip__fn" x="380" y="148">fill()</text>
+          <text class="chip__sub" x="380" y="167">ATOMIC SWAP</text>
+
+          <!-- signature seals -->
+          <g class="seal">
+            <rect x="32" y="206" width="116" height="26" rx="13"/>
+            <text x="90" y="223">✓ maker signed</text>
+          </g>
+          <g class="seal">
+            <rect x="612" y="206" width="116" height="26" rx="13"/>
+            <text x="670" y="223">✓ taker signed</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="hero__stats">
+        <div class="hstat">
+          <div class="hstat__v">2 sigs · 1 tx</div>
+          <div class="hstat__k">Both parties sign the exact terms; one transaction settles both legs.</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat__v">0 custody</div>
+          <div class="hstat__k">Funds move wallet → wallet inside the fill. The contract holds nothing.</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat__v">0 slippage</div>
+          <div class="hstat__k">The price you sign is the price that settles. No curve, no impact.</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat__v">~5s</div>
+          <div class="hstat__k">Stellar ledger finality — atomic settlement in seconds, not days.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ THE PROBLEM ============ -->
+    <section class="section section--hairline">
+      <div class="section__wrap">
+        <div class="eyebrow eyebrow--red"><span class="eyebrow__dot"></span>The problem</div>
         <h2 class="section__h2">On-chain liquidity can't move institutional size</h2>
-        <p class="section__lead">Stellar's deepest XLM/USDC liquidity sits in the single-digit millions. The constant-product model (x · y = k) turns punitive at scale — every block trade pays a structural slippage tax.</p>
-      </div>
+        <p class="section__lead">Stellar's deepest XLM/USDC liquidity sits in the single-digit millions.
+          The constant-product model (x · y = k) turns punitive at scale — every block trade pays a
+          structural slippage tax.</p>
 
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-card__label">$250K trade</div>
-          <div class="stat-card__value">3–5%</div>
-          <div class="stat-card__sub">slippage · ~$10K lost</div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-card__label">$250K trade</div>
+            <div class="stat-card__value">3–5%</div>
+            <div class="stat-card__sub">slippage · ~$10K lost</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__label">$1M trade</div>
+            <div class="stat-card__value">9–13%</div>
+            <div class="stat-card__sub">slippage · ~$110K lost</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__label">$2M trade</div>
+            <div class="stat-card__value">18%+</div>
+            <div class="stat-card__sub">slippage · $360K+ lost</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-card__label">$1M trade</div>
-          <div class="stat-card__value">9–13%</div>
-          <div class="stat-card__sub">slippage · ~$110K lost</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card__label">$2M trade</div>
-          <div class="stat-card__value">18%+</div>
-          <div class="stat-card__sub">slippage · $360K+ lost</div>
-        </div>
-      </div>
 
-      <div class="contrast">
-        <span class="contrast__text">The same <strong>$1M</strong> clears off-chain on Coinbase or Binance OTC at <strong class="gold">under 10 bps</strong> — roughly $1,000.</span>
-        <span class="contrast__badge">100× cheaper off-chain</span>
+        <div class="contrast">
+          <span class="contrast__text">The same <strong>$1M</strong> clears off-chain on Coinbase or Binance OTC
+            at <strong class="gold">under 10 bps</strong> — roughly $1,000.</span>
+          <span class="contrast__badge">100× cheaper off-chain</span>
+        </div>
       </div>
+    </section>
+
+    <!-- ============ THE SOLUTION ============ -->
+    <section class="section section--hairline section--tint">
+      <div class="section__wrap">
+        <div class="eyebrow"><span class="eyebrow__dot"></span>The solution</div>
+        <h2 class="section__h2">RFQ execution, settled <span class="nowrap">on-chain</span></h2>
+        <p class="section__lead">TrustRFQ decouples price discovery from AMM pools. Terms are agreed
+          peer-to-peer, off-book — then settled as a deterministic atomic swap. Institutional execution,
+          on-chain on Stellar.</p>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-card__icon">0</div>
+            <h3 class="feature-card__title">Zero slippage</h3>
+            <p class="feature-card__body">Quotes are firm — a fixed amount-in for a fixed amount-out.
+              What the maker signs is exactly what settles. No curve, no impact.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card__icon">∅</div>
+            <h3 class="feature-card__title">No intent leak</h3>
+            <p class="feature-card__body">Block size never hits a lit order book. Orders are routed
+              privately to one counterparty, so bots can't front-run and liquidity can't flee.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card__icon">⇄</div>
+            <h3 class="feature-card__title">Atomic settlement</h3>
+            <p class="feature-card__body">A Soroban smart contract moves both legs in a single
+              transaction. Either both sides settle or neither does — no counterparty risk.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="section section--hairline" id="how">
+      <div class="section__wrap">
+        <div class="eyebrow"><span class="eyebrow__dot"></span>How it works</div>
+        <h2 class="section__h2">From agreement to atomic swap in three steps</h2>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step__num">STEP 01</div>
+            <div class="step__rule"></div>
+            <h3 class="step__title">Agree &amp; sign</h3>
+            <p class="step__body">You agree terms with your counterparty and create a directed order —
+              amounts, tokens, expiry, their address. Your wallet signs the exact payload.</p>
+          </div>
+          <div class="step">
+            <div class="step__num">STEP 02</div>
+            <div class="step__rule"></div>
+            <h3 class="step__title">Counter-sign</h3>
+            <p class="step__body">The order appears live on their desk. They accept, and each wallet
+              signs a Soroban authorization binding every argument of the <code>fill</code> — amounts included.</p>
+          </div>
+          <div class="step">
+            <div class="step__num">STEP 03</div>
+            <div class="step__rule"></div>
+            <h3 class="step__title">Atomic fill</h3>
+            <p class="step__body">Anyone can submit the fill carrying both signatures. Both legs move
+              in one transaction — or nothing moves at all.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SECURITY ============ -->
+    <section class="section section--hairline section--tint" id="security">
+      <div class="section__wrap">
+        <div class="eyebrow eyebrow--green"><span class="eyebrow__dot"></span>Security model</div>
+        <h2 class="section__h2">The trust lives in the signatures</h2>
+        <p class="section__lead">No accounts, no custodian, no admin switches. Every safeguard is
+          cryptographic — enforced by the Stellar network, not by a middleman.</p>
+
+        <div class="security-grid">
+          <div class="sec-cards">
+            <div class="sec-card">
+              <h3 class="sec-card__title">Wallet = identity</h3>
+              <p class="sec-card__body">No sign-up, no email, no password. Your Stellar wallet is your
+                identity, and every action you take is a wallet signature.</p>
+            </div>
+            <div class="sec-card">
+              <h3 class="sec-card__title">Tamper-proof terms</h3>
+              <p class="sec-card__body">Both signatures bind every argument of the on-chain fill.
+                Change a single stroop and both signatures die — the transaction reverts.</p>
+            </div>
+            <div class="sec-card">
+              <h3 class="sec-card__title">Replay-guarded</h3>
+              <p class="sec-card__body">Each order settles at most once: a per-order guard,
+                per-signature nonces, and a hard expiration — all enforced on-chain.</p>
+            </div>
+            <div class="sec-card">
+              <h3 class="sec-card__title">Non-custodial</h3>
+              <p class="sec-card__body">The contract never holds funds. Both legs move
+                wallet-to-wallet inside the fill, atomically.</p>
+            </div>
+          </div>
+
+          <div class="code-plaque">
+            <div class="code-plaque__bar"><span></span><span></span><span></span><em>soroban · otc_swap</em></div>
+            <pre><span class="fn">fill</span>(
+  maker:   <span class="v">GAM3…X4F2</span>  <span class="ok">✓ signed</span>
+  taker:   <span class="v">GBT7…K9Q1</span>  <span class="ok">✓ signed</span>
+  send:    <span class="v">250,000.00 XLM</span>
+  receive: <span class="v">62,500.00 USDC</span>
+  expiry:  <span class="v">2026-07-08T18:00Z</span>
+)
+<span class="cm">→ both legs move, or neither does</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="section section--hairline">
+      <div class="section__wrap">
+        <div class="cta">
+          <div>
+            <h3 class="cta__title">The desk is open.</h3>
+            <p class="cta__sub">Connect a Testnet wallet and settle your first atomic block trade in minutes.</p>
+          </div>
+          <a href="otc.html" class="btn btn--gold">Launch the desk →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="hero.html">
+          <svg width="22" height="22" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
+            <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="15" cy="32" r="8" fill="#E5B567"/>
+            <circle cx="49" cy="32" r="8" stroke="#E5B567" stroke-width="4"/>
+          </svg>
+          TrustRFQ
+        </a>
+        <p class="footer__tag">Peer-to-peer OTC on Stellar.</p>
+      </div>
+      <nav class="footer__links">
+        <a href="otc.html">Launch the desk</a>
+        <a href="#how">How it works</a>
+        <a href="#security">Security</a>
+      </nav>
     </div>
-  </section>
-
-  <!-- ============ THE SOLUTION ============ -->
-  <section class="section section--solution">
-    <div class="section__wrap">
-      <div class="eyebrow eyebrow--solution">
-        <span class="eyebrow__dot"></span>
-        <span class="eyebrow__text">THE SOLUTION</span>
-      </div>
-
-      <h2 class="section__h2 section__h2--wide">RFQ execution, settled on-chain</h2>
-      <p class="section__lead solution__lead">An RFQ and intent-based layer decouples price discovery from AMM pools. Takers source competitive quotes off-book and settle them as deterministic atomic swaps — bringing institutional execution on-chain for the first time on Stellar.</p>
-
-      <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-card__icon">0</div>
-          <h3 class="feature-card__title">Zero slippage</h3>
-          <p class="feature-card__body">Quotes are firm and priced as a fixed amount-in for amount-out. What the maker signs is exactly what settles — no curve, no impact.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-card__icon">⌧</div>
-          <h3 class="feature-card__title">No intent leak</h3>
-          <p class="feature-card__body">Block size never hits a lit orderbook. Makers compete privately, so bots can't front-run and liquidity can't flee before the trade clears.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-card__icon">⇄</div>
-          <h3 class="feature-card__title">Atomic settlement</h3>
-          <p class="feature-card__body">A Soroban smart contract swaps both legs in a single transaction. Either both sides move or neither does — no counterparty risk.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ HOW IT WORKS ============ -->
-  <section class="section section--how">
-    <div class="section__wrap">
-      <div class="eyebrow eyebrow--how">
-        <span class="eyebrow__dot"></span>
-        <span class="eyebrow__text">HOW IT WORKS</span>
-      </div>
-
-      <h2 class="section__h2 section__h2--how">From request to atomic swap in three steps</h2>
-
-      <div class="steps">
-        <div class="step step--1">
-          <div class="step__num">STEP 01</div>
-          <div class="step__rule"></div>
-          <h3 class="step__title">Taker opens an RFQ</h3>
-          <p class="step__body">An institution requests a quote for an XLM/USDC block — side and size — broadcast to the maker network.</p>
-        </div>
-        <div class="step step--2">
-          <div class="step__num">STEP 02</div>
-          <div class="step__rule"></div>
-          <h3 class="step__title">Makers respond</h3>
-          <p class="step__body">Multiple market makers view open RFQs and reply with signed, time-limited offers competing on price.</p>
-        </div>
-        <div class="step step--3">
-          <div class="step__num">STEP 03</div>
-          <div class="step__rule"></div>
-          <h3 class="step__title">Best offer settles</h3>
-          <p class="step__body">The taker selects the best quote and settles it as a zero-slippage atomic swap via a Soroban contract.</p>
-        </div>
-      </div>
-
-      <div class="cta">
-        <div>
-          <h3 class="cta__title">Deterministic block trades, live on Testnet</h3>
-          <p class="cta__sub">Open an RFQ, take the best quote, settle with zero slippage.</p>
-        </div>
-        <a href="otc.html" class="cta__btn">Launch app →</a>
-      </div>
-    </div>
-  </section>
+    <div class="footer__fine">Built on Stellar · Soroban settlement · Testnet MVP — no real funds involved.</div>
+  </footer>
 
 </body>
 </html>

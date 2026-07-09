@@ -3,267 +3,103 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OTC — Off-chain RFQ</title>
-  <link rel="icon" href="data:,">
+  <title>TrustRFQ — OTC Desk</title>
+  <meta name="description" content="The TrustRFQ desk: create wallet-signed OTC orders on Stellar and settle them atomically on-chain.">
+  <meta name="theme-color" content="#050505">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    ::selection { background: rgba(229, 181, 103, 0.3); }
-
-    body {
-      min-height: 100vh;
-      background: #000;
-      color: #fff;
-      font-family: 'Hanken Grotesk', sans-serif;
-    }
-    a { color: inherit; }
-
-    /* ===== top bar ===== */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 22px 40px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .topbar__brand {
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 20px;
-      letter-spacing: 0.3px;
-      text-decoration: none;
-    }
-    .topbar__brand .dot { color: #E5B567; }
-    .wallet-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .wallet-chip__addr {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 16px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.82);
-    }
-    .wallet-chip__addr .net { color: #E5B567; font-weight: 600; font-size: 12px; }
-
-    /* ===== buttons ===== */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border-radius: 999px;
-      border: none;
-      cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      transition: opacity .15s, background .15s, border-color .15s;
-    }
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-    .btn--gold { background: #E5B567; color: #0a0a0c; }
-    .btn--gold:not(:disabled):hover { opacity: 0.88; }
-    .btn--ghost { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14); color: #fff; }
-    .btn--ghost:not(:disabled):hover { border-color: rgba(255,255,255,0.3); }
-    .btn--danger { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.3); color: #FF8C8C; }
-    .btn--danger:not(:disabled):hover { background: rgba(255,107,107,0.2); }
-    .btn--sm { padding: 9px 18px; font-size: 14px; }
-
-    /* ===== layout ===== */
-    .wrap { max-width: 920px; margin: 0 auto; padding: 48px 40px 96px; }
-
-    /* ===== wallet gate ===== */
-    .gate {
-      max-width: 520px;
-      margin: 80px auto 0;
-      padding: 48px 40px;
-      border-radius: 20px;
-      background: linear-gradient(120deg, #0c0c10, #060608);
-      border: 1px solid rgba(255,255,255,0.08);
-      text-align: center;
-    }
-    .gate__eyebrow {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 14px; border-radius: 999px; margin-bottom: 24px;
-      border: 1px solid rgba(229,181,103,0.28); background: rgba(229,181,103,0.06);
-      font-size: 13px; font-weight: 600; color: #E5B567;
-    }
-    .gate__eyebrow .d { width: 6px; height: 6px; border-radius: 50%; background: #E5B567; }
-    .gate h1 {
-      margin: 0 0 14px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600; font-size: 34px; letter-spacing: -0.5px;
-    }
-    .gate p { margin: 0 0 30px; color: rgba(255,255,255,0.58); font-size: 16px; line-height: 1.6; }
-
-    /* ===== tabs ===== */
-    .tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.07); }
-    .tab {
-      padding: 14px 4px; margin-right: 28px;
-      background: none; border: none; cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600;
-      color: rgba(255,255,255,0.5);
-      border-bottom: 2px solid transparent; margin-bottom: -1px;
-      display: inline-flex; align-items: center; gap: 8px;
-    }
-    .tab:hover { color: rgba(255,255,255,0.8); }
-    .tab.is-active { color: #fff; border-bottom-color: #E5B567; }
-    .tab__count {
-      min-width: 20px; padding: 1px 7px; border-radius: 999px;
-      background: rgba(229,181,103,0.14); color: #E5B567; font-size: 12px; font-weight: 600;
-    }
-    .panel { display: none; }
-    .panel.is-active { display: block; }
-
-    /* ===== form ===== */
-    .card {
-      padding: 30px; border-radius: 16px;
-      background: #0a0a0c; border: 1px solid rgba(255,255,255,0.07);
-    }
-    .field { margin-bottom: 22px; }
-    .field__label {
-      display: block; margin-bottom: 10px;
-      font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
-      color: rgba(255,255,255,0.55); text-transform: uppercase;
-    }
-    .leg { display: grid; grid-template-columns: 1fr 150px; gap: 12px; }
-    input[type="text"], input[type="number"], select {
-      width: 100%; padding: 14px 16px; border-radius: 12px;
-      background: #060608; border: 1px solid rgba(255,255,255,0.10);
-      color: #fff; font-family: 'Hanken Grotesk', sans-serif; font-size: 15px;
-    }
-    input::placeholder { color: rgba(255,255,255,0.3); }
-    input:focus, select:focus { outline: none; border-color: rgba(229,181,103,0.5); }
-    select { appearance: none; cursor: pointer; }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .hint { margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.4); }
-    .maker-addr {
-      padding: 12px 16px; border-radius: 12px;
-      background: rgba(229,181,103,0.06); border: 1px solid rgba(229,181,103,0.2);
-      font-size: 14px; color: #E5B567; word-break: break-all;
-    }
-    .form-actions { margin-top: 28px; display: flex; align-items: center; gap: 16px; }
-
-    /* ===== order cards ===== */
-    .order {
-      padding: 22px 24px; border-radius: 16px; margin-bottom: 14px;
-      background: #0a0a0c; border: 1px solid rgba(255,255,255,0.07);
-    }
-    .order__top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-    .order__party { font-size: 14px; color: rgba(255,255,255,0.55); }
-    .order__party b { color: #fff; font-family: 'Space Grotesk', sans-serif; }
-    .legs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
-    .legbox { padding: 16px; border-radius: 12px; background: #060608; border: 1px solid rgba(255,255,255,0.06); }
-    .legbox__k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.45); }
-    .legbox__v { margin-top: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; }
-    .legbox--in .legbox__v { color: #6FE3A1; }
-    .legbox--out .legbox__v { color: #fff; }
-    .order__meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 13px; color: rgba(255,255,255,0.5); }
-    .order__actions { display: flex; gap: 10px; margin-top: 18px; }
-
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .badge--pending { background: rgba(229,181,103,0.12); color: #E5B567; }
-    .badge--accepted { background: rgba(111,227,161,0.12); color: #6FE3A1; }
-    .badge--declined, .badge--cancelled { background: rgba(255,107,107,0.12); color: #FF8C8C; }
-    .badge--expired { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.5); }
-    .sig { font-size: 12px; color: rgba(255,255,255,0.4); display: inline-flex; align-items: center; gap: 6px; }
-    .sig b { color: #6FE3A1; }
-
-    .empty { padding: 56px 24px; text-align: center; color: rgba(255,255,255,0.4); font-size: 15px; }
-
-    /* settlement strip */
-    .settle { margin-top: 16px; padding: 16px 18px; border-radius: 12px; background: #060608; border: 1px solid rgba(255,255,255,0.08); }
-    .settle__title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.45); margin-bottom: 12px; }
-    .settle__steps { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-    .settle__step { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.55); }
-    .settle__step.is-done { color: #6FE3A1; border-color: rgba(111,227,161,0.3); background: rgba(111,227,161,0.08); }
-    .settle__msg { font-size: 13px; color: rgba(255,255,255,0.5); }
-    .settle__msg a { color: #E5B567; }
-    .settle__err { font-size: 13px; color: #FF8C8C; margin-top: 8px; word-break: break-word; }
-
-    /* ===== toast ===== */
-    #toast {
-      position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);
-      max-width: 90vw; padding: 14px 22px; border-radius: 12px;
-      background: #15151a; border: 1px solid rgba(255,255,255,0.12);
-      font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50;
-    }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #toast.err { border-color: rgba(255,107,107,0.4); }
-    #toast.ok { border-color: rgba(111,227,161,0.4); }
-
-    @media (max-width: 640px) {
-      .topbar { padding: 18px 20px; }
-      .wrap { padding: 32px 20px 80px; }
-      .leg, .row2, .legs { grid-template-columns: 1fr; }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="backdrop starfield" aria-hidden="true"></div>
+
   <header class="topbar">
-    <a class="topbar__brand" href="hero.html">Nebula<span class="dot">.</span>OTC</a>
-    <div class="wallet-chip" id="walletChip"></div>
+    <a class="brand" href="hero.html">
+      <svg width="24" height="24" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
+        <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="15" cy="32" r="8" fill="#E5B567"/>
+        <circle cx="49" cy="32" r="8" stroke="#E5B567" stroke-width="4"/>
+      </svg>
+      TrustRFQ
+    </a>
+    <span class="net-pill">Testnet</span>
+    <div class="topbar__right">
+      <div class="wallet-chip" id="walletChip"></div>
+    </div>
   </header>
 
   <main class="wrap">
     <!-- wallet gate -->
     <section class="gate" id="gate">
-      <div class="gate__eyebrow"><span class="d"></span> OFF-CHAIN RFQ · TESTNET</div>
-      <h1>Connect your wallet</h1>
-      <p>Your Stellar wallet is your identity here — there's no sign-up. Connect to send a
-         directed order to a counterparty, or to see orders addressed to you.</p>
+      <div class="gate__mark">
+        <svg width="44" height="44" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="15" cy="32" r="7.5" fill="#E5B567"/>
+          <circle cx="49" cy="32" r="7.5" stroke="#E5B567" stroke-width="3.5"/>
+        </svg>
+      </div>
+      <div class="eyebrow"><span class="eyebrow__dot"></span>Peer-to-peer OTC · Stellar Testnet</div>
+      <h1>Your wallet is your desk.</h1>
+      <p>No sign-up, nothing custodied. Connect a Stellar wallet to send a directed order
+         to your counterparty — or to see orders addressed to you.</p>
       <button class="btn btn--gold" id="connectBtn">Connect wallet</button>
+      <div class="gate__trust">
+        <span>Non-custodial</span>
+        <span>Wallet-signed terms</span>
+        <span>Atomic settlement</span>
+      </div>
     </section>
 
     <!-- app -->
     <section id="app" style="display:none">
       <div class="tabs">
-        <button class="tab is-active" data-tab="create">Create order</button>
+        <button class="tab is-active" data-tab="create">New order</button>
         <button class="tab" data-tab="incoming">Incoming <span class="tab__count" id="incCount">0</span></button>
         <button class="tab" data-tab="sent">Sent <span class="tab__count" id="sentCount">0</span></button>
       </div>
 
       <!-- create -->
       <div class="panel is-active" data-panel="create">
-        <form class="card" id="orderForm" autocomplete="off">
+        <form class="ticket" id="orderForm" autocomplete="off">
+          <div class="ticket__head">
+            <h2 class="ticket__title">New RFQ ticket</h2>
+            <p class="ticket__sub">Terms are signed by your wallet — what you sign is exactly what settles.</p>
+          </div>
+
           <div class="field">
-            <label class="field__label">You will send</label>
+            <label class="field__label" for="makerAmount">You send</label>
             <div class="leg">
-              <input type="text" id="makerAmount" inputmode="decimal" placeholder="0.00">
-              <select id="makerToken"></select>
+              <input type="text" id="makerAmount" class="input--num" inputmode="decimal" placeholder="0.00">
+              <select id="makerToken" aria-label="Token you send"></select>
+            </div>
+          </div>
+
+          <div class="ticket__swap" aria-hidden="true"><span>⇅</span></div>
+
+          <div class="field">
+            <label class="field__label" for="takerAmount">You receive</label>
+            <div class="leg">
+              <input type="text" id="takerAmount" class="input--num" inputmode="decimal" placeholder="0.00">
+              <select id="takerToken" aria-label="Token you receive"></select>
             </div>
           </div>
 
           <div class="field">
-            <label class="field__label">You will receive</label>
-            <div class="leg">
-              <input type="text" id="takerAmount" inputmode="decimal" placeholder="0.00">
-              <select id="takerToken"></select>
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="field__label">Counterparty wallet address</label>
-            <input type="text" id="takerAddress" placeholder="G…">
+            <label class="field__label" for="takerAddress">Counterparty wallet address</label>
+            <input type="text" id="takerAddress" class="input--addr" placeholder="G…" spellcheck="false">
             <div class="hint">The taker who has agreed to this trade off-platform.</div>
           </div>
 
           <div class="field">
-            <label class="field__label">Expires in</label>
+            <label class="field__label" for="expValue">Expires in</label>
             <div class="row2">
-              <input type="number" id="expValue" min="1" step="1" value="60">
-              <select id="expUnit">
+              <input type="number" id="expValue" class="input--num" min="1" step="1" value="60">
+              <select id="expUnit" aria-label="Expiry unit">
                 <option value="60000">Minutes</option>
                 <option value="3600000" selected>Hours</option>
                 <option value="86400000">Days</option>
@@ -272,7 +108,7 @@
           </div>
 
           <div class="field">
-            <label class="field__label">Your address (maker)</label>
+            <span class="field__label">Signing as (maker)</span>
             <div class="maker-addr" id="makerAddrBox">—</div>
           </div>
 

@@ -15,7 +15,7 @@ work.** When it and this file disagree on a repo-specific detail, this file wins
 
 ## Project
 
-**Trust OTC** — a peer-to-peer OTC dApp on **Stellar** (XLM/USDC), modeled on the Swap/AirSwap
+**TrustRFQ** — a peer-to-peer OTC dApp on **Stellar** (XLM/USDC), modeled on the Swap/AirSwap
 peer protocol: parties agree **off-chain** (RFQ negotiation) and settle **on-chain**
 (atomic swap). On-chain settlement is **AirSwap-style**: each party signs an **off-chain Soroban
 authorization entry** over the exact terms; a permissionless **`fill`** carries both signatures
@@ -48,6 +48,15 @@ and moves the legs in one tx (no separate on-chain `approve`).
   assertion + host-enforced-layer notes. **Accepted risks** (Testnet MVP): Supabase anon-key public
   reads; off-chain RFQ signatures (`canonicalPayload`) are stored but **unverified** — the on-chain
   auth entries are the real integrity boundary; no SRI on esm.sh imports (dynamic; versions pinned).
+- **Frontend redesigned (2026-07-08): "private desk", brand = TrustRFQ.** Shared design system in
+  `styles.css` (CSS custom properties; both pages link it — inline `<style>` blocks are gone);
+  `hero.html` rebuilt from zero (no external video — CSS starfield + `hero.js` canvas, animated
+  `fill()` swap diagram, responsive, reduced-motion aware); `otc.html` shell rebuilt (same IDs/
+  `data-*` hooks); `otc.js` **render layer only** updated: 3-stage settlement stepper, and hardened
+  output — every DB-sourced string is HTML-escaped (`esc`), tokens outside the `TOKENS` allow-list
+  are quarantined (⚠ badge, Accept/Sign refused — `orderTokensKnown`), `settle_tx_hash` validated
+  (`isTxHash`) before building explorer links. Crypto/settlement core untouched. CSP: `media-src`
+  dropped. README documents optional DB backstops (column-scoped anon UPDATE grant + shape checks).
 
 ## Stack
 
@@ -63,14 +72,17 @@ and moves the legs in one tx (no separate on-chain `approve`).
 
 | Path | What |
 |------|------|
-| `hero.html` | Landing page; top-right **OTC** button → `otc.html`. |
-| `otc.html` | The app shell: wallet gate, Create/Incoming/Sent, settlement UI. Markup + inline `<style>`; the JS is loaded from `otc.js`. |
+| `hero.html` | TrustRFQ landing (self-contained animated hero, no external media); links → `otc.html`. |
+| `otc.html` | The desk shell: wallet gate, RFQ ticket, Incoming/Sent, settlement UI. **Markup only** — styles in `styles.css`, JS in `otc.js`. |
 | `otc.js` | The app logic (one ES module): wallet, RFQ, `signOrderAuth`/`fillOrder`. Externalized from `otc.html` so the CSP can drop `'unsafe-inline'` for scripts. |
+| `styles.css` | **Shared design system** (tokens + all component/page styles for both pages). |
+| `hero.js` | Landing-only canvas starfield (plain script, self-hosted, reduced-motion aware). |
+| `favicon.svg` | Gold swap-mark favicon (both pages). |
 | `supabase-config.js` | `window.SUPABASE_URL` / `SUPABASE_ANON_KEY`. |
 | `otc-config.js` | `window.RPC_URL` / `HORIZON_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID`. |
 | `vercel.json` | `cleanUrls` + rewrite `/` → `/hero`; security **headers** (CSP, HSTS, X-Frame-Options, …). |
 | `contracts/otc_swap/` | Soroban contract: `fill(...)` + unit tests (`src/lib.rs`, `src/test.rs`). |
-| `README.md` | Setup, schema SQL, Phase-2 deploy steps, E2E. |
+| `README.md` | Setup, schema SQL (+ anon-grant hardening), Phase-2 deploy steps, E2E. |
 
 ## Identity & trust model
 
@@ -122,12 +134,15 @@ footprint), then assembles + submits. **`fillCanonicalArgs` must stay determinis
   `tweetnacl`) that **throws on import and kills the whole module** — symptom: the Connect button
   does nothing because `init()` never runs. Also keep the `globalThis.Buffer = Buffer` shim.
 - **The CSP in `vercel.json` is an allow-list — keep it in sync with the code.** The strict policy
-  (`script-src 'self' https://esm.sh`) only works because the app JS lives in `otc.js`, **not**
-  inlined in `otc.html` — do not move it back inline. Any new external origin the app talks to must
-  be added to the matching directive or the browser **silently blocks it**: RPC/Horizon/Supabase →
-  `connect-src`; fonts → `style-src`/`font-src`; the landing video → `media-src`; a wallet module
-  beyond Freighter (e.g. WalletConnect) → its relay in `connect-src`. Test in the browser console
-  (zero CSP violations) after any change.
+  (`script-src 'self' https://esm.sh`) only works because the page JS lives in external files
+  (`otc.js`, `hero.js`), **never** inline — do not move it back. Styles live in `styles.css`
+  (`style-src 'self'`); `style-src` keeps `'unsafe-inline'` only for the wallet-kit's injected
+  modal styles and the `#app` `style="display:none"` attribute. There is **no `media-src`** (no
+  media is loaded — the old hero video is gone). Any new external origin the app talks to must be
+  added to the matching directive or the browser **silently blocks it**: RPC/Horizon/Supabase →
+  `connect-src`; fonts → `style-src`/`font-src`; a wallet module beyond Freighter (e.g.
+  WalletConnect) → its relay in `connect-src`. Test in the browser console (zero CSP violations)
+  after any change.
 - **macOS (aarch64) toolchain works natively — no workarounds.** Set up 2026-06-30: rustc 1.96.1,
   `wasm32v1-none` target, Stellar CLI 27 (`~/.local/bin/stellar`). `cargo test`, `stellar contract
   build`, and `stellar contract deploy --source-account deployer` all run directly from the repo
@@ -167,7 +182,11 @@ footprint), then assembles + submits. **`fillCanonicalArgs` must stay determinis
 
 ## Conventions
 
-- Match existing style: vanilla JS, no framework/build; dark theme tokens (`#E5B567` gold, Space
-  Grotesk headings, Hanken Grotesk body).
+- Match existing style: vanilla JS, no framework/build. Design tokens are CSS custom properties in
+  `styles.css` (`--gold #E5B567` on near-black surfaces; Space Grotesk display, Hanken Grotesk
+  body, IBM Plex Mono for addresses/amounts) — extend the tokens, don't hardcode new literals.
+- `otc.js` render templates: any DB-sourced string entering `innerHTML` goes through `esc()`
+  (tokens through `renderToken()`); keep the IDs and `data-*` hooks stable — handlers re-bind
+  after every render.
 - Reference files as clickable `path:line` links.
 - **Commit/push only when asked**; branch off `main` first.
