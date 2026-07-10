@@ -9,59 +9,52 @@ the project evolves.
 @STELLAR.md
 
 The import above pulls in **[STELLAR.md](STELLAR.md)** — a curated Stellar/Soroban development
-reference distilled from the full `developers.stellar.org/docs/build` tree (Introduction → Securing
-web-based projects). It loads every session alongside this file. **Read it before doing any Stellar
-work.** When it and this file disagree on a repo-specific detail, this file wins.
+reference distilled from the official docs. **Read it before doing any Stellar work.** When it and
+this file disagree on a repo-specific detail, this file wins.
 
 ## Project
 
 **TrustRFQ** — a peer-to-peer OTC dApp on **Stellar** (XLM/USDC), modeled on the Swap/AirSwap
 peer protocol: parties agree **off-chain** (RFQ negotiation) and settle **on-chain**
-(atomic swap). On-chain settlement is **AirSwap-style**: each party signs an **off-chain Soroban
+(atomic swap). Settlement is **AirSwap-style**: each party signs an **off-chain Soroban
 authorization entry** over the exact terms; a permissionless **`fill`** carries both signatures
 and moves the legs in one tx (no separate on-chain `approve`).
+
+Roadmap: a near-term **intent/private-offer layer** (pair-classified taker discovery), then an
+**institutional RFQ protocol** (peer-to-server quoting). Both will be built on the new frontend
+stack (see Stack below).
 
 ## Status (keep current)
 
 - **Off-chain RFQ: done & working.** Create → wallet-sign → deliver (routed by taker address) →
-  Accept/Decline, all live via Supabase realtime.
-- **On-chain settlement: deployed (AirSwap-style signed `fill`).** Soroban contract rewritten to
-  `require_auth` + direct `transfer` (no allowances) + **6/6 unit tests pass** (incl. amount-tamper
-  rejection). Deployed to Testnet: `OTC_CONTRACT_ID = CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ`
-  (redeployed 2026-06-30 from macOS under the local `deployer` identity, built with rustc 1.96.1 /
-  soroban-sdk 26.1.0 — on-chain bytecode provably matches `src/lib.rs`; supersedes the prior
-  `CBLKKVX3…` deploy, which was the same source built with rustc 1.96.0).
-  `otc.html` rewritten to `signOrderAuth` (off-chain auth entry) + enforcing-mode assemble/submit;
-  proven end-to-end on Testnet via standalone spikes.
-- **DB migrated (live).** Supabase project `zaflldqvenbgfaxtzbjc` (TrustRFQ) transitioned to the
-  auth model: `maker_approve_tx`/`taker_approve_tx` → `maker_auth`/`taker_auth`, `settlement_status`
-  check now `idle|signing|ready|settling|settled|failed`. Table is in `supabase_realtime` with
+  Accept/Decline, live via Supabase realtime.
+- **On-chain settlement: deployed (AirSwap-style signed `fill`).** `require_auth` + direct
+  `transfer`, 6/6 unit tests pass. Testnet:
+  `OTC_CONTRACT_ID = CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ` (redeployed
+  2026-06-30; on-chain bytecode provably matches `src/lib.rs`). Proven end-to-end via spikes.
+- **DB migrated (live).** Supabase project `zaflldqvenbgfaxtzbjc`: auth-model columns
+  (`maker_auth`/`taker_auth`, `settlement_status`), table in `supabase_realtime` with
   `replica identity full` (verified).
 - **Pending to go live:** two-wallet **XLM↔XLM** E2E in the browser (verifies wallet
   `signAuthEntry` end-to-end). Targets **Testnet** only.
-- **STELLAR.md compliance audit (2026-06-30): passed.** Every fund/signature-critical path —
-  contract auth (both `require_auth` over full args), `Filled(order_id)` + `expiration` replay/
-  staleness, deterministic signed `fill` (`fillCanonicalArgs`, never `Date.now()`), enforcing-mode
-  submit, derived SAC ids, i128 BigInt math, `?bundle-deps` imports — verified compliant. Fixed the
-  **web-infra gaps (§11)**: added `vercel.json` security headers + a strict **CSP** (which required
-  externalizing `otc.html`'s module to `otc.js`). Hardened contract tests with an `env.auths()`
-  assertion + host-enforced-layer notes. **Accepted risks** (Testnet MVP): Supabase anon-key public
-  reads; off-chain RFQ signatures (`canonicalPayload`) are stored but **unverified** — the on-chain
-  auth entries are the real integrity boundary; no SRI on esm.sh imports (dynamic; versions pinned).
+- **STELLAR.md compliance audit (2026-06-30): passed.** All fund/signature-critical paths verified;
+  strict CSP + security headers added (`vercel.json`), `otc.html`'s module externalized to `otc.js`.
+  Accepted risks (Testnet MVP): public anon-key reads; off-chain RFQ signatures stored but
+  unverified (on-chain auth entries are the real integrity boundary); no SRI on esm.sh imports.
 - **Frontend redesigned (2026-07-08): "private desk", brand = TrustRFQ.** Shared design system in
-  `styles.css` (CSS custom properties; both pages link it — inline `<style>` blocks are gone);
-  `hero.html` rebuilt from zero (no external video — CSS starfield + `hero.js` canvas, animated
-  `fill()` swap diagram, responsive, reduced-motion aware); `otc.html` shell rebuilt (same IDs/
-  `data-*` hooks); `otc.js` **render layer only** updated: 3-stage settlement stepper, and hardened
-  output — every DB-sourced string is HTML-escaped (`esc`), tokens outside the `TOKENS` allow-list
-  are quarantined (⚠ badge, Accept/Sign refused — `orderTokensKnown`), `settle_tx_hash` validated
-  (`isTxHash`) before building explorer links. Crypto/settlement core untouched. CSP: `media-src`
-  dropped. README documents optional DB backstops (column-scoped anon UPDATE grant + shape checks).
+  `styles.css`; hardened output layer (`esc()` on all DB strings, token allow-list quarantine,
+  `settle_tx_hash` validation). Details in commit `ef4b70c`.
 
 ## Stack
 
-- **Frontend:** plain static HTML, **no build step**, deployed on Vercel. Browser libraries are
-  ES-module imports from **esm.sh**.
+- **Frontend — migration decided (2026-07-10):** the frontend will be rebuilt in
+  **React + TypeScript** (build-based stack); upcoming complex features (intent/private-offer
+  layer, institutional RFQ) will be developed on the new stack. **The current vanilla files
+  (`otc.html`/`otc.js`/`hero.*`/`styles.css`) remain the live product until the migration lands** —
+  bugfixes continue on the vanilla side. Framework/tooling choice (Next.js vs Vite etc.) is not
+  yet decided; the migration gets its own design session.
+- **Current (live) frontend:** plain static HTML, **no build step**, deployed on Vercel. Browser
+  libraries are ES-module imports from **esm.sh**.
 - **Backend:** Supabase (Postgres + RLS + Realtime) used with the **anon key, no auth**.
 - **Chain:** Stellar **Testnet**; settlement via a **Soroban** (Rust) contract; classic assets used
   as **SACs** (Stellar Asset Contracts).
@@ -72,104 +65,67 @@ and moves the legs in one tx (no separate on-chain `approve`).
 
 | Path | What |
 |------|------|
-| `hero.html` | TrustRFQ landing (self-contained animated hero, no external media); links → `otc.html`. |
-| `otc.html` | The desk shell: wallet gate, RFQ ticket, Incoming/Sent, settlement UI. **Markup only** — styles in `styles.css`, JS in `otc.js`. |
-| `otc.js` | The app logic (one ES module): wallet, RFQ, `signOrderAuth`/`fillOrder`. Externalized from `otc.html` so the CSP can drop `'unsafe-inline'` for scripts. |
+| `hero.html` | TrustRFQ landing (self-contained animated hero); links → `otc.html`. |
+| `otc.html` | The desk shell: wallet gate, RFQ ticket, Incoming/Sent, settlement UI. **Markup only.** |
+| `otc.js` | The app logic (one ES module): wallet, RFQ, `signOrderAuth`/`fillOrder`. |
 | `styles.css` | **Shared design system** (tokens + all component/page styles for both pages). |
-| `hero.js` | Landing-only canvas starfield (plain script, self-hosted, reduced-motion aware). |
+| `hero.js` | Landing-only canvas starfield (plain script, reduced-motion aware). |
 | `favicon.svg` | Gold swap-mark favicon (both pages). |
 | `supabase-config.js` | `window.SUPABASE_URL` / `SUPABASE_ANON_KEY`. |
 | `otc-config.js` | `window.RPC_URL` / `HORIZON_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID`. |
-| `vercel.json` | `cleanUrls` + rewrite `/` → `/hero`; security **headers** (CSP, HSTS, X-Frame-Options, …). |
+| `vercel.json` | `cleanUrls` + rewrite `/` → `/hero`; security **headers** (CSP, HSTS, …). |
 | `contracts/otc_swap/` | Soroban contract: `fill(...)` + unit tests (`src/lib.rs`, `src/test.rs`). |
 | `README.md` | Setup, schema SQL (+ anon-grant hardening), Phase-2 deploy steps, E2E. |
 
 ## Identity & trust model
 
-- **Connected Stellar wallet = identity.** No sign-in (no Google/email).
-- Integrity comes from **wallet signatures**, not RLS: maker signs the order (`signature`/
-  `signed_payload`), taker signs accept/decline (`taker_signature`), and on-chain each party signs
-  an **off-chain Soroban auth entry** over the exact `fill` terms (amounts included), so the
-  submitter cannot alter the deal. The anon Supabase backend only coordinates UI state and **reads
-  are public** — acceptable for a Testnet MVP.
-- Future hardening (not built): Sign-In-With-Stellar (sign a nonce → Edge Function mints a JWT) for
-  per-wallet RLS + private reads.
+- **Connected Stellar wallet = identity.** No sign-in. Integrity comes from **wallet signatures**,
+  not RLS: maker/taker sign the RFQ steps, and on-chain each party signs an off-chain Soroban auth
+  entry over the exact `fill` terms, so the submitter cannot alter the deal. The anon Supabase
+  backend only coordinates UI state; **reads are public** — acceptable for a Testnet MVP.
+- Future hardening (not built): Sign-In-With-Stellar (signed nonce → JWT) for per-wallet RLS.
 
 ## Data model
 
 `public.orders`, routed by `taker_address`. Core: `maker_address/amount/token`,
 `taker_address/amount/token`, `expiration`, `nonce`, `signature`, `signed_payload`,
-`taker_signature`, `status` (`pending|accepted|declined|cancelled|expired`). Phase-2 settlement
-columns: `settlement_status` (`idle|signing|ready|settling|settled|failed`), `maker_auth`,
-`taker_auth` (base64 XDR of each party's signed `SorobanAuthorizationEntry`), `settle_tx_hash`,
-`settle_error`, `settled_at`. Table is in the `supabase_realtime` publication with
-`replica identity full` (so address-filtered UPDATE events stream).
+`taker_signature`, `status` (`pending|accepted|declined|cancelled|expired`). Settlement:
+`settlement_status` (`idle|signing|ready|settling|settled|failed`), `maker_auth`, `taker_auth`
+(base64 XDR of signed auth entries), `settle_tx_hash`, `settle_error`, `settled_at`.
 
 ## Commands
 
 ```bash
 npx serve .                                                   # → http://localhost:3000/otc.html
-cargo test --manifest-path contracts/otc_swap/Cargo.toml      # contract unit tests (see Windows note)
+cargo test --manifest-path contracts/otc_swap/Cargo.toml      # contract unit tests
 cd contracts/otc_swap && stellar contract build               # → target/.../release/otc_swap.wasm
 # deploy + SAC + config: see README "On-chain settlement (Phase 2)"
 ```
 
-The contract is the **on-chain `fill`**: after `maker.require_auth()` + `taker.require_auth()`
-(each satisfied by that party's off-chain-signed auth entry, which binds the exact args), it moves
-both legs via SAC `transfer` — atomic and permissionless. `require_auth` over the full args is the
-security boundary: a `fill` with tampered amounts has no valid signature and reverts. Replay
-guarded by a `Filled(order_id)` key + Soroban auth-entry nonces; staleness by `expiration`.
-
-Client (`otc.js`): `signOrderAuth` simulates `fill` with the **counterparty as source** so the
-signer's auth surfaces as a signable address credential, signs it via `kit.signAuthEntry`
-(SEP-43) wrapped in `Stellar.authorizeEntry`, and stores the base64 entry. `fillOrder` parses both
-stored entries, attaches them, runs an **enforcing-mode** simulation (auth pre-attached → correct
-footprint), then assembles + submits. **`fillCanonicalArgs` must stay deterministic** (derive
-`expiration` from `order.expiration`, never `Date.now()`) — drifting args break the signatures.
+The contract is the **on-chain `fill`**: `maker.require_auth()` + `taker.require_auth()` over the
+full args (the security boundary — tampered amounts have no valid signature), then direct SAC
+`transfer`s. Replay: `Filled(order_id)` key + auth-entry nonces; staleness: `expiration`.
+Client: `signOrderAuth` simulates `fill` with the counterparty as source, signs via
+`kit.signAuthEntry` wrapped in `Stellar.authorizeEntry`; `fillOrder` attaches both entries,
+enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay deterministic**
+(derive `expiration` from `order.expiration`, never `Date.now()`).
 
 ## Gotchas (do not rediscover)
 
-- **esm.sh `?bundle-deps` is mandatory** for `stellar-wallets-kit` and `stellar-sdk`. The default
-  esm.sh builds leave a CJS dep with broken named-export interop (e.g. `tweetnacl-util`,
-  `tweetnacl`) that **throws on import and kills the whole module** — symptom: the Connect button
-  does nothing because `init()` never runs. Also keep the `globalThis.Buffer = Buffer` shim.
-- **The CSP in `vercel.json` is an allow-list — keep it in sync with the code.** The strict policy
-  (`script-src 'self' https://esm.sh`) only works because the page JS lives in external files
-  (`otc.js`, `hero.js`), **never** inline — do not move it back. Styles live in `styles.css`
-  (`style-src 'self'`); `style-src` keeps `'unsafe-inline'` only for the wallet-kit's injected
-  modal styles and the `#app` `style="display:none"` attribute. There is **no `media-src`** (no
-  media is loaded — the old hero video is gone). Any new external origin the app talks to must be
-  added to the matching directive or the browser **silently blocks it**: RPC/Horizon/Supabase →
-  `connect-src`; fonts → `style-src`/`font-src`; a wallet module beyond Freighter (e.g.
-  WalletConnect) → its relay in `connect-src`. Test in the browser console (zero CSP violations)
-  after any change.
-- **macOS (aarch64) toolchain works natively — no workarounds.** Set up 2026-06-30: rustc 1.96.1,
-  `wasm32v1-none` target, Stellar CLI 27 (`~/.local/bin/stellar`). `cargo test`, `stellar contract
-  build`, and `stellar contract deploy --source-account deployer` all run directly from the repo
-  path. The Windows traps below are **Windows-only**; ignore them on this Mac.
-- **Windows native build/test linker traps:**
-  - Default toolchain is **MSVC but `link.exe` is missing** → `cargo test` can't link.
-  - Workaround: a **GNU toolchain run from an ASCII-only path** — the repo path contains
-    `…\Masaüstü\…` (the `ü`), which breaks MinGW `ld`. Copy `contracts/otc_swap` to e.g.
-    `%TEMP%\otc_swap` first.
-  - The contract's `cdylib` crate-type triggers MinGW **"export ordinal too large"**; for *native
-    tests only* build **rlib-only** (temp copy's `Cargo.toml` → `crate-type = ["rlib"]`). Keep
-    `cdylib` in the real `Cargo.toml` (needed for wasm). Working invocation:
-    `cargo +stable-x86_64-pc-windows-gnu test` from `%TEMP%\otc_swap`.
-  - **wasm target is `wasm32v1-none`, NOT `wasm32-unknown-unknown`** — soroban-sdk 26 hard-rejects
-    the latter (reference-types/multi-value). Add it to the GNU toolchain
-    (`rustup target add wasm32v1-none --toolchain stable-x86_64-pc-windows-gnu`).
-  - **Building wasm directly with cargo still needs the GNU toolchain + an ASCII path** — host
-    proc-macros (serde/quote) link with the host linker, so MSVC's missing `link.exe` breaks them
-    and MinGW `ld` chokes on the `ü` path. Build from `%TEMP%\otc_swap_wasm`:
-    `cargo +stable-x86_64-pc-windows-gnu build --target wasm32v1-none --release`. (`stellar
-    contract build` handles toolchain/target itself and is the normal deploy path.)
-- **Install the Stellar CLI as a prebuilt binary**: `winget install Stellar.StellarCLI` (installed
-  v27 to `C:\Program Files (x86)\Stellar CLI\stellar.exe`; PATH needs a new shell). Do **not**
-  `cargo install stellar-cli` (compiles from source → hits the missing MSVC linker).
+- **esm.sh `?bundle-deps` is mandatory** for `stellar-wallets-kit` and `stellar-sdk` — default
+  builds ship a CJS dep with broken named-export interop that throws on import and kills the whole
+  module (symptom: Connect button does nothing). Keep the `globalThis.Buffer = Buffer` shim.
+- **The CSP in `vercel.json` is an allow-list — keep it in sync with the code.** Page JS must stay
+  in external files (`otc.js`, `hero.js`), never inline. Any new external origin must be added to
+  the matching directive (RPC/Horizon/Supabase → `connect-src`, etc.) or the browser silently
+  blocks it. Test in the browser console (zero CSP violations) after any change.
+- **macOS (aarch64) toolchain works natively** — rustc 1.96.1, `wasm32v1-none` target, Stellar
+  CLI 27 (`~/.local/bin/stellar`). No workarounds needed on this Mac.
+- **Windows-only:** native build/test hits MSVC-linker / non-ASCII-path / cdylib traps; the wasm
+  target is `wasm32v1-none`, NOT `wasm32-unknown-unknown`; install the Stellar CLI via winget, not
+  cargo. Full details in this file's history (commits `426f85a`…`4d01878`).
 - **Supabase DDL only via the SQL Editor** (the anon key cannot run DDL). Migrations live in README.
-- **Token SAC ids are derived in-app** from asset + network passphrase (`Asset.contractId`); only
-  `OTC_CONTRACT_ID` is hardcoded (in `otc-config.js`, after deploy).
+- **Token SAC ids are derived in-app** (`Asset.contractId`); only `OTC_CONTRACT_ID` is hardcoded.
 - **Testnet resets ~quarterly** → redeploy the contract and update `OTC_CONTRACT_ID`.
 
 ## Verify before deploying
@@ -182,11 +138,10 @@ footprint), then assembles + submits. **`fillCanonicalArgs` must stay determinis
 
 ## Conventions
 
-- Match existing style: vanilla JS, no framework/build. Design tokens are CSS custom properties in
-  `styles.css` (`--gold #E5B567` on near-black surfaces; Space Grotesk display, Hanken Grotesk
-  body, IBM Plex Mono for addresses/amounts) — extend the tokens, don't hardcode new literals.
-- `otc.js` render templates: any DB-sourced string entering `innerHTML` goes through `esc()`
-  (tokens through `renderToken()`); keep the IDs and `data-*` hooks stable — handlers re-bind
-  after every render.
+- **Live vanilla side:** match existing style (vanilla JS, no framework/build; design tokens are
+  CSS custom properties in `styles.css` — extend the tokens, don't hardcode new literals). Any
+  DB-sourced string entering `innerHTML` goes through `esc()`; keep IDs and `data-*` hooks stable.
+- **New complex features** (intent layer, institutional RFQ) wait for / are built on the
+  **React + TypeScript** stack — don't grow them into the vanilla codebase.
 - Reference files as clickable `path:line` links.
 - **Commit/push only when asked**; branch off `main` first.
