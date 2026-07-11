@@ -52,6 +52,16 @@ stack (see Stack below).
   **esm.sh removed entirely** (deps now bundled). Vanilla `otc.js`/`canonical.js` kept at repo
   root as the reference implementation (not deployed) until the two-wallet E2E passes on the new
   stack. Spec: `docs/superpowers/specs/2026-07-10-react-ts-frontend-migration-design.md`.
+- **Intent/private-offer layer built (2026-07-11, branch `feat/intent-layer`).** Full spec
+  (`docs/superpowers/specs/2026-07-10-intent-private-offer-layer-design.md`) implemented as a
+  second Vite entry (`intent.html` → `src/intent/`, served as `/intent`): pair-intent toggles,
+  one-signature broadcast fan-out (per-taker `orders` rows + `broadcast_id`), isolated
+  counter-offer threads (`rounds`, final terms written back onto the order row), settlement
+  reused unchanged via `OrderCard`/`useSettlement`. DB reconciled live (2026-07-11):
+  `broadcasts` added to realtime; `orders` anon UPDATE re-scoped to workflow columns **plus
+  `maker_amount`/`taker_amount`** (round write-back; README + `docs/migrations/…intent-layer.sql`
+  document the trade-off). 4-lens adversarial review run; all confirmed findings fixed.
+  Pending: the spec §8 two-browser E2E.
 
 ## Stack
 
@@ -81,6 +91,10 @@ stack (see Stack below).
 | `src/data/` | Supabase client, `orders.ts` queries/mutations, `useOrders` (+ realtime). |
 | `src/wallet/` | Wallets-kit singleton + `walletSign`, `WalletContext` (connect/disconnect). |
 | `src/ui/` | `Gate`, `Ticket`, `OrderCard`, `SettlementStrip`, `Toast`, `useSettlement`, `useNow`. |
+| `intent.html` + `src/intent/` | **Intent page** (second Vite entry): pairs panel, broadcast ticket/list, thread views. |
+| `src/core/pairs.ts` / `negotiation.ts` / `balances.ts` | Pure intent-layer logic (pair keys, rounds/`currentTerms`, Horizon balance parsing) — unit-tested. |
+| `src/data/intents.ts` etc. | Intent-layer queries/hooks (`broadcasts`, `rounds`, `useBalances`, realtime). |
+| `public/intent.css` | Intent-page styles (sectioned; uses `styles.css` tokens, never edits it). |
 | `public/hero.html` + `hero.js` | Hand-written landing (never bundled); links → `otc.html`. |
 | `public/styles.css` | **Shared design system** — unchanged by the migration; JSX must keep its classes. |
 | `public/*-config.js` | Runtime config (`window.*`): Supabase URL/key, RPC/Horizon/passphrase/contract id. |
@@ -158,7 +172,7 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Verify before deploying
 
-1. `npm test` green — golden vectors byte-identical + token/validation suites (34 tests).
+1. `npm test` green — golden vectors byte-identical + token/pairs/negotiation/balances suites (89 tests).
 2. `npm run build` clean; `dist/*.html` has **zero inline scripts**; `grep -r esm.sh dist/` empty.
 3. `cargo test …` green — 6 tests (swap, replay, expiry, zero-amount, scoped-auth, amount-tamper).
 4. `stellar contract build` produces `otc_swap.wasm` (target `wasm32v1-none`).

@@ -99,3 +99,30 @@ grant  update (resolution) on public.rounds to anon; -- only the resolution adva
 
 alter table public.rounds replica identity full;
 alter publication supabase_realtime add table public.rounds;
+
+-- ============================================================
+-- Reconciliation (post-review). APPLIED to live project
+-- zaflldqvenbgfaxtzbjc on 2026-07-11 via supabase MCP
+-- apply_migration (name: intent_layer_reconcile_grants_realtime).
+-- ============================================================
+
+-- 5. broadcasts was missing from the realtime publication — useBroadcasts'
+--    channel was permanently dead (cross-tab updates never arrived).
+alter table public.broadcasts replica identity full;
+alter publication supabase_realtime add table public.broadcasts;
+
+-- 6. Restore the README "freeze order terms after insert" hardening on orders
+--    (found live with TABLE-WIDE anon update — the documented revoke was never
+--    applied), amended for the intent layer: maker_amount/taker_amount are
+--    anon-updatable because acceptRound writes the agreed round's amounts back
+--    onto the order row (spec §3.4). Addresses, tokens, expiration, nonce,
+--    signature, signed_payload stay frozen after insert. Accepted residual
+--    risk: amounts on an open row are mutable via the anon key — the on-chain
+--    dual-auth entries over the exact fill args remain the integrity boundary,
+--    and settlement UIs render the same row the parties sign over.
+revoke update on public.orders from anon;
+grant update (status, taker_signature, updated_at,
+              settlement_status, maker_auth, taker_auth,
+              settle_tx_hash, settle_error, settled_at,
+              maker_amount, taker_amount)
+  on public.orders to anon;

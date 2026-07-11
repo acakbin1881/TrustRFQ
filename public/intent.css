@@ -1,0 +1,400 @@
+/* ==========================================================================
+   TrustRFQ — intent/private-offer layer styles
+   Additive companion to styles.css (the design system — never edited here).
+   Everything builds on the :root tokens from styles.css; all class names are
+   prefixed (intent-, thread, round-, pairs-, counter-) so nothing collides.
+   ========================================================================== */
+
+/* === intent layer: shared (thread, timeline, counter form, pairs) === */
+
+/* "Private offer" pill (thread headers + offer rows) */
+.intent-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(229, 181, 103, 0.07);
+  border: 1px solid rgba(229, 181, 103, 0.3);
+  flex: none;
+}
+
+/* status-badge modifier for the intent-layer 'countered' order status —
+   styles.css .badge provides the shape, this adds the missing color */
+.intent-badge--countered {
+  color: var(--gold-hi);
+  background: rgba(229, 181, 103, 0.09);
+  border-color: rgba(229, 181, 103, 0.22);
+}
+
+/* Thread view */
+.thread { margin-top: 14px; }
+.thread__head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.thread__id { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.thread__pair {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+.thread__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--text-4);
+}
+.thread__party b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  color: var(--text-1);
+}
+.thread__round-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 10px;
+}
+.thread__wait {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* Round timeline */
+.round-list {
+  margin-top: 16px;
+  padding: 14px 16px 16px;
+  border-radius: var(--r-md);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line-3);
+}
+.round-list__title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 10px;
+}
+.round-list__items { list-style: none; margin: 0; padding: 0; }
+.round-item { padding: 11px 0; border-top: 1px solid var(--line-3); }
+.round-item:first-child { border-top: 0; padding-top: 0; }
+.round-item:last-child { padding-bottom: 0; }
+.round-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.round-item__who {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.round-item__terms { margin-top: 6px; font-size: 13.5px; color: var(--text-2); }
+.round-item__time { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--text-4); }
+
+/* Round resolution chips (smaller siblings of .badge) */
+.round-res {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  flex: none;
+}
+.round-res--pending { color: var(--gold); background: rgba(229, 181, 103, 0.09); border-color: rgba(229, 181, 103, 0.22); }
+.round-res--accepted { color: var(--green); background: rgba(111, 227, 161, 0.09); border-color: rgba(111, 227, 161, 0.22); }
+.round-res--declined { color: var(--red); background: rgba(255, 107, 107, 0.09); border-color: rgba(255, 107, 107, 0.22); }
+.round-res--superseded { color: var(--text-4); background: rgba(255, 255, 255, 0.05); border-color: var(--line-3); }
+
+/* Counter-offer form */
+.counter-form {
+  margin-top: 14px;
+  padding: 16px 18px 18px;
+  border-radius: var(--r-md);
+  background: var(--bg-sunken);
+  border: 1px solid rgba(229, 181, 103, 0.2);
+}
+.counter-form__title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 14px;
+}
+/* fixed-token pill occupying the .leg grid's select column */
+.counter-token {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+.counter-form__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+/* Pairs panel */
+.pairs-panel {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 36px);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 45%), var(--bg-raised);
+  border: 1px solid var(--line-3);
+  box-shadow: var(--shadow-card);
+}
+.pairs-panel__head { margin-bottom: 6px; }
+.pairs-panel__title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pairs-panel__sub { margin: 0; font-size: 13.5px; color: var(--text-4); line-height: 1.6; }
+.pairs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 2px;
+  border-top: 1px solid var(--line-3);
+}
+.pairs-panel__head + .pairs-row { border-top: 0; margin-top: 12px; }
+.pairs-row__label {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+/* Toggle switch (role="switch" button) */
+.pairs-toggle {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  flex: none;
+  padding: 0;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-1);
+  background: var(--bg-sunken);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.pairs-toggle:disabled { opacity: 0.45; cursor: wait; }
+.pairs-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-3);
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+.pairs-toggle.is-on {
+  background: rgba(229, 181, 103, 0.16);
+  border-color: rgba(229, 181, 103, 0.5);
+}
+.pairs-toggle.is-on .pairs-toggle__thumb {
+  transform: translateX(20px);
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold));
+  box-shadow: 0 0 12px rgba(229, 181, 103, 0.5);
+}
+
+/* === intent layer: taker === */
+
+/* Offer card = .order (design system) + expandable summary row */
+.thread-card__toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.thread-card__pair {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+.thread-card__party { font-size: 13px; color: var(--text-3); }
+.thread-card__party b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  color: var(--text-1);
+}
+.thread-card__expiry { margin-left: auto; font-size: 12.5px; color: var(--text-4); }
+.thread-card__chev { color: var(--text-4); font-size: 11px; transition: transform 0.18s ease; flex: none; }
+.thread-card__toggle[aria-expanded="true"] .thread-card__chev { transform: rotate(180deg); }
+
+/* === intent layer: maker (appended by a later task) === */
+
+/* Broadcast ticket — direction picker (which token the maker gives) */
+.broadcast-dir { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.broadcast-dir__opt {
+  padding: 12px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.broadcast-dir__opt:disabled { opacity: 0.45; cursor: not-allowed; }
+.broadcast-dir__opt.is-active {
+  color: var(--gold-hi);
+  border-color: rgba(229, 181, 103, 0.5);
+  background: rgba(229, 181, 103, 0.09);
+}
+
+/* live "N takers subscribed" line above the Send button */
+.broadcast-subs { font-size: 13px; color: var(--text-3); line-height: 1.5; }
+.broadcast-subs--zero { color: var(--red); }
+
+/* Broadcast card = .order + the thread-card toggle pattern; the terms and
+   tally spans wrap onto their own full-width rows inside the flex toggle */
+.broadcast-card__terms,
+.broadcast-card__tally { flex-basis: 100%; min-width: 0; }
+.broadcast-card__terms { font-size: 13.5px; color: var(--text-2); }
+.broadcast-card__tally {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+/* broadcast status chips missing from styles.css (.badge provides the shape) */
+.broadcast-badge--active { color: var(--gold); background: rgba(229, 181, 103, 0.09); border-color: rgba(229, 181, 103, 0.22); }
+.broadcast-badge--completed { color: var(--green); background: rgba(111, 227, 161, 0.09); border-color: rgba(111, 227, 161, 0.22); }
+
+/* settled-thread banner (spec §4.4 — a PROMPT, never an auto-cancel) */
+.broadcast-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 13px 15px;
+  border-radius: var(--r-md);
+  background: rgba(229, 181, 103, 0.07);
+  border: 1px solid rgba(229, 181, 103, 0.3);
+}
+.broadcast-banner__msg { font-size: 13.5px; color: var(--text-2); line-height: 1.55; }
+.broadcast-banner__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* expanded thread list inside a broadcast card */
+.broadcast-threads { margin-top: 12px; }
+.broadcast-thread { padding: 6px 0; border-top: 1px solid var(--line-3); }
+.broadcast-thread:last-of-type { padding-bottom: 0; }
+
+/* === intent layer: page shell + balances (appended by a later task) === */
+
+/* Topbar "Desk" nav link back to otc.html (btn provides the shape) */
+.topbar__desk-link { flex: none; }
+
+/* Balance strip (spec §4.5) — quiet mono chips in the topbar, one per
+   allow-listed token; the note covers loading / failed / unfunded states */
+.bal-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.bal-strip__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line-3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.bal-strip__token {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+.bal-strip__amount {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+}
+.bal-strip__note {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-4);
+  white-space: nowrap;
+}
+
+/* the strip is topbar garnish — let the wallet chip win the space fight */
+@media (max-width: 720px) {
+  .topbar .bal-strip { display: none; }
+}
+
+/* Shell spacing: each panel stacks two blocks (offers + pairs; ticket + list) */
+[data-panel="offers"] .pairs-panel { margin-top: 28px; }
+[data-panel="broadcast"] .intent-broadcasts { margin-top: 28px; }

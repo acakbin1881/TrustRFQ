@@ -160,12 +160,16 @@ harder to abuse — run them once all columns above exist:
 
 ```sql
 -- 1. Freeze the order TERMS after insert. The anon role may only advance workflow
---    columns; it can never rewrite addresses / amounts / tokens / expiration / nonce
---    (so a row can't be mutated between accept and sign).
+--    columns; it can never rewrite addresses / tokens / expiration / nonce
+--    (so a row can't be mutated between accept and sign). maker_amount and
+--    taker_amount ARE grantable: the intent layer writes the accepted round's
+--    amounts back onto the order row, and on-chain dual-auth over the exact
+--    fill args remains the integrity boundary.
 revoke update on public.orders from anon;
 grant  update (status, taker_signature, updated_at,
                settlement_status, maker_auth, taker_auth,
-               settle_tx_hash, settle_error, settled_at) on public.orders to anon;
+               settle_tx_hash, settle_error, settled_at,
+               maker_amount, taker_amount) on public.orders to anon;
 
 -- 2. Reject markup / malformed values at the database (defense in depth behind the
 --    client's HTML-escaping), and enforce positive amounts + address/token shape.
@@ -183,6 +187,10 @@ Note these are DB-side backstops; the client also (a) escapes every stored field
 touches the DOM, and (b) refuses to Accept or Sign an order whose token isn't on its recognized
 allow-list (a look-alike asset with an attacker-controlled issuer otherwise renders like the real
 one). Keep both layers.
+
+The exact grant above (including `maker_amount, taker_amount`) is what's live — the
+reconciliation SQL that applied it, together with the intent-layer schema and realtime setup,
+lives in `docs/migrations/2026-07-10-intent-layer.sql`.
 
 ### 2. Build, test & deploy the contract
 
