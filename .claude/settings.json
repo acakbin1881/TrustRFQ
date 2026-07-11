@@ -1,7 +1,36 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:developers.stellar.org)"
+      "WebFetch(domain:developers.stellar.org)",
+      "Bash(awk 'NR>=17150 && NR<=17275 && \\(/__commonJS/ || /require_/ || /\\\\/\\\\/ node_modules/\\)' @creit__tech_stellar-wallets-kit.js)",
+      "Bash(python3 -c \"import sys,json; [print\\(json.loads\\(l\\).get\\('type'\\), str\\(json.loads\\(l\\).get\\('result'\\)\\)[:200]\\) for l in sys.stdin]\")",
+      "Bash(curl -s \"http://localhost:5199/src/main.tsx\")",
+      "Bash(node -e \"console.log\\(JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/acakbin1881/Projects/TrustRFQ/node_modules/.vite/deps/_metadata.json'\\)\\).browserHash\\)\")",
+      "Bash(curl -s \"http://localhost:5199/node_modules/.vite/deps/@stellar_stellar-sdk.js?v=$\\(node -e \"console.log\\(JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/acakbin1881/Projects/TrustRFQ/node_modules/.vite/deps/_metadata.json'\\)\\).browserHash\\)\"\\)\")",
+      "Bash(cargo test *)",
+      "Bash(grep -ao 'document.createElement\\(`iframe`\\)[^;]\\\\{0,80\\\\}' dist/assets/otc-Cmhftz0r.js)",
+      "Bash(pkill -f \"vite.*--port 5199\")",
+      "Bash(grep -o '[^a-zA-Z_.$]eval\\(' otc-Cmhftz0r.js)",
+      "Bash(npx esbuild *)",
+      "Bash(node /private/tmp/claude-501/-Users-acakbin1881-Projects-TrustRFQ/d72b7182-9334-4ce5-be8a-781713999074/scratchpad/render-check.cjs)",
+      "Bash(grep -ao 'document.createElement\\(`iframe`\\).\\\\{0,300\\\\}' dist/assets/otc-Cmhftz0r.js)",
+      "Bash(node -p \"require\\('/Users/acakbin1881/Projects/TrustRFQ/node_modules/@supabase/realtime-js/package.json'\\).version + ' / supabase-js ' + require\\('/Users/acakbin1881/Projects/TrustRFQ/node_modules/@supabase/supabase-js/package.json'\\).version\")",
+      "Bash(git -C /Users/acakbin1881/Projects/TrustRFQ diff HEAD -- vercel.json .vercelignore)",
+      "Bash(git -C /Users/acakbin1881/Projects/TrustRFQ show HEAD:.vercelignore)",
+      "Bash(sed -n '/async removeChannel/,/^  }/p' /Users/acakbin1881/Projects/TrustRFQ/node_modules/@supabase/realtime-js/src/RealtimeClient.ts)",
+      "Bash(sed -n '/^  subscribe\\(/,/^  }$/p' /Users/acakbin1881/Projects/TrustRFQ/node_modules/@supabase/realtime-js/src/RealtimeChannel.ts)",
+      "Bash(git -C /Users/acakbin1881/Projects/TrustRFQ diff HEAD --stat -- supabase-config.js otc-config.js hero.html hero.js styles.css)",
+      "Bash(python3 -c \"import json; print\\(json.load\\(open\\('/Users/acakbin1881/Projects/TrustRFQ/node_modules/vite/package.json'\\)\\).get\\('engines'\\)\\)\")",
+      "Bash(git -C /Users/acakbin1881/Projects/TrustRFQ show HEAD:package.json)",
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(npm test *)",
+      "Bash(echo \"===src origins \\(http/wss\\)===\" && grep -rnoE \"\\(https?|wss\\)://[a-zA-Z0-9._/-]+\" src/ public/otc-config.js public/supabase-config.js 2>/dev/null | grep -vE \"w3.org|schema|example|localhost|127.0.0.1\" | sort -u; echo \"\"; echo \"===wallet module===\" ; sed -n '1,80p' src/wallet/*.ts 2>/dev/null | grep -niE \"module|WalletConnect|kit|modules|network|url|import\" | head -40)",
+      "Bash(awk '{print $1, $NF}')",
+      "Bash(awk -F: '{print $1}')"
+    ],
+    "additionalDirectories": [
+      "/Users/acakbin1881/Projects/TrustRFQ/src/wallet"
     ]
   },
   "enabledPlugins": {

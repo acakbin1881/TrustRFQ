@@ -10,6 +10,9 @@
     } from 'https://esm.sh/@creit.tech/stellar-wallets-kit@1.9.5?bundle-deps';
     import * as Stellar from 'https://esm.sh/@stellar/stellar-sdk@16?bundle-deps';
     import { Buffer } from 'https://esm.sh/buffer@6';
+    // The signature boundary: the exact bytes both parties sign. Never re-derive
+    // these here — see the header of canonical.js.
+    import { assetFor, fillCanonicalArgs, canonicalPayload } from './canonical.js';
     globalThis.Buffer = globalThis.Buffer || Buffer;
 
     // --- config -----------------------------------------------------------
@@ -103,20 +106,6 @@
       }
       if (!sig || typeof sig !== 'string') throw new Error('Wallet returned no signature.');
       return sig;
-    }
-
-    // exact bytes the maker signs — fixed key order = deterministic
-    function canonicalPayload(o) {
-      return JSON.stringify({
-        maker_address: o.maker_address,
-        maker_amount: o.maker_amount,
-        maker_token: o.maker_token,
-        taker_address: o.taker_address,
-        taker_amount: o.taker_amount,
-        taker_token: o.taker_token,
-        expiration: o.expiration,
-        nonce: o.nonce,
-      });
     }
 
     // --- wallet ------------------------------------------------------------
@@ -389,52 +378,12 @@
       state.incoming.find((o) => o.id === id) || state.sent.find((o) => o.id === id);
     const refreshLists = () => Promise.all([loadIncoming(), loadSent()]);
 
-    // token string ('XLM' | 'CODE:ISSUER') -> Asset
-    function assetFor(tokenStr) {
-      if (!tokenStr || tokenStr.toUpperCase() === 'XLM') return { asset: Stellar.Asset.native(), native: true };
-      const [code, issuer] = tokenStr.split(':');
-      return { asset: new Stellar.Asset(code, issuer), native: false };
-    }
-    // Asset -> Stellar Asset Contract id ('C...'), normalising older return shapes
-    function sacIdFor(tokenStr) {
-      let id = assetFor(tokenStr).asset.contractId(PASSPHRASE);
-      if (id instanceof Uint8Array) id = Stellar.StrKey.encodeContract(id);
-      else if (typeof id === 'string' && !id.startsWith('C')) id = Stellar.StrKey.encodeContract(Buffer.from(id, 'hex'));
-      return id;
-    }
-    // decimal string -> i128 stroops (7 dp) as BigInt
-    function toStroops(s) {
-      const [whole, frac = ''] = String(s).split('.');
-      return BigInt(whole || '0') * 10000000n + BigInt((frac + '0000000').slice(0, 7));
-    }
-    async function sha256Bytes(str) {
-      return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)));
-    }
-
     // address ('G…'/'C…') behind an address-credential auth entry, else null
     function entryAddr(e) {
       try { return Stellar.Address.fromScAddress(e.credentials().address().address()).toString(); }
       catch { return null; }
     }
 
-    // canonical `fill` arguments, derived deterministically from the order so
-    // both parties sign — and the submitter calls — byte-identical terms. This
-    // binding is what makes settlement safe: the on-chain amounts cannot differ
-    // from what each party signed.
-    async function fillCanonicalArgs(order) {
-      const idBytes = await sha256Bytes(order.id);
-      const expSec = Math.floor(new Date(order.expiration).getTime() / 1000);
-      return [
-        Stellar.Address.fromString(order.maker_address).toScVal(),
-        Stellar.Address.fromString(order.taker_address).toScVal(),
-        Stellar.Address.fromString(sacIdFor(order.maker_token)).toScVal(),
-        Stellar.Address.fromString(sacIdFor(order.taker_token)).toScVal(),
-        Stellar.nativeToScVal(toStroops(order.maker_amount), { type: 'i128' }),
-        Stellar.nativeToScVal(toStroops(order.taker_amount), { type: 'i128' }),
-        Stellar.nativeToScVal(BigInt(expSec), { type: 'u64' }),
-        Stellar.nativeToScVal(Buffer.from(idBytes), { type: 'bytes' }),
-      ];
-    }
     const fillHostFn = (args) =>
       new Stellar.Contract(OTC_CONTRACT_ID).call('fill', ...args).body().invokeHostFunctionOp().hostFunction();
 
@@ -488,7 +437,7 @@
         await ensureTrustline(recvToken, myAddr);
 
         const server = rpc();
-        const args = await fillCanonicalArgs(order);
+        const args = await fillCanonicalArgs(order, PASSPHRASE);
         // counterparty as source → our require_auth surfaces as a signable entry
         const src = await server.getAccount(otherAddr);
         const tx = new Stellar.TransactionBuilder(src, { fee: Stellar.BASE_FEE, networkPassphrase: PASSPHRASE })
@@ -540,7 +489,7 @@
         toast('Submitting settlement — check your wallet…');
 
         const server = rpc();
-        const hostFn = fillHostFn(await fillCanonicalArgs(order));
+        const hostFn = fillHostFn(await fillCanonicalArgs(order, PASSPHRASE));
         const auth = [
           Stellar.xdr.SorobanAuthorizationEntry.fromXDR(order.maker_auth, 'base64'),
           Stellar.xdr.SorobanAuthorizationEntry.fromXDR(order.taker_auth, 'base64'),

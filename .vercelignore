@@ -1,8 +1,22 @@
-# Vercel only serves the static frontend. Exclude everything else so the
-# upload stays small (the Rust build dir alone is ~400MB).
+# Vercel builds the frontend (npm run build → dist/). Exclude everything the
+# build doesn't need so the upload stays small (the Rust build dir alone is
+# ~400MB). NOTE: fixtures/ must ship — canonical.test.ts imports it and tsc
+# runs as part of the build.
 contracts/
 target/
 .claude/
 .agents/
 skills-lock.json
 *.log
+dist/
+
+# Dev-only: vector-capture harness, specs, vanilla reference implementation.
+tools/
+docs/
+otc.js
+canonical.js
+
+# Belt-and-braces: .mcp.json holds a live Supabase access token. It is gitignored,
+# so a Git-based deploy never sees it — but a `vercel` CLI deploy from this
+# directory is governed by THIS file, not .gitignore.
+.mcp.json

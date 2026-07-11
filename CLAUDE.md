@@ -44,36 +44,50 @@ stack (see Stack below).
 - **Frontend redesigned (2026-07-08): "private desk", brand = TrustRFQ.** Shared design system in
   `styles.css`; hardened output layer (`esc()` on all DB strings, token allow-list quarantine,
   `settle_tx_hash` validation). Details in commit `ef4b70c`.
+- **Frontend migrated to React + TypeScript + Vite (2026-07-10, branch
+  `frontend/react-ts-migration`).** Like-for-like port of the desk; landing stays hand-written
+  static HTML in `public/`. The signature boundary (`src/core/canonical.ts`) is pinned
+  **byte-for-byte** to the vanilla output via golden vectors (`fixtures/canonical-args.json`,
+  captured from the live esm.sh stack — regenerate with `npm run capture`). CSP tightened:
+  **esm.sh removed entirely** (deps now bundled). Vanilla `otc.js`/`canonical.js` kept at repo
+  root as the reference implementation (not deployed) until the two-wallet E2E passes on the new
+  stack. Spec: `docs/superpowers/specs/2026-07-10-react-ts-frontend-migration-design.md`.
 
 ## Stack
 
-- **Frontend — migration decided (2026-07-10):** the frontend will be rebuilt in
-  **React + TypeScript** (build-based stack); upcoming complex features (intent/private-offer
-  layer, institutional RFQ) will be developed on the new stack. **The current vanilla files
-  (`otc.html`/`otc.js`/`hero.*`/`styles.css`) remain the live product until the migration lands** —
-  bugfixes continue on the vanilla side. Framework/tooling choice (Next.js vs Vite etc.) is not
-  yet decided; the migration gets its own design session.
-- **Current (live) frontend:** plain static HTML, **no build step**, deployed on Vercel. Browser
-  libraries are ES-module imports from **esm.sh**.
+- **Frontend: React + TypeScript on Vite** (migrated 2026-07-10). The desk (`otc.html` → `src/`)
+  is a client-only SPA compiled to static files; **no server runtime** (mirrors AirSwap's
+  architecture — their quote server is a separate deployable, and so will ours be). The landing
+  (`public/hero.html` + `hero.js`) stays hand-written static HTML, copied verbatim into the build.
+  Deployed on Vercel via `npm run build` → `dist/`.
+- **Runtime config is deliberately un-bundled:** `public/otc-config.js` / `public/supabase-config.js`
+  stay `window.*` scripts, so a Testnet reset is a one-file edit, not a rebuild (typed in
+  `src/config.ts`).
 - **Backend:** Supabase (Postgres + RLS + Realtime) used with the **anon key, no auth**.
 - **Chain:** Stellar **Testnet**; settlement via a **Soroban** (Rust) contract; classic assets used
   as **SACs** (Stellar Asset Contracts).
-- **Pinned browser deps:** `@creit.tech/stellar-wallets-kit@1.9.5`, `@stellar/stellar-sdk@16`,
-  `@supabase/supabase-js@2`, `buffer@6`.
+- **Pinned deps (now in package.json):** `@creit.tech/stellar-wallets-kit@1.9.5` (exact),
+  `@stellar/stellar-sdk@^16`, `@supabase/supabase-js@^2`, `buffer@^6`, React 19, Vite 8, Vitest 4.
 
 ## File map
 
 | Path | What |
 |------|------|
-| `hero.html` | TrustRFQ landing (self-contained animated hero); links → `otc.html`. |
-| `otc.html` | The desk shell: wallet gate, RFQ ticket, Incoming/Sent, settlement UI. **Markup only.** |
-| `otc.js` | The app logic (one ES module): wallet, RFQ, `signOrderAuth`/`fillOrder`. |
-| `styles.css` | **Shared design system** (tokens + all component/page styles for both pages). |
-| `hero.js` | Landing-only canvas starfield (plain script, reduced-motion aware). |
-| `favicon.svg` | Gold swap-mark favicon (both pages). |
-| `supabase-config.js` | `window.SUPABASE_URL` / `SUPABASE_ANON_KEY`. |
-| `otc-config.js` | `window.RPC_URL` / `HORIZON_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID`. |
-| `vercel.json` | `cleanUrls` + rewrite `/` → `/hero`; security **headers** (CSP, HSTS, …). |
+| `otc.html` | **Vite entry** for the desk: head + `#root` + config scripts + `src/main.tsx`. |
+| `src/core/canonical.ts` | **The signature boundary** — `fillCanonicalArgs` etc., pinned by golden vectors. |
+| `src/core/fill.ts` | Chain ops: `signFillAuth` / `submitFill`, wallet injected as `WalletSigner`. |
+| `src/core/tokens.ts` | Token allow-list (quarantine boundary) + validation/display helpers. |
+| `src/config.ts` | Typed reader of the `window.*` runtime config (the only module that may). |
+| `src/data/` | Supabase client, `orders.ts` queries/mutations, `useOrders` (+ realtime). |
+| `src/wallet/` | Wallets-kit singleton + `walletSign`, `WalletContext` (connect/disconnect). |
+| `src/ui/` | `Gate`, `Ticket`, `OrderCard`, `SettlementStrip`, `Toast`, `useSettlement`, `useNow`. |
+| `public/hero.html` + `hero.js` | Hand-written landing (never bundled); links → `otc.html`. |
+| `public/styles.css` | **Shared design system** — unchanged by the migration; JSX must keep its classes. |
+| `public/*-config.js` | Runtime config (`window.*`): Supabase URL/key, RPC/Horizon/passphrase/contract id. |
+| `fixtures/canonical-args.json` | Golden vectors pinning `canonical.ts` to the vanilla bytes. |
+| `tools/capture.html` + `capture-server.mjs` | Regenerates the golden vectors from the vanilla esm.sh stack. |
+| `otc.js`, `canonical.js` | **Vanilla reference implementation** (root; excluded from deploy). |
+| `vercel.json` | `buildCommand`/`outputDirectory` + `cleanUrls` + `/`→`/hero` rewrite; CSP/HSTS headers. |
 | `contracts/otc_swap/` | Soroban contract: `fill(...)` + unit tests (`src/lib.rs`, `src/test.rs`). |
 | `README.md` | Setup, schema SQL (+ anon-grant hardening), Phase-2 deploy steps, E2E. |
 
@@ -96,7 +110,10 @@ stack (see Stack below).
 ## Commands
 
 ```bash
-npx serve .                                                   # → http://localhost:3000/otc.html
+npm run dev                                                   # → http://localhost:5173/otc.html
+npm test                                                      # vitest: golden vectors + token/validation suites
+npm run build                                                 # tsc --noEmit && vite build → dist/
+npm run capture                                               # regenerate fixtures/ from the vanilla esm.sh stack
 cargo test --manifest-path contracts/otc_swap/Cargo.toml      # contract unit tests
 cd contracts/otc_swap && stellar contract build               # → target/.../release/otc_swap.wasm
 # deploy + SAC + config: see README "On-chain settlement (Phase 2)"
@@ -112,13 +129,24 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Gotchas (do not rediscover)
 
-- **esm.sh `?bundle-deps` is mandatory** for `stellar-wallets-kit` and `stellar-sdk` — default
-  builds ship a CJS dep with broken named-export interop that throws on import and kills the whole
-  module (symptom: Connect button does nothing). Keep the `globalThis.Buffer = Buffer` shim.
-- **The CSP in `vercel.json` is an allow-list — keep it in sync with the code.** Page JS must stay
-  in external files (`otc.js`, `hero.js`), never inline. Any new external origin must be added to
-  the matching directive (RPC/Horizon/Supabase → `connect-src`, etc.) or the browser silently
-  blocks it. Test in the browser console (zero CSP violations) after any change.
+- **The bundle must resolve the npm `buffer`, never Node's builtin.** `vite.config.ts` aliases
+  `buffer` → `buffer/index.js` so Vitest (Node) and the browser bundle exercise the SAME
+  implementation the signatures are computed with. If canonical bytes ever drift, the golden-vector
+  tests (`src/core/canonical.test.ts` vs `fixtures/canonical-args.json`) go red — trust them.
+- **`define: { global: 'globalThis' }` in `vite.config.ts` is load-bearing** — wallet/SDK deps
+  reference Node's `global` at module scope; without the shim the whole bundle dies on load
+  (symptom: blank page, "global is not defined"). esm.sh used to shim this invisibly.
+- **`modulePreload.polyfill: false` keeps the build free of inline scripts** — the CSP has no
+  `'unsafe-inline'` in `script-src` and must never gain one. After any build-config change, check
+  `dist/*.html` for inline `<script>` blocks.
+- **The CSP in `vercel.json` is an allow-list — keep it in sync with the code.** Any new external
+  origin must be added to the matching directive (RPC/Horizon/Supabase → `connect-src`, etc.) or
+  the browser silently blocks it. Test in the browser console (zero CSP violations) after any
+  change. esm.sh is GONE from the CSP — only `tools/capture.html` (dev-only, never deployed) still
+  loads from it.
+- **esm.sh `?bundle-deps` (vanilla reference + capture tool only):** default esm.sh builds of
+  `stellar-wallets-kit`/`stellar-sdk` ship a CJS dep with broken named-export interop that throws
+  on import. Only relevant to `otc.js`/`canonical.js`/`tools/capture.html` now.
 - **macOS (aarch64) toolchain works natively** — rustc 1.96.1, `wasm32v1-none` target, Stellar
   CLI 27 (`~/.local/bin/stellar`). No workarounds needed on this Mac.
 - **Windows-only:** native build/test hits MSVC-linker / non-ASCII-path / cdylib traps; the wasm
@@ -130,18 +158,23 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Verify before deploying
 
-1. `cargo test …` green — 6 tests (swap, replay, expiry, zero-amount, scoped-auth, amount-tamper).
-2. `stellar contract build` produces `otc_swap.wasm` (target `wasm32v1-none`).
-3. Review amounts + contract/SAC ids before signing any wallet prompt.
-4. Deploy → paste `C…` id into `otc-config.js` → run the Phase-2 migration → two funded Testnet
-   wallets, two browsers, E2E (README).
+1. `npm test` green — golden vectors byte-identical + token/validation suites (34 tests).
+2. `npm run build` clean; `dist/*.html` has **zero inline scripts**; `grep -r esm.sh dist/` empty.
+3. `cargo test …` green — 6 tests (swap, replay, expiry, zero-amount, scoped-auth, amount-tamper).
+4. `stellar contract build` produces `otc_swap.wasm` (target `wasm32v1-none`).
+5. Review amounts + contract/SAC ids before signing any wallet prompt.
+6. Deploy → paste `C…` id into `public/otc-config.js` → run the Phase-2 migration → two funded
+   Testnet wallets, two browsers, E2E (README). Browser console must show zero CSP violations.
 
 ## Conventions
 
-- **Live vanilla side:** match existing style (vanilla JS, no framework/build; design tokens are
-  CSS custom properties in `styles.css` — extend the tokens, don't hardcode new literals). Any
-  DB-sourced string entering `innerHTML` goes through `esc()`; keep IDs and `data-*` hooks stable.
-- **New complex features** (intent layer, institutional RFQ) wait for / are built on the
-  **React + TypeScript** stack — don't grow them into the vanilla codebase.
+- **React side:** strict TS, no `dangerouslySetInnerHTML` (JSX escaping replaces the old `esc()`),
+  keep JSX class names in lockstep with `public/styles.css` (design tokens are CSS custom
+  properties — extend the tokens, don't hardcode new literals). `src/core/` stays pure: no wallet,
+  no network, no window (config comes in through `src/config.ts`, the wallet through the
+  `WalletSigner` interface).
+- **`otc.js`/`canonical.js` are a frozen reference** — don't develop on them; delete once the
+  two-wallet E2E passes on the React build.
+- **New complex features** (intent layer, institutional RFQ) go on the React + TypeScript stack.
 - Reference files as clickable `path:line` links.
 - **Commit/push only when asked**; branch off `main` first.

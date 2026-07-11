@@ -8,3 +8,7 @@
 
 # Rust / Soroban build artifacts
 target/
+node_modules
+
+# Vite build output
+dist/

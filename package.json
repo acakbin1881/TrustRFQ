@@ -1,0 +1,34 @@
+{
+  "name": "trustrfq",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check:bundle": "node tools/bundle-check-driver.mjs",
+    "check:dev": "node tools/dev-smoke.mjs",
+    "capture": "node tools/capture-server.mjs"
+  },
+  "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "1.9.5",
+    "@stellar/stellar-sdk": "^16.0.1",
+    "@supabase/supabase-js": "^2.110.2",
+    "buffer": "^6.0.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
+  }
+}
