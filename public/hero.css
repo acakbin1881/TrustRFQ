@@ -28,6 +28,7 @@
   --lp-mist:  rgba(255, 255, 255, 0.62);  /* the two-tone headline's dim lines (large text) */
   --lp-body:  rgba(255, 255, 255, 0.90);
   --lp-soft:  rgba(255, 255, 255, 0.80);  /* captions/labels — only on the deep glass */
+  --lp-deep-ink: #0D1140;                 /* ink for the panel's MILKY half (tickets, chips) */
 
   /* glass — two frosts, and the difference is load-bearing.
      LIGHT is the reference's milky frost: the hero panel, nav, tickets, chips.
@@ -212,8 +213,13 @@ img, svg { display: block; max-width: 100%; }
   border-radius: var(--lp-r-xl);
   overflow: hidden;   /* clips the big arc */
   background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.05));
-  border: 1px solid rgba(255, 255, 255, 0.22);
+    linear-gradient(103deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.09) 34%,
+      rgba(255, 255, 255, 0.26) 56%,
+      rgba(255, 255, 255, 0.44) 78%,
+      rgba(255, 255, 255, 0.38) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.38);
   box-shadow: var(--lp-sheen), 0 40px 100px rgba(16, 20, 110, 0.35);
 }
 
@@ -516,19 +522,22 @@ img, svg { display: block; max-width: 100%; }
   margin-bottom: 46px;
 }
 
+/* The tickets sit on the panel's MILKY half, where white type cannot clear AA
+   however you tune it. So they are printed in dark ink — which is how a real
+   card is printed anyway, and it reads sharper than the mockup's white-on-frost. */
 .lp-ticket__label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.94);
+  color: rgba(13, 17, 64, 0.92);
 }
 
 .lp-ticket__val {
   margin-top: 5px;
   font-family: var(--lp-mono);
   font-size: 13px;
-  color: #fff;
+  color: var(--lp-deep-ink);
 }
 
 .lp-ticket__asset {
@@ -536,6 +545,7 @@ img, svg { display: block; max-width: 100%; }
   font-size: 19px;
   font-weight: 600;
   letter-spacing: 0.02em;
+  color: var(--lp-deep-ink);
 }
 
 /* the accent band — the reference's coloured lower half of each card */
@@ -607,12 +617,14 @@ img, svg { display: block; max-width: 100%; }
   box-shadow: var(--lp-drop);
 }
 
+.lp-chip { color: var(--lp-deep-ink); }
+
 .lp-chip::before {
   content: '';
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--lp-deep-ink);
   flex: none;
 }
 
@@ -623,7 +635,7 @@ img, svg { display: block; max-width: 100%; }
    copying the shape at the cost of the content. */
 .lp-chip--signed { top: 66px;  right: 370px; }
 .lp-chip--atomic { top: 384px; right: 370px; }
-.lp-chip--atomic::before { background: var(--lp-teal); }
+.lp-chip--atomic::before { background: #0E9E90; }
 
 /* small round glass affordances, as in the reference's corner icon buttons */
 .lp-orb {
@@ -638,6 +650,7 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .lp-orb--b { top: 470px; right: 34px; }
+.lp-orb svg [stroke] { stroke: var(--lp-deep-ink); }
 
 /* --------------------------------------------------------------- 9. SECTIONS */
 .lp-section { padding: 110px 34px; }
