@@ -10,11 +10,12 @@ permissionless `fill` (no separate on-chain `approve` step).
 
 | File | What it is |
 |------|------------|
-| `hero.html` | Landing page (self-contained animated hero — no external media). "Launch the desk" opens the app. |
+| `hero.html` | Landing page — electric-indigo glassmorphism, hand-written, never bundled. Links to the desk and the intent board. |
 | `otc.html` | The desk shell — wallet gate, RFQ ticket, incoming/sent inboxes, settlement UI (markup only; styles in `styles.css`). |
 | `otc.js` | The app logic (ES module) — externalized from `otc.html` so the CSP needs no `'unsafe-inline'` for scripts. |
-| `styles.css` | The shared design system (tokens + all component/page styles for both pages). |
-| `hero.js` | Landing-only canvas starfield (self-hosted; honors `prefers-reduced-motion`). |
+| `styles.css` | The **desk's** design system (`otc.html` / `intent.html`). The landing does not load it. |
+| `hero.css` | The **landing's** design system — self-contained, `.lp-`-prefixed, no overlap with `styles.css`. |
+| `hero.js` | Landing-only: scroll reveal + pointer parallax (self-hosted; honors `prefers-reduced-motion`, and fails *visible* — if it never runs, nothing is hidden). |
 | `favicon.svg` | The TrustRFQ swap-mark. |
 | `supabase-config.js` | Sets `window.SUPABASE_URL` / `window.SUPABASE_ANON_KEY`. |
 | `otc-config.js` | Sets `RPC_URL` / `NETWORK_PASSPHRASE` / `OTC_CONTRACT_ID` for settlement. |

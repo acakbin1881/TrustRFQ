@@ -62,14 +62,27 @@ stack (see Stack below).
   `maker_amount`/`taker_amount`** (round write-back; README + `docs/migrations/…intent-layer.sql`
   document the trade-off). 4-lens adversarial review run; all confirmed findings fixed.
   Pending: the spec §8 two-browser E2E.
+- **Landing redesigned (2026-07-12, branch `design`): electric-indigo glassmorphism.** Rebuilt from a
+  supplied reference mockup — frosted panel, pill nav, two-tone headline, and a stack of floating
+  glass **order tickets** (the mockup's credit cards, re-authored as the artifact this product makes).
+  Self-contained in `public/hero.css` (`.lp-` prefix); `hero.html` no longer loads `styles.css`, and
+  the now-dead landing rules were removed from it. **The desk is untouched and stays dark + gold** —
+  verified pixel-identical at 1440px and 375px. Fonts: Outfit + Plus Jakarta Sans + IBM Plex Mono
+  (all on the already-allowed Google Fonts origin → **no CSP change**). All 30 text elements clear
+  WCAG AA, measured against rendered pixels; zero CSP violations under the production headers.
+  Next: redesign the desk to match, so the two stop looking like different products.
 
 ## Stack
 
 - **Frontend: React + TypeScript on Vite** (migrated 2026-07-10). The desk (`otc.html` → `src/`)
   is a client-only SPA compiled to static files; **no server runtime** (mirrors AirSwap's
   architecture — their quote server is a separate deployable, and so will ours be). The landing
-  (`public/hero.html` + `hero.js`) stays hand-written static HTML, copied verbatim into the build.
-  Deployed on Vercel via `npm run build` → `dist/`.
+  (`public/hero.html` + `hero.css` + `hero.js`) stays hand-written static HTML, copied verbatim into
+  the build. Deployed on Vercel via `npm run build` → `dist/`.
+- **Two visual systems, on purpose.** The desk is the dark "private desk" (`styles.css`); the landing
+  is electric-indigo glassmorphism (`hero.css`, added 2026-07-12 on branch `design`). They share no
+  CSS — the landing does not load `styles.css`, and every landing selector is `.lp-`-prefixed. Until
+  the desk is redesigned to match, expect them to look like different products.
 - **Runtime config is deliberately un-bundled:** `public/otc-config.js` / `public/supabase-config.js`
   stay `window.*` scripts, so a Testnet reset is a one-file edit, not a rebuild (typed in
   `src/config.ts`).
@@ -95,8 +108,9 @@ stack (see Stack below).
 | `src/core/pairs.ts` / `negotiation.ts` / `balances.ts` | Pure intent-layer logic (pair keys, rounds/`currentTerms`, Horizon balance parsing) — unit-tested. |
 | `src/data/intents.ts` etc. | Intent-layer queries/hooks (`broadcasts`, `rounds`, `useBalances`, realtime). |
 | `public/intent.css` | Intent-page styles (sectioned; uses `styles.css` tokens, never edits it). |
-| `public/hero.html` + `hero.js` | Hand-written landing (never bundled); links → `otc.html`. |
-| `public/styles.css` | **Shared design system** — unchanged by the migration; JSX must keep its classes. |
+| `public/hero.html` + `hero.js` | Hand-written landing (never bundled); links → `otc.html`, `intent.html`. `hero.js` = scroll reveal + ticket parallax. |
+| `public/hero.css` | **The landing's design system** — self-contained, `.lp-` prefixed, loads instead of `styles.css`. |
+| `public/styles.css` | **The desk's design system** (`otc.html`/`intent.html` only); JSX must keep its classes. |
 | `public/*-config.js` | Runtime config (`window.*`): Supabase URL/key, RPC/Horizon/passphrase/contract id. |
 | `fixtures/canonical-args.json` | Golden vectors pinning `canonical.ts` to the vanilla bytes. |
 | `tools/capture.html` + `capture-server.mjs` | Regenerates the golden vectors from the vanilla esm.sh stack. |
@@ -143,6 +157,21 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Gotchas (do not rediscover)
 
+- **Landing: `transform` and `backdrop-filter` must be on the SAME element.** A transformed (or
+  `filter`ed / `will-change`d) *ancestor* becomes the backdrop root, and any descendant's blur then
+  samples nothing — the panel renders empty/black in Chrome and Safari. This is why the ticket
+  parallax feeds through `--lp-mx`/`--lp-my` custom properties instead of transforming a wrapper, and
+  why `.lp-surface` is a plain translucent wash rather than a `.lp-glass` (a frosted parent would
+  flatten the frost on every nav pill and ticket inside it).
+- **Landing: the glass comes in two tints and that is an accessibility decision, not a style one.**
+  A milky *white* frost lifts its backdrop so far toward white that on the electric canvas even
+  **pure white text cannot reach 4.5:1** — on the first pass all 30 text elements failed WCAG AA. So
+  surfaces carrying small copy (`.lp-card`, `.lp-plaque`, `.lp-contrast`, `.lp-cta`, `.lp-eyebrow`)
+  use the **deep indigo frost** (`--lp-glass-deep`), which buys ~3 stops at no visual cost. Same
+  reason the ambient blooms are faint and each ticket band carries its own ink. **If you lighten any
+  landing surface or dim any landing text, re-measure** — and measure against the *rendered pixels*
+  (screenshot the page with the glyphs made transparent and sample the backdrop), because walking the
+  CSSOM cannot see gradients, stacked frosts, or `backdrop-filter`.
 - **The bundle must resolve the npm `buffer`, never Node's builtin.** `vite.config.ts` aliases
   `buffer` → `buffer/index.js` so Vitest (Node) and the browser bundle exercise the SAME
   implementation the signatures are computed with. If canonical bytes ever drift, the golden-vector
