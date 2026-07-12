@@ -75,6 +75,13 @@
   --lp-text:    'Plus Jakarta Sans', system-ui, sans-serif;
   --lp-mono:    'IBM Plex Mono', ui-monospace, monospace;
 
+  /* ONE column width. The hero panel, every section's content and the footer all
+     measure to this, so their left and right edges land on the same line down the
+     whole page. The arithmetic: the panel sits directly in .lp-canvas, the section
+     wrap sits inside .lp-section's 44px padding — set both to the same max-width
+     and the paddings cancel exactly, at any viewport. No magic numbers. */
+  --lp-col: 1120px;
+
   --lp-r-pill: 999px;
   --lp-r-xl:   40px;
   --lp-r-lg:   24px;
@@ -230,7 +237,7 @@ img, svg { display: block; max-width: 100%; }
    children sampling the real page. */
 .lp-surface {
   position: relative;
-  max-width: 1400px;
+  max-width: var(--lp-col);
   margin: 0 auto;
   padding: 22px 22px 64px;
   border-radius: var(--lp-r-xl);
@@ -672,7 +679,7 @@ img, svg { display: block; max-width: 100%; }
 /* --------------------------------------------------------------- 9. SECTIONS */
 .lp-section { padding: 96px 44px; }
 
-.lp-section__wrap { max-width: 1120px; margin: 0 auto; }
+.lp-section__wrap { max-width: var(--lp-col); margin: 0 auto; }
 
 .lp-eyebrow {
   display: inline-flex;
@@ -1050,9 +1057,9 @@ img, svg { display: block; max-width: 100%; }
 /* The footer lands on the cloud, not on the deep canvas — so it is printed, not
    lit. The brand mark has to flip with it: white strokes vanish on cloud. */
 .lp-footer {
-  max-width: 1400px;
+  max-width: var(--lp-col);
   margin: 0 auto;
-  padding: 40px 56px 30px;
+  padding: 40px 0 30px;
   color: var(--lp-ink-2);
 }
 
