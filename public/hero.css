@@ -16,7 +16,6 @@
   /* canvas */
   --lp-canvas:      #3B44F5;   /* the electric indigo the page sits on */
   --lp-canvas-deep: #2A31D6;   /* vignette, deep shadow */
-  --lp-canvas-lift: #5560F7;   /* opaque glass fallback */
   --lp-cta:         #1F2BEE;   /* solid button — deeper than the canvas, so it reads as raised */
   --lp-cta-hi:      #2E39FF;
 
@@ -30,24 +29,30 @@
   --lp-soft:  rgba(255, 255, 255, 0.80);  /* captions/labels — only on the deep glass */
   --lp-deep-ink: #0D1140;                 /* ink for the panel's MILKY half (tickets, chips) */
 
-  /* MILK — the reference's white frosted glass, used for the section surfaces.
-     It lands well above mid luminance, so it takes DARK ink, not white. Trying to
-     keep white type on it is the one thing that cannot work: white tops out at
-     2.7:1 here. Dark navy lands at 6.5:1 and reads like print on frosted glass. */
-  --lp-milk:        rgba(255, 255, 255, 0.42);
-  --lp-milk-solid:  rgba(255, 255, 255, 0.52);
-  --lp-milk-line:   rgba(13, 17, 64, 0.14);
-  --lp-ink-1: #0D1140;                    /* on milk: titles, figures */
-  --lp-ink-2: rgba(13, 17, 64, 0.92);     /* on milk: body */
-  --lp-ink-3: rgba(13, 17, 64, 0.82);     /* on milk: labels */
+  /* THE SHEET — below the hero the page inverts. The light frosted colour that
+     used to be the cards becomes the ground, and the electric blue that used to
+     be the ground becomes the cards. Two worlds: a lit hero, a printed document.
+     MILK is what the ticket stack still floats on, up in the hero's bright half. */
+  --lp-milk:      rgba(255, 255, 255, 0.42);
+  --lp-sheet-line: rgba(13, 17, 64, 0.16);
 
-  /* Every accent needs two values on this page: one to FILL with, one to WRITE
-     with. A colour bright enough to read as a bar on white glass (1.6:1 as text)
-     is nowhere near readable as a figure, and vice versa. Same hue, two jobs. */
-  --lp-loss:     #D8365B;   /* fill: the slippage bars — the page's one warm accent */
-  --lp-loss-ink: #5A0A22;   /* text: the slippage figures */
-  --lp-win:      #0E9E90;   /* fill: the OTC bar, the chip dot */
-  --lp-win-ink:  #04352F;   /* text: the OTC figure, the plaque's ✓ signed */
+  --lp-pane:       rgba(48, 57, 240, 0.86);  /* the blue glass cards ON the sheet */
+  --lp-pane-solid: rgba(48, 57, 240, 0.94);
+  --lp-pane-line:  rgba(255, 255, 255, 0.28);
+
+  /* INK, by the surface it lands on. Nothing here is decoration — the same navy
+     that reads at 6.5:1 on the sheet is invisible on a pane, and vice versa. */
+  --lp-ink-1: #0D1140;                    /* on the SHEET (and the hero's milk): titles */
+  --lp-ink-2: rgba(13, 17, 64, 0.92);     /* on the SHEET: body */
+
+  /* Accents come in a FILL and a TEXT value, and they are not interchangeable.
+     A coral saturated enough to read as a bar (#FF7A96) is only 2.5:1 as a
+     figure on the same blue pane — colour that carries meaning as a shape needs
+     hue; colour that carries meaning as a word needs luminance. Two values. */
+  --lp-loss-fill: #FF7A96;
+  --lp-loss-text: #FFD6DE;
+  --lp-win-fill:  #6FE3D2;
+  --lp-win-text:  #97EEE1;
 
   /* glass — two frosts, and the difference is load-bearing.
      LIGHT is the reference's milky frost: the hero panel, nav, tickets, chips.
@@ -147,18 +152,41 @@ img, svg { display: block; max-width: 100%; }
   }
 }
 
-.lp-milk {
-  background: var(--lp-milk-solid);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), var(--lp-drop);
+/* THE SHEET — everything below the hero sits on this. Same slab geometry as the
+   hero panel, inverted value: the page's light "document". */
+.lp-sheet {
+  max-width: 1400px;
+  margin: 26px auto 0;
+  border-radius: var(--lp-r-xl);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  /* A WASH, not a fill — the field pools visibly through it. No backdrop-filter
+     here on purpose: it would make the sheet a backdrop root and kill the blur on
+     every pane inside it (the same trap the hero panel avoids). Blurring a smooth
+     gradient would change nothing anyway. */
+  background: linear-gradient(168deg,
+    rgba(255, 255, 255, 0.50) 0%,
+    rgba(255, 255, 255, 0.42) 38%,
+    rgba(255, 255, 255, 0.48) 68%,
+    rgba(255, 255, 255, 0.40) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 40px 100px rgba(16, 20, 110, 0.30);
+  overflow: hidden;
   color: var(--lp-ink-2);
 }
 
+/* THE PANES — blue glass cards ON the sheet. The exact swap the hero makes in
+   reverse, so the two halves of the page read as one idea seen twice. */
+.lp-pane {
+  background: var(--lp-pane-solid);
+  border: 1px solid var(--lp-pane-line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 24px 60px rgba(16, 20, 110, 0.28);
+  color: var(--lp-body);
+}
+
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .lp-milk {
-    background: var(--lp-milk);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-            backdrop-filter: blur(20px) saturate(1.4);
+  .lp-pane {
+    background: var(--lp-pane);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+            backdrop-filter: blur(18px) saturate(1.5);
   }
 }
 
@@ -173,30 +201,40 @@ img, svg { display: block; max-width: 100%; }
   padding: 26px;
 }
 
+/* THE FIELD — the indigo you see THROUGH the glass.
+   Absolute, not fixed: it spans the whole document, so it does not slide with
+   the viewport and read as one flat colour everywhere. It pools instead —
+   deep under the problem, opening up through the solution, deep again under the
+   security model, dark at the close. The glass above it is only interesting
+   because what is behind it changes.
+
+   Every pool is contrast-budgeted. The darkest ones sit at 55%: deeper and the
+   translucent sheet above them stops being light enough for its dark ink; the
+   brightest are capped too, because an earlier bloom behind the ticket stack
+   lifted the backdrop so far that even PURE white on the tickets died at 4.1:1. */
 .lp-canvas::before {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: -2;
-  /* Kept deliberately faint. An earlier, brighter cyan bloom sat exactly behind
-     the ticket stack and lifted the backdrop enough that even PURE white text on
-     the tickets could not clear 4.1:1 — ambient light is cheap to add and
-     expensive to read through. */
   background:
-    radial-gradient(60% 50% at 80% 6%, rgba(140, 200, 255, 0.14), transparent 66%),
-    radial-gradient(50% 45% at 10% 92%, rgba(120, 100, 255, 0.18), transparent 68%),
-    radial-gradient(70% 60% at 50% 50%, rgba(70, 90, 240, 0.16), transparent 75%),
+    radial-gradient(80% 22% at 82% 2%,  rgba(140, 200, 255, 0.16), transparent 68%),
+    radial-gradient(78% 13% at 12% 21%, rgba(8, 12, 88, 0.62),     transparent 74%),
+    radial-gradient(88% 12% at 90% 37%, rgba(132, 142, 255, 0.38), transparent 70%),
+    radial-gradient(82% 13% at 18% 55%, rgba(10, 14, 94, 0.54),    transparent 74%),
+    radial-gradient(92% 13% at 76% 73%, rgba(124, 136, 255, 0.34), transparent 70%),
+    radial-gradient(82% 15% at 28% 93%, rgba(6, 10, 72, 0.64),     transparent 76%),
     var(--lp-canvas);
 }
 
-/* the deep edge vignette that makes the canvas read as lit from within */
+/* the edge vignette — fixed, so the frame stays lit while the field scrolls past */
 .lp-canvas::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(120% 100% at 50% 40%, transparent 45%, rgba(24, 28, 140, 0.45));
+  background: radial-gradient(120% 100% at 50% 40%, transparent 52%, rgba(20, 24, 128, 0.38));
 }
 
 /* The big panel deliberately does NOT use .lp-glass. An element with
@@ -640,7 +678,7 @@ img, svg { display: block; max-width: 100%; }
    copying the shape at the cost of the content. */
 .lp-chip--signed { top: 66px;  right: 370px; }
 .lp-chip--atomic { top: 384px; right: 370px; }
-.lp-chip--atomic::before { background: var(--lp-win); }
+.lp-chip--atomic::before { background: var(--lp-win-fill); }
 
 /* small round glass affordances, as in the reference's corner icon buttons */
 .lp-orb {
@@ -658,7 +696,7 @@ img, svg { display: block; max-width: 100%; }
 .lp-orb svg [stroke] { stroke: var(--lp-deep-ink); }
 
 /* --------------------------------------------------------------- 9. SECTIONS */
-.lp-section { padding: 110px 34px; }
+.lp-section { padding: 96px 44px; }
 
 .lp-section__wrap { max-width: 1120px; margin: 0 auto; }
 
@@ -671,7 +709,7 @@ img, svg { display: block; max-width: 100%; }
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--lp-ink-1);
+  color: #fff;
 }
 
 .lp-eyebrow::before {
@@ -679,7 +717,7 @@ img, svg { display: block; max-width: 100%; }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--lp-ink-1);
+  background: #fff;
 }
 
 .lp-h2 {
@@ -690,7 +728,7 @@ img, svg { display: block; max-width: 100%; }
   font-weight: 500;
   line-height: 1.14;
   letter-spacing: -0.02em;
-  color: var(--lp-ink);
+  color: var(--lp-ink-1);
 }
 
 .lp-lead {
@@ -698,7 +736,7 @@ img, svg { display: block; max-width: 100%; }
   margin: 20px 0 0;
   font-size: 18px;
   line-height: 1.6;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
 
 /* ---- 9a. THE LADDER (problem) -------------------------------------------
@@ -718,14 +756,14 @@ img, svg { display: block; max-width: 100%; }
   gap: 20px;
   padding-bottom: 20px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--lp-milk-line);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .lp-ladder__title {
   font-family: var(--lp-display);
   font-size: 17px;
   font-weight: 600;
-  color: var(--lp-ink-1);
+  color: var(--lp-ink);
 }
 
 /* a real axis, so the bar lengths mean something */
@@ -736,12 +774,12 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-size: 11px;
   letter-spacing: 0.06em;
-  color: var(--lp-ink-3);
+  color: var(--lp-soft);
 }
 .lp-ladder__axis i {
   width: 120px;
   height: 1px;
-  background: var(--lp-milk-line);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .lp-rung {
@@ -750,7 +788,7 @@ img, svg { display: block; max-width: 100%; }
   align-items: center;
   gap: 20px;
   padding: 15px 0;
-  border-bottom: 1px solid var(--lp-milk-line);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
 }
 .lp-rung:last-child { border-bottom: 0; }
 
@@ -758,7 +796,7 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-display);
   font-size: 19px;
   font-weight: 600;
-  color: var(--lp-ink-1);
+  color: var(--lp-ink);
 }
 .lp-rung__size em {
   display: block;
@@ -766,13 +804,13 @@ img, svg { display: block; max-width: 100%; }
   font-style: normal;
   font-size: 12px;
   font-weight: 500;
-  color: var(--lp-ink-2);
+  color: var(--lp-body);
 }
 
 .lp-rung__track {
   height: 12px;
   border-radius: var(--lp-r-pill);
-  background: rgba(13, 17, 64, 0.09);
+  background: rgba(255, 255, 255, 0.16);
   overflow: hidden;
 }
 
@@ -781,20 +819,20 @@ img, svg { display: block; max-width: 100%; }
   height: 100%;
   min-width: 5px;
   border-radius: var(--lp-r-pill);
-  background: linear-gradient(90deg, rgba(216, 54, 91, 0.45), var(--lp-loss));
+  background: linear-gradient(90deg, rgba(255, 122, 150, 0.5), var(--lp-loss-fill));
 }
 
 .lp-rung__pct {
   font-family: var(--lp-mono);
   font-size: 17px;
   font-weight: 600;
-  color: var(--lp-loss-ink);
+  color: var(--lp-loss-text);
   text-align: right;
 }
 
 .lp-rung__loss {
   font-size: 13px;
-  color: var(--lp-ink-2);
+  color: var(--lp-body);
   text-align: right;
 }
 
@@ -802,20 +840,20 @@ img, svg { display: block; max-width: 100%; }
 .lp-rung--otc {
   margin-top: 10px;
   padding-top: 22px;
-  border-top: 1px solid var(--lp-milk-line);
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
   border-bottom: 0;
 }
-.lp-rung--otc .lp-rung__bar { background: var(--lp-win); }
-.lp-rung--otc .lp-rung__pct { color: var(--lp-win-ink); }
+.lp-rung--otc .lp-rung__bar { background: var(--lp-win-fill); }
+.lp-rung--otc .lp-rung__pct { color: var(--lp-win-text); }
 
 .lp-note {
   max-width: 46em;
   margin: 24px 0 0;
   font-size: 17px;
   line-height: 1.6;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
-.lp-note strong { color: var(--lp-ink); font-weight: 600; }
+.lp-note strong { color: var(--lp-ink-1); font-weight: 600; }
 
 /* ---- 9b. THE SLAB (solution) --------------------------------------------
    Three claims that are true at the same time — not a sequence and not data.
@@ -831,7 +869,7 @@ img, svg { display: block; max-width: 100%; }
 
 .lp-slab__col {
   padding: 34px 30px;
-  border-left: 1px solid var(--lp-milk-line);
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
 }
 .lp-slab__col:first-child { border-left: 0; }
 
@@ -842,11 +880,12 @@ img, svg { display: block; max-width: 100%; }
   height: 46px;
   margin-bottom: 22px;
   border-radius: 14px;
-  background: rgba(13, 17, 64, 0.10);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   font-family: var(--lp-display);
   font-size: 21px;
   font-weight: 600;
-  color: var(--lp-ink-1);
+  color: #fff;
 }
 
 .lp-slab__title {
@@ -855,14 +894,14 @@ img, svg { display: block; max-width: 100%; }
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--lp-ink-1);
+  color: var(--lp-ink);
 }
 
 .lp-slab__body {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
-  color: var(--lp-ink-2);
+  color: var(--lp-body);
 }
 
 /* ---- 9c. THE RAIL (how it works) ----------------------------------------
@@ -889,9 +928,9 @@ img, svg { display: block; max-width: 100%; }
   right: 25px;
   height: 1px;
   background: linear-gradient(90deg,
-    rgba(255, 255, 255, 0.10),
-    rgba(255, 255, 255, 0.45),
-    rgba(255, 255, 255, 0.10));
+    rgba(13, 17, 64, 0.10),
+    rgba(13, 17, 64, 0.35),
+    rgba(13, 17, 64, 0.10));
 }
 
 .lp-rail__step { position: relative; }
@@ -904,9 +943,9 @@ img, svg { display: block; max-width: 100%; }
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--lp-canvas-deep);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 0 0 8px rgba(59, 68, 245, 0.55);
+  background: var(--lp-cta);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 18px rgba(16, 20, 110, 0.35);
   font-family: var(--lp-mono);
   font-size: 14px;
   font-weight: 600;
@@ -919,14 +958,14 @@ img, svg { display: block; max-width: 100%; }
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--lp-ink);
+  color: var(--lp-ink-1);
 }
 
 .lp-rail__body {
   margin: 0;
   font-size: 15px;
   line-height: 1.65;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
 
 /* ---- 9d. THE SPEC SHEET (security) --------------------------------------
@@ -948,23 +987,23 @@ img, svg { display: block; max-width: 100%; }
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   padding: 22px 0;
-  border-top: 1px solid var(--lp-line-soft);
+  border-top: 1px solid var(--lp-sheet-line);
 }
-.lp-spec__row:last-child { border-bottom: 1px solid var(--lp-line-soft); }
+.lp-spec__row:last-child { border-bottom: 1px solid var(--lp-sheet-line); }
 
 .lp-spec__term {
   font-family: var(--lp-display);
   font-size: 19px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--lp-ink);
+  color: var(--lp-ink-1);
 }
 
 .lp-spec__def {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
 
 .lp-plaque {
@@ -977,15 +1016,15 @@ img, svg { display: block; max-width: 100%; }
   align-items: center;
   gap: 7px;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--lp-milk-line);
-  background: rgba(13, 17, 64, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .lp-plaque__bar span {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(13, 17, 64, 0.22);
+  background: rgba(255, 255, 255, 0.32);
 }
 
 .lp-plaque__bar em {
@@ -993,7 +1032,7 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-style: normal;
   font-size: 12px;
-  color: var(--lp-ink-2);
+  color: var(--lp-body);
 }
 
 .lp-plaque pre {
@@ -1003,13 +1042,13 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-size: 13px;
   line-height: 1.9;
-  color: var(--lp-ink-2);
+  color: var(--lp-body);
 }
 
-.lp-plaque .fn { color: var(--lp-ink-1); font-weight: 600; }
-.lp-plaque .v  { color: var(--lp-ink-1); }
-.lp-plaque .ok { color: var(--lp-win-ink); font-weight: 600; }
-.lp-plaque .cm { color: var(--lp-ink-3); }
+.lp-plaque .fn { color: #fff; font-weight: 600; }
+.lp-plaque .v  { color: #fff; }
+.lp-plaque .ok { color: var(--lp-win-text); font-weight: 600; }
+.lp-plaque .cm { color: var(--lp-soft); }
 
 /* ------------------------------------------------------------------ 10. CTA */
 .lp-cta {
@@ -1028,10 +1067,10 @@ img, svg { display: block; max-width: 100%; }
   font-size: clamp(28px, 3vw, 40px);
   font-weight: 500;
   letter-spacing: -0.02em;
-  color: var(--lp-ink-1);
+  color: var(--lp-ink);
 }
 
-.lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-ink-2); }
+.lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-body); }
 
 /* --------------------------------------------------------------- 11. FOOTER */
 .lp-footer {
@@ -1137,11 +1176,12 @@ img, svg { display: block; max-width: 100%; }
 
   .lp-stats { gap: 28px 40px; margin-top: 48px; }
 
-  .lp-section { padding: 76px 20px; }
+  .lp-sheet { border-radius: 28px; margin-top: 14px; }
+  .lp-section { padding: 68px 22px; }
 
   /* the slab un-divides into stacked panes; the rail turns vertical */
   .lp-slab { grid-template-columns: minmax(0, 1fr); }
-  .lp-slab__col { border-left: 0; border-top: 1px solid var(--lp-milk-line); }
+  .lp-slab__col { border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.16); }
   .lp-slab__col:first-child { border-top: 0; }
 
   .lp-rail { grid-template-columns: minmax(0, 1fr); gap: 30px; }

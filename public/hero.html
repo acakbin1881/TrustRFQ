@@ -194,17 +194,17 @@
     </section>
   </div>
 
-  <main>
+  <main class="lp-sheet">
     <!-- ===== WHY OTC — a curve, so it is drawn as one ===== -->
     <section class="lp-section" id="why">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-milk lp-reveal">The problem</div>
+        <div class="lp-eyebrow lp-pane lp-reveal">The problem</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">On-chain liquidity can't move institutional size</h2>
         <p class="lp-lead lp-reveal" style="--lp-delay:120ms">Stellar's deepest XLM/USDC liquidity sits in
           the single-digit millions. The constant-product model (x · y = k) turns punitive at scale — every
           block trade pays a structural slippage tax.</p>
 
-        <figure class="lp-ladder lp-milk lp-reveal" style="--lp-delay:180ms">
+        <figure class="lp-ladder lp-pane lp-reveal" style="--lp-delay:180ms">
           <figcaption class="lp-ladder__head">
             <span class="lp-ladder__title">What it costs to move the block</span>
             <span class="lp-ladder__axis">0%<i></i>20%</span>
@@ -246,13 +246,13 @@
     <!-- ===== THE SOLUTION — three parallel claims, so: one slab, three columns ===== -->
     <section class="lp-section">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-milk lp-reveal">The solution</div>
+        <div class="lp-eyebrow lp-pane lp-reveal">The solution</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">RFQ execution, settled on-chain</h2>
         <p class="lp-lead lp-reveal" style="--lp-delay:120ms">TrustRFQ decouples price discovery from AMM
           pools. Terms are agreed peer-to-peer, off-book — then settled as a deterministic atomic swap.
           Institutional execution, on-chain on Stellar.</p>
 
-        <div class="lp-slab lp-milk lp-reveal" style="--lp-delay:180ms">
+        <div class="lp-slab lp-pane lp-reveal" style="--lp-delay:180ms">
           <article class="lp-slab__col">
             <div class="lp-slab__icon">0</div>
             <h3 class="lp-slab__title">Zero slippage</h3>
@@ -278,7 +278,7 @@
     <!-- ===== HOW IT WORKS — a real sequence, so: a rail. The only place numbering earns its keep. ===== -->
     <section class="lp-section" id="how">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-milk lp-reveal">How it works</div>
+        <div class="lp-eyebrow lp-pane lp-reveal">How it works</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">From agreement to atomic swap in three steps</h2>
 
         <ol class="lp-rail">
@@ -307,7 +307,7 @@
     <!-- ===== SECURITY — a spec, so: a spec sheet. The contract itself does the talking. ===== -->
     <section class="lp-section" id="security">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-milk lp-reveal">Security model</div>
+        <div class="lp-eyebrow lp-pane lp-reveal">Security model</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">The trust lives in the signatures</h2>
         <p class="lp-lead lp-reveal" style="--lp-delay:120ms">No accounts, no custodian, no admin switches.
           Every safeguard is cryptographic — enforced by the Stellar network, not by a middleman.</p>
@@ -336,7 +336,7 @@
             </div>
           </dl>
 
-          <div class="lp-plaque lp-milk lp-reveal" style="--lp-delay:240ms">
+          <div class="lp-plaque lp-pane lp-reveal" style="--lp-delay:240ms">
             <div class="lp-plaque__bar"><span></span><span></span><span></span><em>soroban · otc_swap</em></div>
             <pre><span class="fn">fill</span>(
   maker:   <span class="v">GAM3…X4F2</span>  <span class="ok">✓ signed</span>
@@ -354,12 +354,12 @@
     <!-- =========================== CTA =========================== -->
     <section class="lp-section">
       <div class="lp-section__wrap">
-        <div class="lp-cta lp-milk lp-reveal">
+        <div class="lp-cta lp-pane lp-reveal">
           <div>
             <h3 class="lp-cta__title">The desk is open.</h3>
             <p class="lp-cta__sub">Connect a Testnet wallet and settle your first atomic block trade in minutes.</p>
           </div>
-          <a class="lp-btn lp-btn--solid" href="otc.html">Open the desk</a>
+          <a class="lp-btn lp-btn--white" href="otc.html">Open the desk</a>
         </div>
       </div>
     </section>
