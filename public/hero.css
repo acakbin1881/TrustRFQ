@@ -29,15 +29,15 @@
   --lp-soft:  rgba(255, 255, 255, 0.80);  /* captions/labels — only on the deep glass */
   --lp-deep-ink: #0D1140;                 /* ink for the panel's MILKY half (tickets, chips) */
 
-  /* THE SHEET — below the hero the page inverts. The light frosted colour that
-     used to be the cards becomes the ground, and the electric blue that used to
-     be the ground becomes the cards. Two worlds: a lit hero, a printed document.
-     MILK is what the ticket stack still floats on, up in the hero's bright half. */
-  --lp-milk:      rgba(255, 255, 255, 0.42);
-  --lp-sheet-line: rgba(13, 17, 64, 0.16);
+  /* Below the hero the page inverts: the ground goes light and the electric blue
+     becomes the cards. Two worlds — a lit hero, then a printed page. MILK is what
+     the ticket stack still floats on, up in the hero's bright half. */
+  --lp-cloud:      #A7BCF2;                  /* the ground below the hero — cloud, not navy */
+  --lp-fold:       880px;                    /* where the hero ends — see .lp-canvas::before */
+  --lp-hair:       rgba(13, 17, 64, 0.16);   /* hairlines on the cloud */
 
-  --lp-pane:       rgba(48, 57, 240, 0.86);  /* the blue glass cards ON the sheet */
-  --lp-pane-solid: rgba(48, 57, 240, 0.94);
+  --lp-pane:       rgba(42, 50, 232, 0.92);  /* the blue glass cards ON the cloud */
+  --lp-pane-solid: rgba(42, 50, 232, 0.96);
   --lp-pane-line:  rgba(255, 255, 255, 0.28);
 
   /* INK, by the surface it lands on. Nothing here is decoration — the same navy
@@ -74,9 +74,6 @@
 
   /* ticket accents — the reference's three cards */
   --lp-teal:  #57D8CE;          /* as a FILL (ticket band). Too light to use as text on glass. */
-  --lp-teal-ink: #9FEDE6;       /* the same accent as TEXT — lifted until it clears AA on the frost */
-  --lp-peri:  #6B77E6;
-  --lp-steel: #AEB3BE;
 
   /* type */
   --lp-display: 'Outfit', system-ui, sans-serif;
@@ -86,7 +83,6 @@
   --lp-r-pill: 999px;
   --lp-r-xl:   40px;
   --lp-r-lg:   24px;
-  --lp-r-md:   18px;
 
   --lp-ring: 0 0 0 3px rgba(255, 255, 255, 0.85);
 }
@@ -152,29 +148,9 @@ img, svg { display: block; max-width: 100%; }
   }
 }
 
-/* THE SHEET — everything below the hero sits on this. Same slab geometry as the
-   hero panel, inverted value: the page's light "document". */
-.lp-sheet {
-  max-width: 1400px;
-  margin: 26px auto 0;
-  border-radius: var(--lp-r-xl);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  /* A WASH, not a fill — the field pools visibly through it. No backdrop-filter
-     here on purpose: it would make the sheet a backdrop root and kill the blur on
-     every pane inside it (the same trap the hero panel avoids). Blurring a smooth
-     gradient would change nothing anyway. */
-  background: linear-gradient(168deg,
-    rgba(255, 255, 255, 0.50) 0%,
-    rgba(255, 255, 255, 0.42) 38%,
-    rgba(255, 255, 255, 0.48) 68%,
-    rgba(255, 255, 255, 0.40) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 40px 100px rgba(16, 20, 110, 0.30);
-  overflow: hidden;
-  color: var(--lp-ink-2);
-}
-
-/* THE PANES — blue glass cards ON the sheet. The exact swap the hero makes in
-   reverse, so the two halves of the page read as one idea seen twice. */
+/* THE PANES — blue glass cards, sitting straight on the cloud. There is no slab
+   between them and the page any more: the space *between* two sections has to
+   show the page, not a panel bridging them. */
 .lp-pane {
   background: var(--lp-pane-solid);
   border: 1px solid var(--lp-pane-line);
@@ -201,40 +177,48 @@ img, svg { display: block; max-width: 100%; }
   padding: 26px;
 }
 
-/* THE FIELD — the indigo you see THROUGH the glass.
-   Absolute, not fixed: it spans the whole document, so it does not slide with
-   the viewport and read as one flat colour everywhere. It pools instead —
-   deep under the problem, opening up through the solution, deep again under the
-   security model, dark at the close. The glass above it is only interesting
-   because what is behind it changes.
+/* THE FIELD — the whole page, and the only ground there is. The sections sit
+   straight on it, so the space *between* two sections shows the page rather than
+   a panel bridging them.
 
-   Every pool is contrast-budgeted. The darkest ones sit at 55%: deeper and the
-   translucent sheet above them stops being light enough for its dark ink; the
-   brightest are capped too, because an earlier bloom behind the ticket stack
-   lifted the backdrop so far that even PURE white on the tickets died at 4.1:1. */
+   It opens out of the hero's electric blue into CLOUD, and the cloud is never the
+   same twice: it banks and thins down the page — heavier under the problem, bright
+   and open through the solution, gathering again at the close.
+
+   Absolute, not fixed. Fixed slid with the viewport, so no matter what was painted
+   on it, every screen showed the same thing. */
 .lp-canvas::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(80% 22% at 82% 2%,  rgba(140, 200, 255, 0.16), transparent 68%),
-    radial-gradient(78% 13% at 12% 21%, rgba(8, 12, 88, 0.62),     transparent 74%),
-    radial-gradient(88% 12% at 90% 37%, rgba(132, 142, 255, 0.38), transparent 70%),
-    radial-gradient(82% 13% at 18% 55%, rgba(10, 14, 94, 0.54),    transparent 74%),
-    radial-gradient(92% 13% at 76% 73%, rgba(124, 136, 255, 0.34), transparent 70%),
-    radial-gradient(82% 15% at 28% 93%, rgba(6, 10, 72, 0.64),     transparent 76%),
-    var(--lp-canvas);
+    radial-gradient(72%  9% at 18% 27%, rgba(104, 136, 232, 0.45), transparent 72%),
+    radial-gradient(86% 10% at 88% 41%, rgba(255, 255, 255, 0.46), transparent 70%),
+    radial-gradient(78% 10% at 22% 57%, rgba(110, 144, 236, 0.40), transparent 72%),
+    radial-gradient(92% 11% at 78% 73%, rgba(255, 255, 255, 0.38), transparent 70%),
+    radial-gradient(84% 13% at 30% 93%, rgba(96, 128, 228, 0.50),  transparent 74%),
+    /* The break to cloud is anchored in PIXELS, off --lp-fold, not in percent.
+       A percent stop is a fraction of the whole document, so it slides the moment
+       the page gets longer or shorter — and it slid straight up into the hero,
+       lightening the ground under white text that had no room to spare. The hero
+       is a fixed height; the page is not. Measure from the thing that holds still. */
+    linear-gradient(180deg,
+      var(--lp-canvas) 0,
+      var(--lp-canvas) var(--lp-fold),
+      #6E7BF2 calc(var(--lp-fold) + 90px),
+      var(--lp-cloud) calc(var(--lp-fold) + 250px),
+      var(--lp-cloud) 100%);
 }
 
-/* the edge vignette — fixed, so the frame stays lit while the field scrolls past */
+/* a whisper of a frame. Anything heavier just muddies the cloud. */
 .lp-canvas::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(120% 100% at 50% 40%, transparent 52%, rgba(20, 24, 128, 0.38));
+  background: radial-gradient(120% 100% at 50% 28%, transparent 64%, rgba(46, 66, 168, 0.16));
 }
 
 /* The big panel deliberately does NOT use .lp-glass. An element with
@@ -880,8 +864,8 @@ img, svg { display: block; max-width: 100%; }
   height: 46px;
   margin-bottom: 22px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.26);
   font-family: var(--lp-display);
   font-size: 21px;
   font-weight: 600;
@@ -987,9 +971,9 @@ img, svg { display: block; max-width: 100%; }
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   padding: 22px 0;
-  border-top: 1px solid var(--lp-sheet-line);
+  border-top: 1px solid var(--lp-hair);
 }
-.lp-spec__row:last-child { border-bottom: 1px solid var(--lp-sheet-line); }
+.lp-spec__row:last-child { border-bottom: 1px solid var(--lp-hair); }
 
 .lp-spec__term {
   font-family: var(--lp-display);
@@ -1073,11 +1057,22 @@ img, svg { display: block; max-width: 100%; }
 .lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-body); }
 
 /* --------------------------------------------------------------- 11. FOOTER */
+/* The footer lands on the cloud, not on the deep canvas — so it is printed, not
+   lit. The brand mark has to flip with it: white strokes vanish on cloud. */
 .lp-footer {
   max-width: 1400px;
   margin: 0 auto;
   padding: 40px 56px 30px;
+  color: var(--lp-ink-2);
 }
+
+.lp-footer .lp-brand { color: var(--lp-ink-1); }
+.lp-footer .lp-brand__mark {
+  background: rgba(13, 17, 64, 0.10);
+  border-color: rgba(13, 17, 64, 0.22);
+}
+.lp-footer .lp-brand__mark svg [stroke] { stroke: var(--lp-ink-1); }
+.lp-footer .lp-brand__mark svg [fill]:not([fill="none"]) { fill: var(--lp-ink-1); }
 
 .lp-footer__inner {
   display: flex;
@@ -1086,20 +1081,20 @@ img, svg { display: block; max-width: 100%; }
   flex-wrap: wrap;
   gap: 28px;
   padding-bottom: 26px;
-  border-bottom: 1px solid var(--lp-line-soft);
+  border-bottom: 1px solid var(--lp-hair);
 }
 
-.lp-footer__tag { margin: 12px 0 0; font-size: 14px; color: var(--lp-soft); }
+.lp-footer__tag { margin: 12px 0 0; font-size: 14px; color: var(--lp-ink-2); }
 
-.lp-footer__links { display: flex; flex-wrap: wrap; gap: 26px; font-size: 15px; color: var(--lp-body); }
+.lp-footer__links { display: flex; flex-wrap: wrap; gap: 26px; font-size: 15px; color: var(--lp-ink-2); }
 .lp-footer__links a { transition: color 0.18s ease; }
-.lp-footer__links a:hover { color: var(--lp-ink); }
+.lp-footer__links a:hover { color: var(--lp-ink-1); }
 
 .lp-footer__fine {
   margin-top: 22px;
   font-family: var(--lp-mono);
   font-size: 12px;
-  color: var(--lp-soft);
+  color: var(--lp-ink-2);
 }
 
 /* ---------------------------------------------------------------- 12. MOTION
@@ -1153,6 +1148,7 @@ img, svg { display: block; max-width: 100%; }
 }
 
 @media (max-width: 980px) {
+  :root { --lp-fold: 1560px; }   /* the hero stacks, so the fold drops with it */
   .lp-canvas { padding: 12px; }
   .lp-surface { padding: 16px 16px 48px; border-radius: 28px; }
 
@@ -1176,7 +1172,6 @@ img, svg { display: block; max-width: 100%; }
 
   .lp-stats { gap: 28px 40px; margin-top: 48px; }
 
-  .lp-sheet { border-radius: 28px; margin-top: 14px; }
   .lp-section { padding: 68px 22px; }
 
   /* the slab un-divides into stacked panes; the rail turns vertical */
