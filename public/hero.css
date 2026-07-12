@@ -26,7 +26,6 @@
   --lp-ink:   #FFFFFF;
   --lp-mist:  rgba(255, 255, 255, 0.62);  /* the two-tone headline's dim lines (large text) */
   --lp-body:  rgba(255, 255, 255, 0.90);
-  --lp-soft:  rgba(255, 255, 255, 0.80);  /* captions/labels — only on the deep glass */
   --lp-deep-ink: #0D1140;                 /* ink for the panel's MILKY half (tickets, chips) */
 
   /* Below the hero the page inverts: the ground goes light and the electric blue
@@ -36,23 +35,19 @@
   --lp-fold:       880px;                    /* where the hero ends — see .lp-canvas::before */
   --lp-hair:       rgba(13, 17, 64, 0.16);   /* hairlines on the cloud */
 
-  --lp-pane:       rgba(42, 50, 232, 0.92);  /* the blue glass cards ON the cloud */
-  --lp-pane-solid: rgba(42, 50, 232, 0.96);
-  --lp-pane-line:  rgba(255, 255, 255, 0.28);
-
   /* INK, by the surface it lands on. Nothing here is decoration — the same navy
      that reads at 6.5:1 on the sheet is invisible on a pane, and vice versa. */
   --lp-ink-1: #0D1140;                    /* on the SHEET (and the hero's milk): titles */
   --lp-ink-2: rgba(13, 17, 64, 0.92);     /* on the SHEET: body */
 
   /* Accents come in a FILL and a TEXT value, and they are not interchangeable.
-     A coral saturated enough to read as a bar (#FF7A96) is only 2.5:1 as a
-     figure on the same blue pane — colour that carries meaning as a shape needs
-     hue; colour that carries meaning as a word needs luminance. Two values. */
-  --lp-loss-fill: #FF7A96;
-  --lp-loss-text: #FFD6DE;
-  --lp-win-fill:  #6FE3D2;
-  --lp-win-text:  #97EEE1;
+     A colour that carries meaning as a SHAPE needs hue; the same colour carrying
+     the same meaning as a WORD needs luminance. They are never the same value —
+     the bar's coral is 2.5:1 as a figure. Both are tuned for the LIGHT card. */
+  --lp-loss-fill: #E8456A;
+  --lp-loss-text: #7A0F2C;
+  --lp-win-fill:  #0FA394;
+  --lp-win-text:  #05413A;
 
   /* glass — two frosts, and the difference is load-bearing.
      LIGHT is the reference's milky frost: the hero panel, nav, tickets, chips.
@@ -148,21 +143,27 @@ img, svg { display: block; max-width: 100%; }
   }
 }
 
-/* THE PANES — blue glass cards, sitting straight on the cloud. There is no slab
-   between them and the page any more: the space *between* two sections has to
-   show the page, not a panel bridging them. */
+/* THE CARD — ONE material, defined once and used by the hero's tickets and by
+   every card below the fold. They are the same object seen twice, so they are
+   literally the same rule: change it here and both move together. Geometry
+   (size, padding, tilt) stays with each user; only the material lives here.
+
+   It is light, so everything printed on it is dark — see --lp-ink-1/-2. */
+.lp-ticket,
 .lp-pane {
-  background: var(--lp-pane-solid);
-  border: 1px solid var(--lp-pane-line);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 24px 60px rgba(16, 20, 110, 0.28);
-  color: var(--lp-body);
+  border-radius: var(--lp-r-lg);
+  background: var(--lp-glass-solid);
+  border: 1px solid var(--lp-line);
+  box-shadow: var(--lp-sheen), var(--lp-drop-lift);
+  color: var(--lp-ink-2);
 }
 
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .lp-ticket,
   .lp-pane {
-    background: var(--lp-pane);
-    -webkit-backdrop-filter: blur(18px) saturate(1.5);
-            backdrop-filter: blur(18px) saturate(1.5);
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+            backdrop-filter: blur(14px) saturate(1.5);
   }
 }
 
@@ -514,27 +515,16 @@ img, svg { display: block; max-width: 100%; }
   --lp-my: 0;
 }
 
+/* geometry only — the material comes from the shared .lp-ticket/.lp-pane rule */
 .lp-ticket {
   position: absolute;
   width: 366px;
   padding: 22px;
-  border-radius: var(--lp-r-lg);
   overflow: hidden;
-  box-shadow: var(--lp-sheen), var(--lp-drop-lift);
-  background: var(--lp-glass-solid);
-  border: 1px solid var(--lp-line);
   transform:
     translate3d(calc(var(--lp-mx) * var(--lp-depth) * 1px), calc(var(--lp-my) * var(--lp-depth) * 1px), 0)
     rotate(var(--lp-tilt));
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .lp-ticket {
-    background: rgba(255, 255, 255, 0.08);
-    -webkit-backdrop-filter: blur(14px) saturate(1.5);
-            backdrop-filter: blur(14px) saturate(1.5);
-  }
 }
 
 .lp-ticket--send { --lp-tilt: -7deg; --lp-depth: 1.6; top: 0;     right: 0;   z-index: 3; }
@@ -693,7 +683,7 @@ img, svg { display: block; max-width: 100%; }
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: #fff;
+  color: var(--lp-ink-1);
 }
 
 .lp-eyebrow::before {
@@ -701,7 +691,7 @@ img, svg { display: block; max-width: 100%; }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--lp-ink-1);
 }
 
 .lp-h2 {
@@ -740,14 +730,14 @@ img, svg { display: block; max-width: 100%; }
   gap: 20px;
   padding-bottom: 20px;
   margin-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid var(--lp-hair);
 }
 
 .lp-ladder__title {
   font-family: var(--lp-display);
   font-size: 17px;
   font-weight: 600;
-  color: var(--lp-ink);
+  color: var(--lp-ink-1);
 }
 
 /* a real axis, so the bar lengths mean something */
@@ -758,12 +748,12 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-size: 11px;
   letter-spacing: 0.06em;
-  color: var(--lp-soft);
+  color: var(--lp-ink-2);
 }
 .lp-ladder__axis i {
   width: 120px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--lp-hair);
 }
 
 .lp-rung {
@@ -772,7 +762,7 @@ img, svg { display: block; max-width: 100%; }
   align-items: center;
   gap: 20px;
   padding: 15px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+  border-bottom: 1px solid var(--lp-hair);
 }
 .lp-rung:last-child { border-bottom: 0; }
 
@@ -780,7 +770,7 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-display);
   font-size: 19px;
   font-weight: 600;
-  color: var(--lp-ink);
+  color: var(--lp-ink-1);
 }
 .lp-rung__size em {
   display: block;
@@ -788,13 +778,13 @@ img, svg { display: block; max-width: 100%; }
   font-style: normal;
   font-size: 12px;
   font-weight: 500;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
 
 .lp-rung__track {
   height: 12px;
   border-radius: var(--lp-r-pill);
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(13, 17, 64, 0.10);
   overflow: hidden;
 }
 
@@ -803,7 +793,7 @@ img, svg { display: block; max-width: 100%; }
   height: 100%;
   min-width: 5px;
   border-radius: var(--lp-r-pill);
-  background: linear-gradient(90deg, rgba(255, 122, 150, 0.5), var(--lp-loss-fill));
+  background: linear-gradient(90deg, rgba(232, 69, 106, 0.5), var(--lp-loss-fill));
 }
 
 .lp-rung__pct {
@@ -816,7 +806,7 @@ img, svg { display: block; max-width: 100%; }
 
 .lp-rung__loss {
   font-size: 13px;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
   text-align: right;
 }
 
@@ -824,7 +814,7 @@ img, svg { display: block; max-width: 100%; }
 .lp-rung--otc {
   margin-top: 10px;
   padding-top: 22px;
-  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  border-top: 1px solid var(--lp-hair);
   border-bottom: 0;
 }
 .lp-rung--otc .lp-rung__bar { background: var(--lp-win-fill); }
@@ -853,7 +843,7 @@ img, svg { display: block; max-width: 100%; }
 
 .lp-slab__col {
   padding: 34px 30px;
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: 1px solid var(--lp-hair);
 }
 .lp-slab__col:first-child { border-left: 0; }
 
@@ -864,12 +854,12 @@ img, svg { display: block; max-width: 100%; }
   height: 46px;
   margin-bottom: 22px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(13, 17, 64, 0.08);
+  border: 1px solid rgba(13, 17, 64, 0.14);
   font-family: var(--lp-display);
   font-size: 21px;
   font-weight: 600;
-  color: #fff;
+  color: var(--lp-ink-1);
 }
 
 .lp-slab__title {
@@ -878,14 +868,14 @@ img, svg { display: block; max-width: 100%; }
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--lp-ink);
+  color: var(--lp-ink-1);
 }
 
 .lp-slab__body {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
 
 /* ---- 9c. THE RAIL (how it works) ----------------------------------------
@@ -1000,15 +990,15 @@ img, svg { display: block; max-width: 100%; }
   align-items: center;
   gap: 7px;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--lp-hair);
+  background: rgba(13, 17, 64, 0.05);
 }
 
 .lp-plaque__bar span {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(13, 17, 64, 0.22);
 }
 
 .lp-plaque__bar em {
@@ -1016,7 +1006,7 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-style: normal;
   font-size: 12px;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
 
 .lp-plaque pre {
@@ -1026,13 +1016,13 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-size: 13px;
   line-height: 1.9;
-  color: var(--lp-body);
+  color: var(--lp-ink-2);
 }
 
-.lp-plaque .fn { color: #fff; font-weight: 600; }
-.lp-plaque .v  { color: #fff; }
+.lp-plaque .fn { color: var(--lp-ink-1); font-weight: 600; }
+.lp-plaque .v  { color: var(--lp-ink-1); }
 .lp-plaque .ok { color: var(--lp-win-text); font-weight: 600; }
-.lp-plaque .cm { color: var(--lp-soft); }
+.lp-plaque .cm { color: var(--lp-ink-2); }
 
 /* ------------------------------------------------------------------ 10. CTA */
 .lp-cta {
@@ -1051,10 +1041,10 @@ img, svg { display: block; max-width: 100%; }
   font-size: clamp(28px, 3vw, 40px);
   font-weight: 500;
   letter-spacing: -0.02em;
-  color: var(--lp-ink);
+  color: var(--lp-ink-1);
 }
 
-.lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-body); }
+.lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-ink-2); }
 
 /* --------------------------------------------------------------- 11. FOOTER */
 /* The footer lands on the cloud, not on the deep canvas — so it is printed, not
