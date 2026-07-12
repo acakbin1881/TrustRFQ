@@ -195,138 +195,148 @@
   </div>
 
   <main>
-    <!-- ========================= WHY OTC ========================== -->
+    <!-- ===== WHY OTC — a curve, so it is drawn as one ===== -->
     <section class="lp-section" id="why">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-reveal">The problem</div>
+        <div class="lp-eyebrow lp-milk lp-reveal">The problem</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">On-chain liquidity can't move institutional size</h2>
         <p class="lp-lead lp-reveal" style="--lp-delay:120ms">Stellar's deepest XLM/USDC liquidity sits in
           the single-digit millions. The constant-product model (x · y = k) turns punitive at scale — every
           block trade pays a structural slippage tax.</p>
 
-        <div class="lp-grid-3">
-          <div class="lp-card lp-glass lp-reveal">
-            <div class="lp-card__label">$250K trade</div>
-            <div class="lp-card__value">3–5%</div>
-            <div class="lp-card__sub">slippage · ~$10K lost</div>
-          </div>
-          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:80ms">
-            <div class="lp-card__label">$1M trade</div>
-            <div class="lp-card__value">9–13%</div>
-            <div class="lp-card__sub">slippage · ~$110K lost</div>
-          </div>
-          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:160ms">
-            <div class="lp-card__label">$2M trade</div>
-            <div class="lp-card__value">18%+</div>
-            <div class="lp-card__sub">slippage · $360K+ lost</div>
-          </div>
-        </div>
+        <figure class="lp-ladder lp-milk lp-reveal" style="--lp-delay:180ms">
+          <figcaption class="lp-ladder__head">
+            <span class="lp-ladder__title">What it costs to move the block</span>
+            <span class="lp-ladder__axis">0%<i></i>20%</span>
+          </figcaption>
 
-        <div class="lp-contrast lp-glass lp-reveal" style="--lp-delay:200ms">
-          <span>The same <strong>$1M</strong> clears off-chain on Coinbase or Binance OTC at
-            <em>under 10 bps</em> — roughly $1,000.</span>
-          <span class="lp-contrast__badge">100× cheaper off-chain</span>
-        </div>
+          <div class="lp-rung">
+            <div class="lp-rung__size">$250K</div>
+            <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:25%"></div></div>
+            <div class="lp-rung__pct">3–5%</div>
+            <div class="lp-rung__loss">~$10K lost</div>
+          </div>
+          <div class="lp-rung">
+            <div class="lp-rung__size">$1M</div>
+            <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:65%"></div></div>
+            <div class="lp-rung__pct">9–13%</div>
+            <div class="lp-rung__loss">~$110K lost</div>
+          </div>
+          <div class="lp-rung">
+            <div class="lp-rung__size">$2M</div>
+            <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:92%"></div></div>
+            <div class="lp-rung__pct">18%+</div>
+            <div class="lp-rung__loss">$360K+ lost</div>
+          </div>
+
+          <div class="lp-rung lp-rung--otc">
+            <div class="lp-rung__size">$1M <em>on an OTC desk</em></div>
+            <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:1.5%"></div></div>
+            <div class="lp-rung__pct">&lt;10 bps</div>
+            <div class="lp-rung__loss">~$1K</div>
+          </div>
+        </figure>
+
+        <p class="lp-note lp-reveal" style="--lp-delay:240ms">That last bar is not a rounding error. The same
+          $1M clears off-chain on Coinbase or Binance OTC for roughly <strong>$1,000</strong> —
+          <strong>100× cheaper</strong> than the pool.</p>
       </div>
     </section>
 
-    <!-- ======================= THE SOLUTION ======================= -->
+    <!-- ===== THE SOLUTION — three parallel claims, so: one slab, three columns ===== -->
     <section class="lp-section">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-reveal">The solution</div>
+        <div class="lp-eyebrow lp-milk lp-reveal">The solution</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">RFQ execution, settled on-chain</h2>
         <p class="lp-lead lp-reveal" style="--lp-delay:120ms">TrustRFQ decouples price discovery from AMM
           pools. Terms are agreed peer-to-peer, off-book — then settled as a deterministic atomic swap.
           Institutional execution, on-chain on Stellar.</p>
 
-        <div class="lp-grid-3">
-          <div class="lp-card lp-glass lp-reveal">
-            <div class="lp-card__icon">0</div>
-            <h3 class="lp-card__title">Zero slippage</h3>
-            <p class="lp-card__body">Quotes are firm — a fixed amount-in for a fixed amount-out. What the
+        <div class="lp-slab lp-milk lp-reveal" style="--lp-delay:180ms">
+          <article class="lp-slab__col">
+            <div class="lp-slab__icon">0</div>
+            <h3 class="lp-slab__title">Zero slippage</h3>
+            <p class="lp-slab__body">Quotes are firm — a fixed amount-in for a fixed amount-out. What the
               maker signs is exactly what settles. No curve, no impact.</p>
-          </div>
-          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:80ms">
-            <div class="lp-card__icon">∅</div>
-            <h3 class="lp-card__title">No intent leak</h3>
-            <p class="lp-card__body">Block size never hits a lit order book. Orders are routed privately to
+          </article>
+          <article class="lp-slab__col">
+            <div class="lp-slab__icon">∅</div>
+            <h3 class="lp-slab__title">No intent leak</h3>
+            <p class="lp-slab__body">Block size never hits a lit order book. Orders are routed privately to
               one counterparty, so bots can't front-run and liquidity can't flee.</p>
-          </div>
-          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:160ms">
-            <div class="lp-card__icon">⇄</div>
-            <h3 class="lp-card__title">Atomic settlement</h3>
-            <p class="lp-card__body">A Soroban smart contract moves both legs in a single transaction.
+          </article>
+          <article class="lp-slab__col">
+            <div class="lp-slab__icon">⇄</div>
+            <h3 class="lp-slab__title">Atomic settlement</h3>
+            <p class="lp-slab__body">A Soroban smart contract moves both legs in a single transaction.
               Either both sides settle or neither does — no counterparty risk.</p>
-          </div>
+          </article>
         </div>
       </div>
     </section>
 
-    <!-- ======================= HOW IT WORKS ======================= -->
+    <!-- ===== HOW IT WORKS — a real sequence, so: a rail. The only place numbering earns its keep. ===== -->
     <section class="lp-section" id="how">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-reveal">How it works</div>
+        <div class="lp-eyebrow lp-milk lp-reveal">How it works</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">From agreement to atomic swap in three steps</h2>
 
-        <div class="lp-grid-3">
-          <div class="lp-card lp-glass lp-reveal">
-            <div class="lp-step__num">STEP 01</div>
-            <div class="lp-step__rule"></div>
-            <h3 class="lp-card__title">Agree &amp; sign</h3>
-            <p class="lp-card__body">You agree terms with your counterparty and create a directed order —
+        <ol class="lp-rail">
+          <li class="lp-rail__step lp-reveal">
+            <span class="lp-rail__node">01</span>
+            <h3 class="lp-rail__title">Agree &amp; sign</h3>
+            <p class="lp-rail__body">You agree terms with your counterparty and create a directed order —
               amounts, tokens, expiry, their address. Your wallet signs the exact payload.</p>
-          </div>
-          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:80ms">
-            <div class="lp-step__num">STEP 02</div>
-            <div class="lp-step__rule"></div>
-            <h3 class="lp-card__title">Counter-sign</h3>
-            <p class="lp-card__body">The order appears live on their desk. They accept, and each wallet signs
+          </li>
+          <li class="lp-rail__step lp-reveal" style="--lp-delay:90ms">
+            <span class="lp-rail__node">02</span>
+            <h3 class="lp-rail__title">Counter-sign</h3>
+            <p class="lp-rail__body">The order appears live on their desk. They accept, and each wallet signs
               a Soroban authorization binding every argument of the fill — amounts included.</p>
-          </div>
-          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:160ms">
-            <div class="lp-step__num">STEP 03</div>
-            <div class="lp-step__rule"></div>
-            <h3 class="lp-card__title">Atomic fill</h3>
-            <p class="lp-card__body">Anyone can submit the fill carrying both signatures. Both legs move in
+          </li>
+          <li class="lp-rail__step lp-reveal" style="--lp-delay:180ms">
+            <span class="lp-rail__node">03</span>
+            <h3 class="lp-rail__title">Atomic fill</h3>
+            <p class="lp-rail__body">Anyone can submit the fill carrying both signatures. Both legs move in
               one transaction — or nothing moves at all.</p>
-          </div>
-        </div>
+          </li>
+        </ol>
       </div>
     </section>
 
-    <!-- ========================= SECURITY ========================= -->
+    <!-- ===== SECURITY — a spec, so: a spec sheet. The contract itself does the talking. ===== -->
     <section class="lp-section" id="security">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-reveal">Security model</div>
+        <div class="lp-eyebrow lp-milk lp-reveal">Security model</div>
         <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">The trust lives in the signatures</h2>
         <p class="lp-lead lp-reveal" style="--lp-delay:120ms">No accounts, no custodian, no admin switches.
           Every safeguard is cryptographic — enforced by the Stellar network, not by a middleman.</p>
 
-        <div class="lp-sec">
-          <div class="lp-sec__cards">
-            <div class="lp-card lp-glass lp-reveal">
-              <h3 class="lp-card__title">Wallet = identity</h3>
-              <p class="lp-card__body">No sign-up, no email, no password. Your Stellar wallet is your
-                identity, and every action you take is a wallet signature.</p>
+        <div class="lp-spec">
+          <dl class="lp-spec__list lp-reveal" style="--lp-delay:180ms">
+            <div class="lp-spec__row">
+              <dt class="lp-spec__term">Wallet = identity</dt>
+              <dd class="lp-spec__def">No sign-up, no email, no password. Your Stellar wallet is your
+                identity, and every action you take is a wallet signature.</dd>
             </div>
-            <div class="lp-card lp-glass lp-reveal" style="--lp-delay:60ms">
-              <h3 class="lp-card__title">Tamper-proof terms</h3>
-              <p class="lp-card__body">Both signatures bind every argument of the on-chain fill. Change a
-                single stroop and both signatures die — the transaction reverts.</p>
+            <div class="lp-spec__row">
+              <dt class="lp-spec__term">Tamper-proof terms</dt>
+              <dd class="lp-spec__def">Both signatures bind every argument of the on-chain fill. Change a
+                single stroop and both signatures die — the transaction reverts.</dd>
             </div>
-            <div class="lp-card lp-glass lp-reveal" style="--lp-delay:120ms">
-              <h3 class="lp-card__title">Replay-guarded</h3>
-              <p class="lp-card__body">Each order settles at most once: a per-order guard, per-signature
-                nonces, and a hard expiration — all enforced on-chain.</p>
+            <div class="lp-spec__row">
+              <dt class="lp-spec__term">Replay-guarded</dt>
+              <dd class="lp-spec__def">Each order settles at most once: a per-order guard, per-signature
+                nonces, and a hard expiration — all enforced on-chain.</dd>
             </div>
-            <div class="lp-card lp-glass lp-reveal" style="--lp-delay:180ms">
-              <h3 class="lp-card__title">Non-custodial</h3>
-              <p class="lp-card__body">The contract never holds funds. Both legs move wallet-to-wallet
-                inside the fill, atomically.</p>
+            <div class="lp-spec__row">
+              <dt class="lp-spec__term">Non-custodial</dt>
+              <dd class="lp-spec__def">The contract never holds funds. Both legs move wallet-to-wallet
+                inside the fill, atomically.</dd>
             </div>
-          </div>
+          </dl>
 
-          <div class="lp-plaque lp-glass lp-reveal" style="--lp-delay:120ms">
+          <div class="lp-plaque lp-milk lp-reveal" style="--lp-delay:240ms">
             <div class="lp-plaque__bar"><span></span><span></span><span></span><em>soroban · otc_swap</em></div>
             <pre><span class="fn">fill</span>(
   maker:   <span class="v">GAM3…X4F2</span>  <span class="ok">✓ signed</span>
@@ -344,7 +354,7 @@
     <!-- =========================== CTA =========================== -->
     <section class="lp-section">
       <div class="lp-section__wrap">
-        <div class="lp-cta lp-glass lp-reveal">
+        <div class="lp-cta lp-milk lp-reveal">
           <div>
             <h3 class="lp-cta__title">The desk is open.</h3>
             <p class="lp-cta__sub">Connect a Testnet wallet and settle your first atomic block trade in minutes.</p>

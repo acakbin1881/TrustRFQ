@@ -30,6 +30,25 @@
   --lp-soft:  rgba(255, 255, 255, 0.80);  /* captions/labels — only on the deep glass */
   --lp-deep-ink: #0D1140;                 /* ink for the panel's MILKY half (tickets, chips) */
 
+  /* MILK — the reference's white frosted glass, used for the section surfaces.
+     It lands well above mid luminance, so it takes DARK ink, not white. Trying to
+     keep white type on it is the one thing that cannot work: white tops out at
+     2.7:1 here. Dark navy lands at 6.5:1 and reads like print on frosted glass. */
+  --lp-milk:        rgba(255, 255, 255, 0.42);
+  --lp-milk-solid:  rgba(255, 255, 255, 0.52);
+  --lp-milk-line:   rgba(13, 17, 64, 0.14);
+  --lp-ink-1: #0D1140;                    /* on milk: titles, figures */
+  --lp-ink-2: rgba(13, 17, 64, 0.92);     /* on milk: body */
+  --lp-ink-3: rgba(13, 17, 64, 0.82);     /* on milk: labels */
+
+  /* Every accent needs two values on this page: one to FILL with, one to WRITE
+     with. A colour bright enough to read as a bar on white glass (1.6:1 as text)
+     is nowhere near readable as a figure, and vice versa. Same hue, two jobs. */
+  --lp-loss:     #D8365B;   /* fill: the slippage bars — the page's one warm accent */
+  --lp-loss-ink: #5A0A22;   /* text: the slippage figures */
+  --lp-win:      #0E9E90;   /* fill: the OTC bar, the chip dot */
+  --lp-win-ink:  #04352F;   /* text: the OTC figure, the plaque's ✓ signed */
+
   /* glass — two frosts, and the difference is load-bearing.
      LIGHT is the reference's milky frost: the hero panel, nav, tickets, chips.
      It is also what wrecks contrast (it lifts the backdrop toward white, and
@@ -41,10 +60,6 @@
   --lp-glass:        rgba(255, 255, 255, 0.10);
   --lp-glass-solid:  rgba(255, 255, 255, 0.13);  /* no-backdrop-filter fallback */
 
-  /* the clear frost = white wash ON TOP of a thin dark scrim (see §3) */
-  --lp-clear-wash:        rgba(255, 255, 255, 0.12);
-  --lp-clear-scrim:       rgba(10, 14, 70, 0.26);
-  --lp-clear-scrim-solid: rgba(10, 14, 70, 0.36);
 
   --lp-line:         rgba(255, 255, 255, 0.24);
   --lp-line-soft:    rgba(255, 255, 255, 0.14);
@@ -132,36 +147,21 @@ img, svg { display: block; max-width: 100%; }
   }
 }
 
-/* The CLEAR frost — the reference's translucent white glass, made readable.
-   Two stacked layers: the white wash on top (that is what your eye reads as
-   glass — the milky cast, the bright rim, the blue showing through), and a thin
-   dark scrim beneath it. The scrim is the whole trick: a bare white wash lifts
-   its backdrop so far toward white that even pure white text tops out around
-   4.4:1, but dropping the backdrop a little first buys the headroom back
-   without changing what the material looks like.
-
-   Everything that carries small copy uses this. Keep the scrim if you retint. */
-.lp-card,
-.lp-plaque,
-.lp-contrast,
-.lp-cta,
-.lp-eyebrow {
-  background:
-    linear-gradient(var(--lp-clear-wash), var(--lp-clear-wash)),
-    var(--lp-clear-scrim-solid);
+.lp-milk {
+  background: var(--lp-milk-solid);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), var(--lp-drop);
+  color: var(--lp-ink-2);
 }
 
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .lp-card,
-  .lp-plaque,
-  .lp-contrast,
-  .lp-cta,
-  .lp-eyebrow {
-    background:
-      linear-gradient(var(--lp-clear-wash), var(--lp-clear-wash)),
-      var(--lp-clear-scrim);
+  .lp-milk {
+    background: var(--lp-milk);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            backdrop-filter: blur(20px) saturate(1.4);
   }
 }
+
 
 /* ------------------------------------------------------- 4. CANVAS & SURFACE
    A full-bleed indigo canvas, with one large frosted surface inset inside it —
@@ -214,11 +214,11 @@ img, svg { display: block; max-width: 100%; }
   overflow: hidden;   /* clips the big arc */
   background:
     linear-gradient(103deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.09) 34%,
-      rgba(255, 255, 255, 0.26) 56%,
-      rgba(255, 255, 255, 0.44) 78%,
-      rgba(255, 255, 255, 0.38) 100%);
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.12) 32%,
+      rgba(255, 255, 255, 0.34) 55%,
+      rgba(255, 255, 255, 0.54) 80%,
+      rgba(255, 255, 255, 0.46) 100%);
   border: 1px solid rgba(255, 255, 255, 0.38);
   box-shadow: var(--lp-sheen), 0 40px 100px rgba(16, 20, 110, 0.35);
 }
@@ -255,6 +255,11 @@ img, svg { display: block; max-width: 100%; }
   gap: 22px;
   padding: 10px 10px 10px 22px;
   border-radius: var(--lp-r-pill);
+  /* the nav spans the panel, so its right end sits on the milky half — this
+     scrim is what keeps the white links readable all the way across */
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)),
+    rgba(10, 14, 70, 0.22);
 }
 
 .lp-brand {
@@ -635,7 +640,7 @@ img, svg { display: block; max-width: 100%; }
    copying the shape at the cost of the content. */
 .lp-chip--signed { top: 66px;  right: 370px; }
 .lp-chip--atomic { top: 384px; right: 370px; }
-.lp-chip--atomic::before { background: #0E9E90; }
+.lp-chip--atomic::before { background: var(--lp-win); }
 
 /* small round glass affordances, as in the reference's corner icon buttons */
 .lp-orb {
@@ -663,12 +668,10 @@ img, svg { display: block; max-width: 100%; }
   gap: 9px;
   padding: 7px 16px;
   border-radius: var(--lp-r-pill);
-  /* no background here — it would beat the deep-frost rule on source order */
-  border: 1px solid var(--lp-line-soft);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--lp-body);
+  color: var(--lp-ink-1);
 }
 
 .lp-eyebrow::before {
@@ -676,7 +679,7 @@ img, svg { display: block; max-width: 100%; }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--lp-ink-1);
 }
 
 .lp-h2 {
@@ -698,125 +701,271 @@ img, svg { display: block; max-width: 100%; }
   color: var(--lp-body);
 }
 
-.lp-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  margin-top: 52px;
-}
-
-.lp-card {
-  padding: 30px;
+/* ---- 9a. THE LADDER (problem) -------------------------------------------
+   The slippage numbers describe a curve, so they are drawn as one. Three bars
+   climbing, then the OTC bar — a sliver — underneath. The argument is the
+   picture; the prose just names it. */
+.lp-ladder {
+  margin: 52px 0 0;
+  padding: 30px 34px 26px;
   border-radius: var(--lp-r-lg);
 }
 
-/* problem: the slippage figures */
-.lp-card__label {
-  font-family: var(--lp-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--lp-soft);
+.lp-ladder__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--lp-milk-line);
 }
 
-.lp-card__value {
-  margin: 14px 0 6px;
+.lp-ladder__title {
   font-family: var(--lp-display);
-  font-size: 46px;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  color: var(--lp-ink-1);
 }
 
-.lp-card__sub { font-size: 14px; color: var(--lp-body); }
+/* a real axis, so the bar lengths mean something */
+.lp-ladder__axis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--lp-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--lp-ink-3);
+}
+.lp-ladder__axis i {
+  width: 120px;
+  height: 1px;
+  background: var(--lp-milk-line);
+}
 
-/* solution / security: titled cards */
-.lp-card__icon {
+.lp-rung {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr) 74px 104px;
+  align-items: center;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--lp-milk-line);
+}
+.lp-rung:last-child { border-bottom: 0; }
+
+.lp-rung__size {
+  font-family: var(--lp-display);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--lp-ink-1);
+}
+.lp-rung__size em {
+  display: block;
+  font-family: var(--lp-text);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lp-ink-2);
+}
+
+.lp-rung__track {
+  height: 12px;
+  border-radius: var(--lp-r-pill);
+  background: rgba(13, 17, 64, 0.09);
+  overflow: hidden;
+}
+
+.lp-rung__bar {
+  width: var(--w);
+  height: 100%;
+  min-width: 5px;
+  border-radius: var(--lp-r-pill);
+  background: linear-gradient(90deg, rgba(216, 54, 91, 0.45), var(--lp-loss));
+}
+
+.lp-rung__pct {
+  font-family: var(--lp-mono);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--lp-loss-ink);
+  text-align: right;
+}
+
+.lp-rung__loss {
+  font-size: 13px;
+  color: var(--lp-ink-2);
+  text-align: right;
+}
+
+/* the punchline: same trade, a bar you can barely see */
+.lp-rung--otc {
+  margin-top: 10px;
+  padding-top: 22px;
+  border-top: 1px solid var(--lp-milk-line);
+  border-bottom: 0;
+}
+.lp-rung--otc .lp-rung__bar { background: var(--lp-win); }
+.lp-rung--otc .lp-rung__pct { color: var(--lp-win-ink); }
+
+.lp-note {
+  max-width: 46em;
+  margin: 24px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--lp-body);
+}
+.lp-note strong { color: var(--lp-ink); font-weight: 600; }
+
+/* ---- 9b. THE SLAB (solution) --------------------------------------------
+   Three claims that are true at the same time — not a sequence and not data.
+   So: one pane of glass, divided. Three separate cards would imply three
+   separate things; they are three faces of the same one. */
+.lp-slab {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 52px;
+  border-radius: var(--lp-r-lg);
+  overflow: hidden;
+}
+
+.lp-slab__col {
+  padding: 34px 30px;
+  border-left: 1px solid var(--lp-milk-line);
+}
+.lp-slab__col:first-child { border-left: 0; }
+
+.lp-slab__icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 20px;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 22px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid var(--lp-line);
+  background: rgba(13, 17, 64, 0.10);
   font-family: var(--lp-display);
   font-size: 21px;
   font-weight: 600;
+  color: var(--lp-ink-1);
 }
 
-.lp-card__title {
+.lp-slab__title {
   margin: 0 0 10px;
   font-family: var(--lp-display);
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  color: var(--lp-ink-1);
 }
 
-.lp-card__body {
+.lp-slab__body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--lp-ink-2);
+}
+
+/* ---- 9c. THE RAIL (how it works) ----------------------------------------
+   This one IS a sequence — the order carries information the reader needs —
+   so it is the only place on the page that earns its numbering, and it gets a
+   line connecting the steps to say so. No glass: after the ladder and the slab,
+   the page needs a breath. */
+.lp-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 34px;
+  margin: 62px 0 0;
+  padding: 0;
+  list-style: none;
+  position: relative;
+}
+
+/* the connecting line, threaded through the node centres */
+.lp-rail::before {
+  content: '';
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  right: 25px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0.10),
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.10));
+}
+
+.lp-rail__step { position: relative; }
+
+.lp-rail__node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--lp-canvas-deep);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 8px rgba(59, 68, 245, 0.55);
+  font-family: var(--lp-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.lp-rail__title {
+  margin: 26px 0 10px;
+  font-family: var(--lp-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--lp-ink);
+}
+
+.lp-rail__body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--lp-body);
+}
+
+/* ---- 9d. THE SPEC SHEET (security) --------------------------------------
+   Four guarantees, each a term and its definition — that is a spec, so it is
+   set as one: a definition list with hairlines, next to the contract that
+   enforces it. The code is the evidence, so it gets the glass and the weight. */
+.lp-spec {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 48px;
+  margin-top: 52px;
+}
+
+.lp-spec__list { margin: 0; }
+
+.lp-spec__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 22px 0;
+  border-top: 1px solid var(--lp-line-soft);
+}
+.lp-spec__row:last-child { border-bottom: 1px solid var(--lp-line-soft); }
+
+.lp-spec__term {
+  font-family: var(--lp-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--lp-ink);
+}
+
+.lp-spec__def {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
   color: var(--lp-body);
 }
-
-/* the off-chain contrast strip */
-.lp-contrast {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-top: 20px;
-  padding: 24px 30px;
-  border-radius: var(--lp-r-lg);
-  font-size: 17px;
-  color: var(--lp-body);
-}
-
-.lp-contrast strong { color: var(--lp-ink); font-weight: 600; }
-.lp-contrast em { font-style: normal; color: var(--lp-teal-ink); font-weight: 600; }
-
-.lp-contrast__badge {
-  padding: 9px 18px;
-  border-radius: var(--lp-r-pill);
-  background: #fff;
-  color: var(--lp-cta);
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* steps */
-.lp-step__num {
-  font-family: var(--lp-mono);
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  color: var(--lp-teal-ink);
-}
-
-.lp-step__rule {
-  height: 1px;
-  margin: 16px 0 20px;
-  background: var(--lp-line-soft);
-}
-
-/* security: 2×2 cards + the frosted terminal */
-.lp-sec {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px;
-  margin-top: 52px;
-  align-items: start;
-}
-
-.lp-sec__cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.lp-sec__cards .lp-card { padding: 26px; }
 
 .lp-plaque {
   border-radius: var(--lp-r-lg);
@@ -828,15 +977,15 @@ img, svg { display: block; max-width: 100%; }
   align-items: center;
   gap: 7px;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--lp-line-soft);
-  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--lp-milk-line);
+  background: rgba(13, 17, 64, 0.06);
 }
 
 .lp-plaque__bar span {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(13, 17, 64, 0.22);
 }
 
 .lp-plaque__bar em {
@@ -844,23 +993,23 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-style: normal;
   font-size: 12px;
-  color: var(--lp-soft);
+  color: var(--lp-ink-2);
 }
 
 .lp-plaque pre {
   margin: 0;
-  padding: 24px 22px;
+  padding: 26px 22px;
   overflow-x: auto;
   font-family: var(--lp-mono);
   font-size: 13px;
-  line-height: 1.85;
-  color: var(--lp-body);
+  line-height: 1.9;
+  color: var(--lp-ink-2);
 }
 
-.lp-plaque .fn { color: #fff; font-weight: 600; }
-.lp-plaque .v  { color: #fff; }
-.lp-plaque .ok { color: var(--lp-teal-ink); }
-.lp-plaque .cm { color: var(--lp-soft); }
+.lp-plaque .fn { color: var(--lp-ink-1); font-weight: 600; }
+.lp-plaque .v  { color: var(--lp-ink-1); }
+.lp-plaque .ok { color: var(--lp-win-ink); font-weight: 600; }
+.lp-plaque .cm { color: var(--lp-ink-3); }
 
 /* ------------------------------------------------------------------ 10. CTA */
 .lp-cta {
@@ -879,9 +1028,10 @@ img, svg { display: block; max-width: 100%; }
   font-size: clamp(28px, 3vw, 40px);
   font-weight: 500;
   letter-spacing: -0.02em;
+  color: var(--lp-ink-1);
 }
 
-.lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-body); }
+.lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-ink-2); }
 
 /* --------------------------------------------------------------- 11. FOOTER */
 .lp-footer {
@@ -988,8 +1138,31 @@ img, svg { display: block; max-width: 100%; }
   .lp-stats { gap: 28px 40px; margin-top: 48px; }
 
   .lp-section { padding: 76px 20px; }
-  .lp-grid-3 { grid-template-columns: minmax(0, 1fr); }
-  .lp-sec { grid-template-columns: minmax(0, 1fr); }
+
+  /* the slab un-divides into stacked panes; the rail turns vertical */
+  .lp-slab { grid-template-columns: minmax(0, 1fr); }
+  .lp-slab__col { border-left: 0; border-top: 1px solid var(--lp-milk-line); }
+  .lp-slab__col:first-child { border-top: 0; }
+
+  .lp-rail { grid-template-columns: minmax(0, 1fr); gap: 30px; }
+  .lp-rail::before {
+    top: 25px; bottom: 25px; left: 25px; right: auto;
+    width: 1px; height: auto;
+    background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.10));
+  }
+  .lp-rail__step { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 0 20px; }
+  .lp-rail__node { grid-row: span 2; }
+  .lp-rail__title { margin-top: 8px; }
+  .lp-rail__body { grid-column: 2; }
+
+  .lp-spec { grid-template-columns: minmax(0, 1fr); gap: 34px; }
+
+  .lp-ladder { padding: 24px 20px 20px; }
+  .lp-ladder__axis { display: none; }
+  .lp-rung { grid-template-columns: 110px minmax(0, 1fr) 66px; gap: 14px; }
+  .lp-rung__loss { display: none; }
+
   .lp-cta { padding: 40px 32px; }
   .lp-footer { padding: 32px 20px 24px; }
 }
@@ -1004,8 +1177,9 @@ img, svg { display: block; max-width: 100%; }
   .lp-hero__ctas .lp-btn { flex: 1 1 100%; }
 
   .lp-stats { flex-direction: column; gap: 26px; }
-  .lp-sec__cards { grid-template-columns: minmax(0, 1fr); }
-  .lp-card { padding: 24px; }
+  .lp-slab__col { padding: 26px 22px; }
+  .lp-rung { grid-template-columns: 88px minmax(0, 1fr) 60px; gap: 10px; }
+  .lp-rung__size { font-size: 16px; }
   .lp-cta { padding: 34px 24px; }
   .lp-cta .lp-btn { width: 100%; }
 }
