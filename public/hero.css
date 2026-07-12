@@ -39,8 +39,11 @@
      it just tints down instead of up, which buys ~3 stops of contrast. */
   --lp-glass:        rgba(255, 255, 255, 0.10);
   --lp-glass-solid:  rgba(255, 255, 255, 0.13);  /* no-backdrop-filter fallback */
-  --lp-glass-deep:       rgba(20, 25, 112, 0.30);
-  --lp-glass-deep-solid: rgba(20, 25, 112, 0.42);
+
+  /* the clear frost = white wash ON TOP of a thin dark scrim (see §3) */
+  --lp-clear-wash:        rgba(255, 255, 255, 0.12);
+  --lp-clear-scrim:       rgba(10, 14, 70, 0.26);
+  --lp-clear-scrim-solid: rgba(10, 14, 70, 0.36);
 
   --lp-line:         rgba(255, 255, 255, 0.24);
   --lp-line-soft:    rgba(255, 255, 255, 0.14);
@@ -49,7 +52,8 @@
   --lp-drop-lift:    0 44px 90px rgba(14, 18, 100, 0.45);
 
   /* ticket accents — the reference's three cards */
-  --lp-teal:  #57D8CE;
+  --lp-teal:  #57D8CE;          /* as a FILL (ticket band). Too light to use as text on glass. */
+  --lp-teal-ink: #9FEDE6;       /* the same accent as TEXT — lifted until it clears AA on the frost */
   --lp-peri:  #6B77E6;
   --lp-steel: #AEB3BE;
 
@@ -127,20 +131,35 @@ img, svg { display: block; max-width: 100%; }
   }
 }
 
-/* The deep frost. Same .lp-glass element, re-tinted — these rules come later in
-   the cascade, so the surfaces that carry small copy tint down instead of up. */
+/* The CLEAR frost — the reference's translucent white glass, made readable.
+   Two stacked layers: the white wash on top (that is what your eye reads as
+   glass — the milky cast, the bright rim, the blue showing through), and a thin
+   dark scrim beneath it. The scrim is the whole trick: a bare white wash lifts
+   its backdrop so far toward white that even pure white text tops out around
+   4.4:1, but dropping the backdrop a little first buys the headroom back
+   without changing what the material looks like.
+
+   Everything that carries small copy uses this. Keep the scrim if you retint. */
 .lp-card,
 .lp-plaque,
 .lp-contrast,
 .lp-cta,
-.lp-eyebrow { background: var(--lp-glass-deep-solid); }
+.lp-eyebrow {
+  background:
+    linear-gradient(var(--lp-clear-wash), var(--lp-clear-wash)),
+    var(--lp-clear-scrim-solid);
+}
 
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .lp-card,
   .lp-plaque,
   .lp-contrast,
   .lp-cta,
-  .lp-eyebrow { background: var(--lp-glass-deep); }
+  .lp-eyebrow {
+    background:
+      linear-gradient(var(--lp-clear-wash), var(--lp-clear-wash)),
+      var(--lp-clear-scrim);
+  }
 }
 
 /* ------------------------------------------------------- 4. CANVAS & SURFACE
@@ -743,7 +762,7 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .lp-contrast strong { color: var(--lp-ink); font-weight: 600; }
-.lp-contrast em { font-style: normal; color: var(--lp-teal); font-weight: 600; }
+.lp-contrast em { font-style: normal; color: var(--lp-teal-ink); font-weight: 600; }
 
 .lp-contrast__badge {
   padding: 9px 18px;
@@ -760,7 +779,7 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--lp-mono);
   font-size: 12px;
   letter-spacing: 0.1em;
-  color: var(--lp-teal);
+  color: var(--lp-teal-ink);
 }
 
 .lp-step__rule {
@@ -827,7 +846,7 @@ img, svg { display: block; max-width: 100%; }
 
 .lp-plaque .fn { color: #fff; font-weight: 600; }
 .lp-plaque .v  { color: #fff; }
-.lp-plaque .ok { color: var(--lp-teal); }
+.lp-plaque .ok { color: var(--lp-teal-ink); }
 .lp-plaque .cm { color: var(--lp-soft); }
 
 /* ------------------------------------------------------------------ 10. CTA */
