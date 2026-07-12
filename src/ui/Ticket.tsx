@@ -73,67 +73,75 @@ export function Ticket({ address, onSent }: TicketProps) {
   }
 
   return (
-    <form className="ticket" id="orderForm" autoComplete="off" onSubmit={submit}>
+    <form className="ticket ticket--swap" id="orderForm" autoComplete="off" onSubmit={submit}>
       <div className="ticket__head">
         <h2 className="ticket__title">New RFQ ticket</h2>
         <p className="ticket__sub">Terms are signed by your wallet — what you sign is exactly what settles.</p>
       </div>
 
-      <div className="field">
+      {/* The two legs are the reference's white cards; the swap orb sits in a
+          scalloped notch between them (mask CSS on field--card-top/-bottom).
+          Select comes before the input so the visual order (chip left, amount
+          right) matches the tab order. */}
+      <div className="field field--card field--card-top">
         <label className="field__label" htmlFor="makerAmount">You send</label>
         <div className="leg">
-          <input type="text" id="makerAmount" className="input--num" inputMode="decimal" placeholder="0.00"
-            value={makerAmount} onChange={(e) => setMakerAmount(e.target.value)} />
           <select id="makerToken" aria-label="Token you send"
             value={makerToken} onChange={(e) => setMakerToken(e.target.value)}>
             {TOKENS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
+          <input type="text" id="makerAmount" className="input--num" inputMode="decimal" placeholder="0.00"
+            value={makerAmount} onChange={(e) => setMakerAmount(e.target.value)} />
         </div>
       </div>
 
       <div className="ticket__swap" aria-hidden="true"><span>⇅</span></div>
 
-      <div className="field">
+      <div className="field field--card field--card-bottom">
         <label className="field__label" htmlFor="takerAmount">You receive</label>
         <div className="leg">
-          <input type="text" id="takerAmount" className="input--num" inputMode="decimal" placeholder="0.00"
-            value={takerAmount} onChange={(e) => setTakerAmount(e.target.value)} />
           <select id="takerToken" aria-label="Token you receive"
             value={takerToken} onChange={(e) => setTakerToken(e.target.value)}>
             {TOKENS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
+          <input type="text" id="takerAmount" className="input--num" inputMode="decimal" placeholder="0.00"
+            value={takerAmount} onChange={(e) => setTakerAmount(e.target.value)} />
         </div>
       </div>
 
-      <div className="field">
-        <label className="field__label" htmlFor="takerAddress">Counterparty wallet address</label>
-        <input type="text" id="takerAddress" className="input--addr" placeholder="G…" spellCheck={false}
-          value={takerAddress} onChange={(e) => setTakerAddress(e.target.value)} />
-        <div className="hint">The taker who has agreed to this trade off-platform.</div>
-      </div>
-
-      <div className="field">
-        <label className="field__label" htmlFor="expValue">Expires in</label>
-        <div className="row2">
-          <input type="number" id="expValue" className="input--num" min={1} step={1}
-            value={expValue} onChange={(e) => setExpValue(e.target.value)} />
-          <select id="expUnit" aria-label="Expiry unit"
-            value={expUnit} onChange={(e) => setExpUnit(e.target.value)}>
-            <option value="60000">Minutes</option>
-            <option value="3600000">Hours</option>
-            <option value="86400000">Days</option>
-          </select>
+      <div className="field--details">
+        <div className="field">
+          <label className="field__label" htmlFor="takerAddress">Counterparty wallet address</label>
+          <input type="text" id="takerAddress" className="input--addr" placeholder="G…" spellCheck={false}
+            value={takerAddress} onChange={(e) => setTakerAddress(e.target.value)} />
+          <div className="hint">The taker who has agreed to this trade off-platform.</div>
         </div>
-      </div>
 
-      <div className="field">
-        <span className="field__label">Signing as (maker)</span>
-        <div className="maker-addr" id="makerAddrBox">{address ?? '—'}</div>
+        <div className="field">
+          <label className="field__label" htmlFor="expValue">Expires in</label>
+          <div className="row2">
+            <input type="number" id="expValue" className="input--num" min={1} step={1}
+              value={expValue} onChange={(e) => setExpValue(e.target.value)} />
+            <select id="expUnit" aria-label="Expiry unit"
+              value={expUnit} onChange={(e) => setExpUnit(e.target.value)}>
+              <option value="60000">Minutes</option>
+              <option value="3600000">Hours</option>
+              <option value="86400000">Days</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="field">
+          <span className="field__label">Signing as (maker)</span>
+          <div className="maker-addr" id="makerAddrBox">{address ?? '—'}</div>
+        </div>
       </div>
 
       <div className="form-actions">
         <button type="submit" className="btn btn--gold" id="sendBtn" disabled={busy}>
+          <span className="btn__orb" aria-hidden="true">✓</span>
           {busy ? 'Waiting for signature…' : 'Sign & send order'}
+          <span className="btn__chevs" aria-hidden="true">›››</span>
         </button>
         <span className="hint" id="formHint">You'll be asked to sign the order in your wallet.</span>
       </div>

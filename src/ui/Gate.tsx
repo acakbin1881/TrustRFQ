@@ -7,10 +7,10 @@ export function Gate({ onConnect, hidden }: { onConnect: () => void; hidden: boo
     <section className="gate" id="gate" style={hidden ? { display: 'none' } : undefined}>
       <div className="gate__mark">
         <svg width="44" height="44" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" strokeWidth="3.5" strokeLinecap="round" />
-          <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" strokeWidth="3.5" strokeLinecap="round" />
-          <circle cx="15" cy="32" r="7.5" fill="#E5B567" />
-          <circle cx="49" cy="32" r="7.5" stroke="#E5B567" strokeWidth="3.5" />
+          <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+          <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+          <circle cx="15" cy="32" r="7.5" fill="currentColor" />
+          <circle cx="49" cy="32" r="7.5" stroke="currentColor" strokeWidth="3.5" />
         </svg>
       </div>
       <div className="eyebrow"><span className="eyebrow__dot" />Peer-to-peer OTC · Stellar Testnet</div>

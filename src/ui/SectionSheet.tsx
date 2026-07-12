@@ -1,0 +1,106 @@
+// The desk's single section control: a floating pill (bottom-center) that
+// names the active section, and a centered modal sheet listing all sections.
+// Replaces the old .tabs bar on the desk only — the intent page keeps .tabs.
+// The sheet only switches which .panel is active; panels stay mounted in App.
+
+import { useEffect, useRef, useState } from 'react';
+
+export interface SectionOption<T extends string> {
+  id: T;
+  label: string;
+  /** small glyph shown in the pill and the option row, e.g. '+', '↓', '↑' */
+  glyph: string;
+  /** pending count badge; omit for sections without one */
+  count?: number;
+}
+
+interface SectionSheetProps<T extends string> {
+  options: readonly SectionOption<T>[];
+  active: T;
+  onSelect: (id: T) => void;
+}
+
+export function SectionSheet<T extends string>({ options, active, onSelect }: SectionSheetProps<T>) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const activeOpt = options.find((o) => o.id === active) ?? options[0];
+  const pending = options.reduce((n, o) => n + (o.count ?? 0), 0);
+
+  const close = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (e.key === 'Tab') {
+        // minimal focus trap: cycle within the sheet's option buttons
+        const els = panelRef.current?.querySelectorAll<HTMLButtonElement>('.sheet__option');
+        if (!els || els.length === 0) return;
+        const first = els[0];
+        const last = els[els.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    panelRef.current?.querySelector<HTMLButtonElement>('.sheet__option.is-active')?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="section-fab"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <span className="section-fab__glyph" aria-hidden="true">{activeOpt.glyph}</span>
+        {activeOpt.label}
+        {pending > 0 ? <span className="section-fab__count">{pending}</span> : null}
+        <span className="section-fab__menu" aria-hidden="true">≡</span>
+      </button>
+
+      {open ? (
+        <div className="sheet">
+          <div className="sheet__backdrop" onClick={close} />
+          <div ref={panelRef} className="sheet__panel" role="dialog" aria-modal="true" aria-label="Desk sections">
+            {options.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                className={o.id === active ? 'sheet__option is-active' : 'sheet__option'}
+                onClick={() => { onSelect(o.id); close(); }}
+              >
+                <span className="sheet__option-glyph" aria-hidden="true">{o.glyph}</span>
+                {o.label}
+                {o.count !== undefined ? <span className="sheet__option-count">{o.count}</span> : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}

@@ -1,7 +1,8 @@
-// The desk shell: topbar + wallet gate + tabs (create / incoming / sent).
-// Structure and classes mirror otc.html/otc.js so styles.css applies unchanged.
-// All three panels stay mounted with .is-active toggling (vanilla parity —
-// keeps form state across tab switches; CSS hides inactive panels).
+// The desk shell: topbar + wallet gate + sections (create / incoming / sent).
+// Structure and classes mirror styles.css. Sections are switched by the
+// floating SectionSheet control (the old .tabs bar lives on only on the
+// intent page). All three panels stay mounted with .is-active toggling —
+// keeps form state across section switches; CSS hides inactive panels.
 
 import { useCallback, useState } from 'react';
 import { isExpired, orderTokensKnown, trunc } from './core/tokens';
@@ -12,6 +13,7 @@ import { walletSign } from './wallet/kit';
 import { useWallet, WalletProvider } from './wallet/WalletContext';
 import { Gate } from './ui/Gate';
 import { OrderCard } from './ui/OrderCard';
+import { SectionSheet } from './ui/SectionSheet';
 import { Ticket } from './ui/Ticket';
 import { errMsg, ToastProvider, useToast } from './ui/Toast';
 import { useNow } from './ui/useNow';
@@ -24,10 +26,10 @@ function Topbar({ address, onDisconnect }: { address: string | null; onDisconnec
     <header className="topbar">
       <a className="brand" href="hero.html">
         <svg width="24" height="24" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" strokeWidth="4" strokeLinecap="round" />
-          <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" strokeWidth="4" strokeLinecap="round" />
-          <circle cx="15" cy="32" r="8" fill="#E5B567" />
-          <circle cx="49" cy="32" r="8" stroke="#E5B567" strokeWidth="4" />
+          <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="15" cy="32" r="8" fill="currentColor" />
+          <circle cx="49" cy="32" r="8" stroke="currentColor" strokeWidth="4" />
         </svg>
         TrustRFQ
       </a>
@@ -91,27 +93,27 @@ function Desk() {
     }
   };
 
-  const tabBtn = (name: TabName, label: string, count?: { id: string; value: number }) => (
-    <button className={tab === name ? 'tab is-active' : 'tab'} onClick={() => setTab(name)}>
-      {label}{count ? <> <span className="tab__count" id={count.id}>{count.value}</span></> : null}
-    </button>
-  );
-
   return (
     <>
       <div className="backdrop starfield" aria-hidden="true" />
       <Topbar address={address} onDisconnect={disconnect} />
       {/* Gate and desk are both mounted, visibility-toggled like vanilla's
-          display switches — so a half-typed ticket draft (and the active tab)
-          survive disconnect/reconnect. */}
-      <main className="wrap">
+          display switches — so a half-typed ticket draft (and the active
+          section) survive disconnect/reconnect. The SectionSheet sits inside
+          #app: position:fixed inside a display:none parent renders nothing,
+          so it hides with the gate for free. */}
+      <main className="wrap wrap--desk">
         <Gate onConnect={() => void handleConnect()} hidden={!!address} />
         <section id="app" style={address ? undefined : { display: 'none' }}>
-            <div className="tabs">
-              {tabBtn('create', 'New order')}
-              {tabBtn('incoming', 'Incoming', { id: 'incCount', value: incomingPending })}
-              {tabBtn('sent', 'Sent', { id: 'sentCount', value: sentPending })}
-            </div>
+            <SectionSheet
+              active={tab}
+              onSelect={setTab}
+              options={[
+                { id: 'create', label: 'New order', glyph: '+' },
+                { id: 'incoming', label: 'Incoming', glyph: '↓', count: incomingPending },
+                { id: 'sent', label: 'Sent', glyph: '↑', count: sentPending },
+              ] as const}
+            />
 
             <div className={tab === 'create' ? 'panel is-active' : 'panel'} data-panel="create">
               <Ticket address={address} onSent={async () => { await loadSent(); setTab('sent'); }} />

@@ -39,10 +39,10 @@ function Topbar({ address, balances, funded, loading, onDisconnect }: {
     <header className="topbar">
       <a className="brand" href="hero.html">
         <svg width="24" height="24" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" strokeWidth="4" strokeLinecap="round" />
-          <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" strokeWidth="4" strokeLinecap="round" />
-          <circle cx="15" cy="32" r="8" fill="#E5B567" />
-          <circle cx="49" cy="32" r="8" stroke="#E5B567" strokeWidth="4" />
+          <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="15" cy="32" r="8" fill="currentColor" />
+          <circle cx="49" cy="32" r="8" stroke="currentColor" strokeWidth="4" />
         </svg>
         TrustRFQ
       </a>
