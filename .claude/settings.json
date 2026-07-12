@@ -27,7 +27,19 @@
       "Bash(npm test *)",
       "Bash(echo \"===src origins \\(http/wss\\)===\" && grep -rnoE \"\\(https?|wss\\)://[a-zA-Z0-9._/-]+\" src/ public/otc-config.js public/supabase-config.js 2>/dev/null | grep -vE \"w3.org|schema|example|localhost|127.0.0.1\" | sort -u; echo \"\"; echo \"===wallet module===\" ; sed -n '1,80p' src/wallet/*.ts 2>/dev/null | grep -niE \"module|WalletConnect|kit|modules|network|url|import\" | head -40)",
       "Bash(awk '{print $1, $NF}')",
-      "Bash(awk -F: '{print $1}')"
+      "Bash(awk -F: '{print $1}')",
+      "Bash(git rev-list *)",
+      "Bash(git ls-tree *)",
+      "Bash(awk '{print}')",
+      "Bash(git -C /Users/acakbin1881/Projects/TrustRFQ branch --show-current)",
+      "Bash(awk '/^\\\\.btn \\\\{/,/^\\\\}/' /Users/acakbin1881/Projects/TrustRFQ/public/styles.css)",
+      "Bash(echo \"esm.sh grep exit: $?\")",
+      "Bash(echo \"log-scan exit: $?\")",
+      "Bash(md5 fixtures/canonical-args.json)",
+      "Bash(md5)",
+      "Bash(git check-ignore *)",
+      "mcp__supabase__list_migrations",
+      "Bash(perl -0ne 'while \\(/<script\\([^>]*\\)>\\(.*?\\)<\\\\/script>/gs\\) { print \"BODY[\", length\\($2\\), \"]: attrs=$1\\\\n\" if length\\($2\\) > 0 }' dist/otc.html dist/intent.html)"
     ],
     "additionalDirectories": [
       "/Users/acakbin1881/Projects/TrustRFQ/src/wallet"
