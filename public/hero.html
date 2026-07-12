@@ -5,243 +5,329 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TrustRFQ — Peer-to-peer OTC on Stellar</title>
   <meta name="description" content="TrustRFQ is a private over-the-counter desk for Stellar. Agree terms peer-to-peer, sign the exact amounts with both wallets, and settle atomically on-chain — no order book, no slippage, no custody.">
-  <meta name="theme-color" content="#050505">
+  <meta name="theme-color" content="#3B44F5">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <script src="hero.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="hero.css">
+  <!-- Not deferred: hero.js sets .lp-js on <html>, which arms the reveal's hidden
+       state. Deferred, the browser can paint before that lands and you see the
+       page flash in, then hide itself. -->
+  <script src="hero.js"></script>
 </head>
 <body>
 
-  <header class="topbar">
-    <a class="brand" href="hero.html">
-      <svg width="24" height="24" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-        <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
-        <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="15" cy="32" r="8" fill="#E5B567"/>
-        <circle cx="49" cy="32" r="8" stroke="#E5B567" stroke-width="4"/>
-      </svg>
-      TrustRFQ
-    </a>
-    <span class="net-pill">Testnet</span>
-    <div class="topbar__right">
-      <a class="btn btn--gold btn--sm" href="otc.html">Launch the desk →</a>
-    </div>
-  </header>
+<div class="lp-canvas">
+  <div class="lp-surface">
+    <div class="lp-arc" aria-hidden="true"></div>
+    <div class="lp-arc lp-arc--inner" aria-hidden="true"></div>
+
+    <!-- ============================ NAV ============================ -->
+    <header class="lp-nav lp-glass">
+      <a class="lp-brand" href="hero.html">
+        <span class="lp-brand__mark">
+          <svg width="20" height="20" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+            <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="15" cy="32" r="8" fill="#fff"/>
+            <circle cx="49" cy="32" r="8" stroke="#fff" stroke-width="5"/>
+          </svg>
+        </span>
+        <span class="lp-brand__name">TrustRFQ</span>
+      </a>
+
+      <nav class="lp-nav__links">
+        <a class="lp-nav__link" href="#why">Why OTC</a>
+        <a class="lp-nav__link" href="#how">How it works</a>
+        <a class="lp-nav__link" href="#security">Security</a>
+      </nav>
+
+      <div class="lp-nav__actions">
+        <a class="lp-btn lp-btn--white lp-btn--sm" href="intent.html">Intent board</a>
+        <a class="lp-btn lp-btn--solid lp-btn--sm" href="otc.html">Open the desk</a>
+      </div>
+    </header>
+
+    <!-- ============================ HERO =========================== -->
+    <section class="lp-hero">
+      <div class="lp-hero__copy">
+        <div class="lp-pill lp-glass lp-reveal">
+          <span class="lp-pill__marks" aria-hidden="true">
+            <span class="lp-pill__mark">XLM</span>
+            <span class="lp-pill__mark">USDC</span>
+          </span>
+          <span><strong>XLM / USDC</strong> · live on Stellar Testnet</span>
+        </div>
+
+        <h1 class="lp-h1 lp-reveal" style="--lp-delay:80ms">
+          <b>Move institutional</b>
+          <span>size. Keep the price</span>
+          <span>you agreed on.</span>
+        </h1>
+
+        <p class="lp-hero__sub lp-reveal" style="--lp-delay:160ms">
+          Agree terms directly with your counterparty, sign the exact amounts with both
+          wallets, and settle both legs in a single on-chain transaction.
+        </p>
+
+        <div class="lp-hero__ctas lp-reveal" style="--lp-delay:240ms">
+          <a class="lp-btn lp-btn--solid" href="otc.html">Open the desk</a>
+          <a class="lp-btn lp-btn--white" href="#how">See how it works</a>
+        </div>
+
+        <div class="lp-stats lp-reveal" style="--lp-delay:320ms">
+          <div class="lp-stat">
+            <div class="lp-stat__head">
+              <span class="lp-stat__icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 18 L10 11 L14 15 L20 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 11 V6 H15" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="lp-stat__v">18%+</span>
+            </div>
+            <p class="lp-stat__k">AMM slippage, $2M block</p>
+          </div>
+
+          <div class="lp-stat">
+            <div class="lp-stat__head">
+              <span class="lp-stat__icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3 L20 12 L12 21 L4 12 Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="lp-stat__v">&lt;10 bps</span>
+            </div>
+            <p class="lp-stat__k">Same block, OTC desk</p>
+          </div>
+
+          <div class="lp-stat">
+            <div class="lp-stat__head">
+              <span class="lp-stat__icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 8 H20 M16 4 L20 8 L16 12" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 16 H4 M8 12 L4 16 L8 20" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="lp-stat__v">100×</span>
+            </div>
+            <p class="lp-stat__k">Cheaper, and on-chain</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- The signature element: the deal itself, as three signed tickets. -->
+      <div class="lp-deal" aria-hidden="true">
+
+        <article class="lp-ticket lp-ticket--send" style="--lp-delay:120ms">
+          <div class="lp-ticket__top">
+            <div>
+              <div class="lp-ticket__label">Send leg · maker</div>
+              <div class="lp-ticket__val">GAM3…X4F2</div>
+            </div>
+            <div class="lp-ticket__asset">XLM</div>
+          </div>
+          <div class="lp-ticket__band">
+            <div>
+              <div class="lp-ticket__label">Amount</div>
+              <div class="lp-ticket__amount">250,000.0000000</div>
+            </div>
+            <div>
+              <div class="lp-ticket__label">Signature</div>
+              <div class="lp-ticket__mask">••••••••••</div>
+            </div>
+          </div>
+        </article>
+
+        <span class="lp-chip lp-chip--signed lp-glass" style="--lp-delay:320ms">Both wallets signed</span>
+
+        <article class="lp-ticket lp-ticket--recv" style="--lp-delay:200ms">
+          <div class="lp-ticket__top">
+            <div>
+              <div class="lp-ticket__label">Receive leg · taker</div>
+              <div class="lp-ticket__val">GBT7…K9Q1</div>
+            </div>
+            <div class="lp-ticket__asset">USDC</div>
+          </div>
+          <div class="lp-ticket__band">
+            <div>
+              <div class="lp-ticket__label">Amount</div>
+              <div class="lp-ticket__amount">62,500.0000000</div>
+            </div>
+            <div>
+              <div class="lp-ticket__label">Signature</div>
+              <div class="lp-ticket__mask">••••••••••</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="lp-ticket lp-ticket--fill" style="--lp-delay:280ms">
+          <div class="lp-ticket__top">
+            <div>
+              <div class="lp-ticket__label">Settlement · expiry</div>
+              <div class="lp-ticket__val">2026-07-08T18:00Z</div>
+            </div>
+            <div class="lp-ticket__asset">fill()</div>
+          </div>
+          <div class="lp-ticket__band">
+            <div>
+              <div class="lp-ticket__label">Both legs</div>
+              <div class="lp-ticket__amount">ONE TX</div>
+            </div>
+            <div>
+              <div class="lp-ticket__label">Nonce</div>
+              <div class="lp-ticket__mask">••••••••••</div>
+            </div>
+          </div>
+        </article>
+
+        <span class="lp-chip lp-chip--atomic lp-glass" style="--lp-delay:400ms">Atomic — or nothing moves</span>
+
+        <span class="lp-orb lp-orb--b lp-glass">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12 H20 M14 6 L20 12 L14 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </div>
+    </section>
+  </div>
 
   <main>
-    <!-- ============ HERO ============ -->
-    <section class="hero">
-      <div class="hero__stars-css starfield" aria-hidden="true"></div>
-      <canvas id="stars" aria-hidden="true"></canvas>
+    <!-- ========================= WHY OTC ========================== -->
+    <section class="lp-section" id="why">
+      <div class="lp-section__wrap">
+        <div class="lp-eyebrow lp-reveal">The problem</div>
+        <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">On-chain liquidity can't move institutional size</h2>
+        <p class="lp-lead lp-reveal" style="--lp-delay:120ms">Stellar's deepest XLM/USDC liquidity sits in
+          the single-digit millions. The constant-product model (x · y = k) turns punitive at scale — every
+          block trade pays a structural slippage tax.</p>
 
-      <div class="eyebrow"><span class="eyebrow__dot"></span>Peer-to-peer OTC · Built on Stellar</div>
-      <h1>Move size. <span class="gold-line">Keep the price.</span></h1>
-      <p class="hero__sub">TrustRFQ is a private over-the-counter desk for Stellar. Agree terms directly
-        with your counterparty, sign the <b>exact amounts</b> with both wallets, and settle atomically
-        on-chain — <b>no order book, no slippage, no custody</b>.</p>
-      <div class="hero__ctas">
-        <a class="btn btn--gold" href="otc.html">Open the desk →</a>
-        <a class="btn btn--ghost" href="#how">See how it works</a>
-      </div>
-
-      <!-- the deal, drawn: both legs flow through fill() at once -->
-      <div class="swap-scene" aria-hidden="true">
-        <svg viewBox="0 0 760 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- rails -->
-          <path class="rail" d="M124 132 C 240 56, 520 56, 636 132"/>
-          <path class="rail" d="M636 168 C 520 244, 240 244, 124 168"/>
-          <!-- animated flows (send: maker → taker, receive: taker → maker) -->
-          <path class="flow flow--send" d="M124 132 C 240 56, 520 56, 636 132"/>
-          <path class="flow flow--recv" d="M636 168 C 520 244, 240 244, 124 168"/>
-
-          <!-- amounts -->
-          <text class="amt amt--send" x="380" y="50">250,000 XLM</text>
-          <text class="amt amt--recv" x="380" y="264">62,500 USDC</text>
-
-          <!-- maker node -->
-          <circle class="node__ring" cx="90" cy="150" r="34"/>
-          <circle class="node__core--maker" cx="90" cy="150" r="26"/>
-          <text class="node__letter node__letter--maker" x="90" y="157">M</text>
-
-          <!-- taker node -->
-          <circle class="node__ring" cx="670" cy="150" r="34"/>
-          <circle class="node__core--taker" cx="670" cy="150" r="26"/>
-          <text class="node__letter node__letter--taker" x="670" y="157">T</text>
-
-          <!-- contract chip -->
-          <rect class="chip__bg" x="302" y="121" width="156" height="58" rx="15"/>
-          <text class="chip__fn" x="380" y="148">fill()</text>
-          <text class="chip__sub" x="380" y="167">ATOMIC SWAP</text>
-
-          <!-- signature seals -->
-          <g class="seal">
-            <rect x="32" y="206" width="116" height="26" rx="13"/>
-            <text x="90" y="223">✓ maker signed</text>
-          </g>
-          <g class="seal">
-            <rect x="612" y="206" width="116" height="26" rx="13"/>
-            <text x="670" y="223">✓ taker signed</text>
-          </g>
-        </svg>
-      </div>
-
-      <div class="hero__stats">
-        <div class="hstat">
-          <div class="hstat__v">2 sigs · 1 tx</div>
-          <div class="hstat__k">Both parties sign the exact terms; one transaction settles both legs.</div>
+        <div class="lp-grid-3">
+          <div class="lp-card lp-glass lp-reveal">
+            <div class="lp-card__label">$250K trade</div>
+            <div class="lp-card__value">3–5%</div>
+            <div class="lp-card__sub">slippage · ~$10K lost</div>
+          </div>
+          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:80ms">
+            <div class="lp-card__label">$1M trade</div>
+            <div class="lp-card__value">9–13%</div>
+            <div class="lp-card__sub">slippage · ~$110K lost</div>
+          </div>
+          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:160ms">
+            <div class="lp-card__label">$2M trade</div>
+            <div class="lp-card__value">18%+</div>
+            <div class="lp-card__sub">slippage · $360K+ lost</div>
+          </div>
         </div>
-        <div class="hstat">
-          <div class="hstat__v">0 custody</div>
-          <div class="hstat__k">Funds move wallet → wallet inside the fill. The contract holds nothing.</div>
-        </div>
-        <div class="hstat">
-          <div class="hstat__v">0 slippage</div>
-          <div class="hstat__k">The price you sign is the price that settles. No curve, no impact.</div>
-        </div>
-        <div class="hstat">
-          <div class="hstat__v">~5s</div>
-          <div class="hstat__k">Stellar ledger finality — atomic settlement in seconds, not days.</div>
+
+        <div class="lp-contrast lp-glass lp-reveal" style="--lp-delay:200ms">
+          <span>The same <strong>$1M</strong> clears off-chain on Coinbase or Binance OTC at
+            <em>under 10 bps</em> — roughly $1,000.</span>
+          <span class="lp-contrast__badge">100× cheaper off-chain</span>
         </div>
       </div>
     </section>
 
-    <!-- ============ THE PROBLEM ============ -->
-    <section class="section section--hairline">
-      <div class="section__wrap">
-        <div class="eyebrow eyebrow--red"><span class="eyebrow__dot"></span>The problem</div>
-        <h2 class="section__h2">On-chain liquidity can't move institutional size</h2>
-        <p class="section__lead">Stellar's deepest XLM/USDC liquidity sits in the single-digit millions.
-          The constant-product model (x · y = k) turns punitive at scale — every block trade pays a
-          structural slippage tax.</p>
+    <!-- ======================= THE SOLUTION ======================= -->
+    <section class="lp-section">
+      <div class="lp-section__wrap">
+        <div class="lp-eyebrow lp-reveal">The solution</div>
+        <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">RFQ execution, settled on-chain</h2>
+        <p class="lp-lead lp-reveal" style="--lp-delay:120ms">TrustRFQ decouples price discovery from AMM
+          pools. Terms are agreed peer-to-peer, off-book — then settled as a deterministic atomic swap.
+          Institutional execution, on-chain on Stellar.</p>
 
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-card__label">$250K trade</div>
-            <div class="stat-card__value">3–5%</div>
-            <div class="stat-card__sub">slippage · ~$10K lost</div>
+        <div class="lp-grid-3">
+          <div class="lp-card lp-glass lp-reveal">
+            <div class="lp-card__icon">0</div>
+            <h3 class="lp-card__title">Zero slippage</h3>
+            <p class="lp-card__body">Quotes are firm — a fixed amount-in for a fixed amount-out. What the
+              maker signs is exactly what settles. No curve, no impact.</p>
           </div>
-          <div class="stat-card">
-            <div class="stat-card__label">$1M trade</div>
-            <div class="stat-card__value">9–13%</div>
-            <div class="stat-card__sub">slippage · ~$110K lost</div>
+          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:80ms">
+            <div class="lp-card__icon">∅</div>
+            <h3 class="lp-card__title">No intent leak</h3>
+            <p class="lp-card__body">Block size never hits a lit order book. Orders are routed privately to
+              one counterparty, so bots can't front-run and liquidity can't flee.</p>
           </div>
-          <div class="stat-card">
-            <div class="stat-card__label">$2M trade</div>
-            <div class="stat-card__value">18%+</div>
-            <div class="stat-card__sub">slippage · $360K+ lost</div>
-          </div>
-        </div>
-
-        <div class="contrast">
-          <span class="contrast__text">The same <strong>$1M</strong> clears off-chain on Coinbase or Binance OTC
-            at <strong class="gold">under 10 bps</strong> — roughly $1,000.</span>
-          <span class="contrast__badge">100× cheaper off-chain</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ THE SOLUTION ============ -->
-    <section class="section section--hairline section--tint">
-      <div class="section__wrap">
-        <div class="eyebrow"><span class="eyebrow__dot"></span>The solution</div>
-        <h2 class="section__h2">RFQ execution, settled <span class="nowrap">on-chain</span></h2>
-        <p class="section__lead">TrustRFQ decouples price discovery from AMM pools. Terms are agreed
-          peer-to-peer, off-book — then settled as a deterministic atomic swap. Institutional execution,
-          on-chain on Stellar.</p>
-
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="feature-card__icon">0</div>
-            <h3 class="feature-card__title">Zero slippage</h3>
-            <p class="feature-card__body">Quotes are firm — a fixed amount-in for a fixed amount-out.
-              What the maker signs is exactly what settles. No curve, no impact.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">∅</div>
-            <h3 class="feature-card__title">No intent leak</h3>
-            <p class="feature-card__body">Block size never hits a lit order book. Orders are routed
-              privately to one counterparty, so bots can't front-run and liquidity can't flee.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">⇄</div>
-            <h3 class="feature-card__title">Atomic settlement</h3>
-            <p class="feature-card__body">A Soroban smart contract moves both legs in a single
-              transaction. Either both sides settle or neither does — no counterparty risk.</p>
+          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:160ms">
+            <div class="lp-card__icon">⇄</div>
+            <h3 class="lp-card__title">Atomic settlement</h3>
+            <p class="lp-card__body">A Soroban smart contract moves both legs in a single transaction.
+              Either both sides settle or neither does — no counterparty risk.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ============ HOW IT WORKS ============ -->
-    <section class="section section--hairline" id="how">
-      <div class="section__wrap">
-        <div class="eyebrow"><span class="eyebrow__dot"></span>How it works</div>
-        <h2 class="section__h2">From agreement to atomic swap in three steps</h2>
+    <!-- ======================= HOW IT WORKS ======================= -->
+    <section class="lp-section" id="how">
+      <div class="lp-section__wrap">
+        <div class="lp-eyebrow lp-reveal">How it works</div>
+        <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">From agreement to atomic swap in three steps</h2>
 
-        <div class="steps">
-          <div class="step">
-            <div class="step__num">STEP 01</div>
-            <div class="step__rule"></div>
-            <h3 class="step__title">Agree &amp; sign</h3>
-            <p class="step__body">You agree terms with your counterparty and create a directed order —
+        <div class="lp-grid-3">
+          <div class="lp-card lp-glass lp-reveal">
+            <div class="lp-step__num">STEP 01</div>
+            <div class="lp-step__rule"></div>
+            <h3 class="lp-card__title">Agree &amp; sign</h3>
+            <p class="lp-card__body">You agree terms with your counterparty and create a directed order —
               amounts, tokens, expiry, their address. Your wallet signs the exact payload.</p>
           </div>
-          <div class="step">
-            <div class="step__num">STEP 02</div>
-            <div class="step__rule"></div>
-            <h3 class="step__title">Counter-sign</h3>
-            <p class="step__body">The order appears live on their desk. They accept, and each wallet
-              signs a Soroban authorization binding every argument of the <code>fill</code> — amounts included.</p>
+          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:80ms">
+            <div class="lp-step__num">STEP 02</div>
+            <div class="lp-step__rule"></div>
+            <h3 class="lp-card__title">Counter-sign</h3>
+            <p class="lp-card__body">The order appears live on their desk. They accept, and each wallet signs
+              a Soroban authorization binding every argument of the fill — amounts included.</p>
           </div>
-          <div class="step">
-            <div class="step__num">STEP 03</div>
-            <div class="step__rule"></div>
-            <h3 class="step__title">Atomic fill</h3>
-            <p class="step__body">Anyone can submit the fill carrying both signatures. Both legs move
-              in one transaction — or nothing moves at all.</p>
+          <div class="lp-card lp-glass lp-reveal" style="--lp-delay:160ms">
+            <div class="lp-step__num">STEP 03</div>
+            <div class="lp-step__rule"></div>
+            <h3 class="lp-card__title">Atomic fill</h3>
+            <p class="lp-card__body">Anyone can submit the fill carrying both signatures. Both legs move in
+              one transaction — or nothing moves at all.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ============ SECURITY ============ -->
-    <section class="section section--hairline section--tint" id="security">
-      <div class="section__wrap">
-        <div class="eyebrow eyebrow--green"><span class="eyebrow__dot"></span>Security model</div>
-        <h2 class="section__h2">The trust lives in the signatures</h2>
-        <p class="section__lead">No accounts, no custodian, no admin switches. Every safeguard is
-          cryptographic — enforced by the Stellar network, not by a middleman.</p>
+    <!-- ========================= SECURITY ========================= -->
+    <section class="lp-section" id="security">
+      <div class="lp-section__wrap">
+        <div class="lp-eyebrow lp-reveal">Security model</div>
+        <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">The trust lives in the signatures</h2>
+        <p class="lp-lead lp-reveal" style="--lp-delay:120ms">No accounts, no custodian, no admin switches.
+          Every safeguard is cryptographic — enforced by the Stellar network, not by a middleman.</p>
 
-        <div class="security-grid">
-          <div class="sec-cards">
-            <div class="sec-card">
-              <h3 class="sec-card__title">Wallet = identity</h3>
-              <p class="sec-card__body">No sign-up, no email, no password. Your Stellar wallet is your
+        <div class="lp-sec">
+          <div class="lp-sec__cards">
+            <div class="lp-card lp-glass lp-reveal">
+              <h3 class="lp-card__title">Wallet = identity</h3>
+              <p class="lp-card__body">No sign-up, no email, no password. Your Stellar wallet is your
                 identity, and every action you take is a wallet signature.</p>
             </div>
-            <div class="sec-card">
-              <h3 class="sec-card__title">Tamper-proof terms</h3>
-              <p class="sec-card__body">Both signatures bind every argument of the on-chain fill.
-                Change a single stroop and both signatures die — the transaction reverts.</p>
+            <div class="lp-card lp-glass lp-reveal" style="--lp-delay:60ms">
+              <h3 class="lp-card__title">Tamper-proof terms</h3>
+              <p class="lp-card__body">Both signatures bind every argument of the on-chain fill. Change a
+                single stroop and both signatures die — the transaction reverts.</p>
             </div>
-            <div class="sec-card">
-              <h3 class="sec-card__title">Replay-guarded</h3>
-              <p class="sec-card__body">Each order settles at most once: a per-order guard,
-                per-signature nonces, and a hard expiration — all enforced on-chain.</p>
+            <div class="lp-card lp-glass lp-reveal" style="--lp-delay:120ms">
+              <h3 class="lp-card__title">Replay-guarded</h3>
+              <p class="lp-card__body">Each order settles at most once: a per-order guard, per-signature
+                nonces, and a hard expiration — all enforced on-chain.</p>
             </div>
-            <div class="sec-card">
-              <h3 class="sec-card__title">Non-custodial</h3>
-              <p class="sec-card__body">The contract never holds funds. Both legs move
-                wallet-to-wallet inside the fill, atomically.</p>
+            <div class="lp-card lp-glass lp-reveal" style="--lp-delay:180ms">
+              <h3 class="lp-card__title">Non-custodial</h3>
+              <p class="lp-card__body">The contract never holds funds. Both legs move wallet-to-wallet
+                inside the fill, atomically.</p>
             </div>
           </div>
 
-          <div class="code-plaque">
-            <div class="code-plaque__bar"><span></span><span></span><span></span><em>soroban · otc_swap</em></div>
+          <div class="lp-plaque lp-glass lp-reveal" style="--lp-delay:120ms">
+            <div class="lp-plaque__bar"><span></span><span></span><span></span><em>soroban · otc_swap</em></div>
             <pre><span class="fn">fill</span>(
   maker:   <span class="v">GAM3…X4F2</span>  <span class="ok">✓ signed</span>
   taker:   <span class="v">GBT7…K9Q1</span>  <span class="ok">✓ signed</span>
@@ -255,42 +341,47 @@
       </div>
     </section>
 
-    <!-- ============ CTA ============ -->
-    <section class="section section--hairline">
-      <div class="section__wrap">
-        <div class="cta">
+    <!-- =========================== CTA =========================== -->
+    <section class="lp-section">
+      <div class="lp-section__wrap">
+        <div class="lp-cta lp-glass lp-reveal">
           <div>
-            <h3 class="cta__title">The desk is open.</h3>
-            <p class="cta__sub">Connect a Testnet wallet and settle your first atomic block trade in minutes.</p>
+            <h3 class="lp-cta__title">The desk is open.</h3>
+            <p class="lp-cta__sub">Connect a Testnet wallet and settle your first atomic block trade in minutes.</p>
           </div>
-          <a href="otc.html" class="btn btn--gold">Launch the desk →</a>
+          <a class="lp-btn lp-btn--solid" href="otc.html">Open the desk</a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="footer__inner">
+  <footer class="lp-footer">
+    <div class="lp-footer__inner">
       <div>
-        <a class="brand" href="hero.html">
-          <svg width="22" height="22" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-            <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
-            <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#E5B567" stroke-width="4" stroke-linecap="round"/>
-            <circle cx="15" cy="32" r="8" fill="#E5B567"/>
-            <circle cx="49" cy="32" r="8" stroke="#E5B567" stroke-width="4"/>
-          </svg>
-          TrustRFQ
+        <a class="lp-brand" href="hero.html">
+          <span class="lp-brand__mark">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+              <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+              <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="15" cy="32" r="8" fill="#fff"/>
+              <circle cx="49" cy="32" r="8" stroke="#fff" stroke-width="5"/>
+            </svg>
+          </span>
+          <span class="lp-brand__name">TrustRFQ</span>
         </a>
-        <p class="footer__tag">Peer-to-peer OTC on Stellar.</p>
+        <p class="lp-footer__tag">Peer-to-peer OTC on Stellar.</p>
       </div>
-      <nav class="footer__links">
-        <a href="otc.html">Launch the desk</a>
+      <nav class="lp-footer__links">
+        <a href="otc.html">Open the desk</a>
+        <a href="intent.html">Intent board</a>
+        <a href="#why">Why OTC</a>
         <a href="#how">How it works</a>
         <a href="#security">Security</a>
       </nav>
     </div>
-    <div class="footer__fine">Built on Stellar · Soroban settlement · Testnet MVP — no real funds involved.</div>
+    <div class="lp-footer__fine">Built on Stellar · Soroban settlement · Testnet MVP — no real funds involved.</div>
   </footer>
+</div>
 
 </body>
 </html>

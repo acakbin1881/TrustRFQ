@@ -1,66 +1,84 @@
-// TrustRFQ landing — hero starfield.
-// Self-hosted (CSP script-src 'self'); no dependencies. Honors
-// prefers-reduced-motion (single static frame) and pauses while hidden.
+/* TrustRFQ landing — reveal on scroll + pointer parallax on the ticket stack.
+   Plain external script: the CSP has no 'unsafe-inline' in script-src.
+
+   FAIL VISIBLE. The hidden state in hero.css is gated on `.lp-js`, which this
+   file puts on <html>. If the script 404s, throws, or is blocked, the class is
+   never set, nothing is ever hidden, and the page renders in full. A landing
+   page that fails visible is a page; one that fails invisible is an outage.
+   That is also why this runs render-blocking in <head> rather than deferred —
+   deferred, the browser can paint the content before the class lands, and you
+   see a flash of the page hiding itself. */
 (() => {
-  const canvas = document.getElementById('stars');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  'use strict';
 
-  let w = 0, h = 0, stars = [], raf = 0;
+  const root = document.documentElement;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const canObserve = 'IntersectionObserver' in window;
 
-  function size() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    w = canvas.clientWidth;
-    h = canvas.clientHeight;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const count = Math.min(220, Math.round((w * h) / 6500));
-    stars = Array.from({ length: count }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      z: 0.3 + Math.random() * 0.7,            // depth: speed, size, brightness
-      r: 0.4 + Math.random() * 1.1,
-      p: Math.random() * Math.PI * 2,           // twinkle phase
-      gold: Math.random() < 0.12,
-    }));
-  }
+  // Only arm the hidden state if we can actually un-hide it again.
+  if (!reduced && canObserve) root.classList.add('lp-js');
 
-  function draw(t) {
-    ctx.clearRect(0, 0, w, h);
-    for (const s of stars) {
-      const tw = reduced ? 0.75 : 0.55 + 0.45 * Math.sin(s.p + t * 0.0012 * s.z);
-      ctx.globalAlpha = tw * s.z;
-      ctx.fillStyle = s.gold ? '#E5B567' : '#EDE8DC';
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r * s.z, 0, 6.2832);
-      ctx.fill();
-      if (!reduced) {
-        s.x += 0.016 * s.z;                     // slow drift
-        if (s.x > w + 2) s.x = -2;
-      }
+  /* The tickets each carry their own transform, and the parallax feeds in
+     through --lp-mx / --lp-my rather than a wrapper transform. That is
+     deliberate: a transformed *ancestor* becomes the backdrop root, so the
+     tickets' backdrop-filter would sample nothing and render empty. */
+  const parallax = () => {
+    const deal = document.querySelector('.lp-deal');
+    if (!deal || reduced) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    let frame = 0;
+
+    const track = (event) => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const box = deal.getBoundingClientRect();
+        const x = (event.clientX - (box.left + box.width / 2)) / box.width;
+        const y = (event.clientY - (box.top + box.height / 2)) / box.height;
+        deal.style.setProperty('--lp-mx', (x * 14).toFixed(2));
+        deal.style.setProperty('--lp-my', (y * 10).toFixed(2));
+      });
+    };
+
+    const rest = () => {
+      deal.style.setProperty('--lp-mx', '0');
+      deal.style.setProperty('--lp-my', '0');
+    };
+
+    window.addEventListener('pointermove', track, { passive: true });
+    window.addEventListener('pointerleave', rest);
+    window.addEventListener('blur', rest);
+  };
+
+  const start = () => {
+    const revealables = document.querySelectorAll('.lp-reveal, .lp-deal');
+    const revealAll = () => revealables.forEach((el) => el.classList.add('is-in'));
+
+    if (!root.classList.contains('lp-js')) {
+      revealAll();
+      return;
     }
-    ctx.globalAlpha = 1;
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-in');
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+
+    revealables.forEach((el) => io.observe(el));
+
+    // Failsafe: if the observer somehow never fires, show everything anyway.
+    window.setTimeout(revealAll, 3000);
+
+    parallax();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
   }
-
-  function loop(t) {
-    draw(t);
-    raf = requestAnimationFrame(loop);
-  }
-
-  size();
-  if (reduced) draw(0);
-  else raf = requestAnimationFrame(loop);
-
-  addEventListener('resize', () => {
-    size();
-    if (reduced) draw(0);
-  });
-
-  document.addEventListener('visibilitychange', () => {
-    if (reduced) return;
-    if (document.hidden) cancelAnimationFrame(raf);
-    else raf = requestAnimationFrame(loop);
-  });
 })();

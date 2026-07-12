@@ -1,0 +1,979 @@
+/* ============================================================================
+   TrustRFQ — landing page ("glass desk").
+   Self-contained: hero.html loads ONLY this file, never styles.css.
+   styles.css remains the desk's stylesheet (otc.html / intent.html) and must
+   not be touched from here. Every selector is prefixed `.lp-` so the two
+   systems cannot collide even if they are ever loaded together.
+
+   Copied verbatim into dist/ by Vite (publicDir) — no autoprefixer, no
+   minification. Vendor prefixes are hand-written; keep them.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- 1. TOKENS */
+:root {
+  color-scheme: dark;
+
+  /* canvas */
+  --lp-canvas:      #3B44F5;   /* the electric indigo the page sits on */
+  --lp-canvas-deep: #2A31D6;   /* vignette, deep shadow */
+  --lp-canvas-lift: #5560F7;   /* opaque glass fallback */
+  --lp-cta:         #1F2BEE;   /* solid button — deeper than the canvas, so it reads as raised */
+  --lp-cta-hi:      #2E39FF;
+
+  /* ink
+     These sit high on purpose. White text tops out around 6:1 on a canvas this
+     bright, so readable body copy has to be near-white — hierarchy comes from
+     size and weight, not from fading the text toward the background. */
+  --lp-ink:   #FFFFFF;
+  --lp-mist:  rgba(255, 255, 255, 0.62);  /* the two-tone headline's dim lines (large text) */
+  --lp-body:  rgba(255, 255, 255, 0.90);
+  --lp-soft:  rgba(255, 255, 255, 0.80);  /* captions/labels — only on the deep glass */
+
+  /* glass — two frosts, and the difference is load-bearing.
+     LIGHT is the reference's milky frost: the hero panel, nav, tickets, chips.
+     It is also what wrecks contrast (it lifts the backdrop toward white, and
+     white-on-near-white has nowhere to go), so nothing but large or near-white
+     type may sit on it.
+     DEEP is a cool indigo frost for every surface that carries small copy —
+     the cards, the plaque, the CTA. Same blur, same border, same glassmorphism;
+     it just tints down instead of up, which buys ~3 stops of contrast. */
+  --lp-glass:        rgba(255, 255, 255, 0.10);
+  --lp-glass-solid:  rgba(255, 255, 255, 0.13);  /* no-backdrop-filter fallback */
+  --lp-glass-deep:       rgba(20, 25, 112, 0.30);
+  --lp-glass-deep-solid: rgba(20, 25, 112, 0.42);
+
+  --lp-line:         rgba(255, 255, 255, 0.24);
+  --lp-line-soft:    rgba(255, 255, 255, 0.14);
+  --lp-sheen:        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --lp-drop:         0 30px 70px rgba(18, 22, 110, 0.35);
+  --lp-drop-lift:    0 44px 90px rgba(14, 18, 100, 0.45);
+
+  /* ticket accents — the reference's three cards */
+  --lp-teal:  #57D8CE;
+  --lp-peri:  #6B77E6;
+  --lp-steel: #AEB3BE;
+
+  /* type */
+  --lp-display: 'Outfit', system-ui, sans-serif;
+  --lp-text:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --lp-mono:    'IBM Plex Mono', ui-monospace, monospace;
+
+  --lp-r-pill: 999px;
+  --lp-r-xl:   40px;
+  --lp-r-lg:   24px;
+  --lp-r-md:   18px;
+
+  --lp-ring: 0 0 0 3px rgba(255, 255, 255, 0.85);
+}
+
+/* ------------------------------------------------------------------ 2. BASE
+   Re-provided here because hero.html no longer loads styles.css. Dropping any
+   of these is a silent regression (box-sizing especially — without it every
+   padded panel gains its padding to its width and the layout looks *almost*
+   right, which is worse than broken). */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--lp-canvas);
+  color: var(--lp-ink);
+  font-family: var(--lp-text);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+::selection { background: rgba(255, 255, 255, 0.28); color: #fff; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--lp-canvas-deep); }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.42); }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--lp-ring);
+  border-radius: var(--lp-r-pill);
+}
+
+img, svg { display: block; max-width: 100%; }
+
+/* ------------------------------------------------------------- 3. THE GLASS
+   Opaque first, upgraded to frosted only where the browser supports it. Never
+   the reverse — a transparent panel on an unsupported browser is unreadable.
+   The `or` is load-bearing: old Safari is prefixed-only, Firefox 103+ is
+   unprefixed-only, so a single-condition @supports fails one of them. */
+.lp-glass {
+  background: var(--lp-glass-solid);
+  border: 1px solid var(--lp-line);
+  box-shadow: var(--lp-sheen), var(--lp-drop);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .lp-glass {
+    background: var(--lp-glass);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+            backdrop-filter: blur(18px) saturate(1.6);
+  }
+}
+
+/* The deep frost. Same .lp-glass element, re-tinted — these rules come later in
+   the cascade, so the surfaces that carry small copy tint down instead of up. */
+.lp-card,
+.lp-plaque,
+.lp-contrast,
+.lp-cta,
+.lp-eyebrow { background: var(--lp-glass-deep-solid); }
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .lp-card,
+  .lp-plaque,
+  .lp-contrast,
+  .lp-cta,
+  .lp-eyebrow { background: var(--lp-glass-deep); }
+}
+
+/* ------------------------------------------------------- 4. CANVAS & SURFACE
+   A full-bleed indigo canvas, with one large frosted surface inset inside it —
+   the reference's inner panel. Ambient light blooms sit *behind* the surface so
+   the frost has something to sample. */
+.lp-canvas {
+  position: relative;
+  min-height: 100vh;
+  padding: 26px;
+}
+
+.lp-canvas::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  /* Kept deliberately faint. An earlier, brighter cyan bloom sat exactly behind
+     the ticket stack and lifted the backdrop enough that even PURE white text on
+     the tickets could not clear 4.1:1 — ambient light is cheap to add and
+     expensive to read through. */
+  background:
+    radial-gradient(60% 50% at 80% 6%, rgba(140, 200, 255, 0.14), transparent 66%),
+    radial-gradient(50% 45% at 10% 92%, rgba(120, 100, 255, 0.18), transparent 68%),
+    radial-gradient(70% 60% at 50% 50%, rgba(70, 90, 240, 0.16), transparent 75%),
+    var(--lp-canvas);
+}
+
+/* the deep edge vignette that makes the canvas read as lit from within */
+.lp-canvas::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 40%, transparent 45%, rgba(24, 28, 140, 0.45));
+}
+
+/* The big panel deliberately does NOT use .lp-glass. An element with
+   backdrop-filter becomes a backdrop root for its descendants, so a frosted
+   surface would flatten the frost on every nav pill and ticket inside it. Since
+   what sits behind the panel is only a gradient, blurring it would change
+   nothing anyway — a translucent white wash reads identically and keeps the
+   children sampling the real page. */
+.lp-surface {
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 22px 22px 64px;
+  border-radius: var(--lp-r-xl);
+  overflow: hidden;   /* clips the big arc */
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: var(--lp-sheen), 0 40px 100px rgba(16, 20, 110, 0.35);
+}
+
+/* the huge circle outline bleeding off the surface, straight from the reference */
+.lp-arc {
+  position: absolute;
+  left: -10%;
+  bottom: -78%;
+  width: 118%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lp-arc--inner {
+  left: 4%;
+  bottom: -60%;
+  width: 90%;
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* everything inside the surface stacks above the arc */
+.lp-surface > *:not(.lp-arc) { position: relative; z-index: 1; }
+
+/* --------------------------------------------------------------------- 5. NAV
+   Floating pill bar: brand, outlined link pills, then the white + solid-blue
+   button pair (the reference's "Download App" / "Sign Up" slots). */
+.lp-nav {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 10px 10px 10px 22px;
+  border-radius: var(--lp-r-pill);
+}
+
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--lp-display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.lp-brand__mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+}
+
+.lp-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;   /* centres the link cluster, as in the reference */
+}
+
+.lp-nav__link {
+  padding: 9px 20px;
+  border-radius: var(--lp-r-pill);
+  border: 1px solid var(--lp-line-soft);
+  color: var(--lp-ink);
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.lp-nav__link:hover {
+  border-color: var(--lp-line);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.lp-nav__actions { display: flex; align-items: center; gap: 8px; }
+
+/* ----------------------------------------------------------------- 6. BUTTONS
+   Two shapes only, both full pills — matching the reference exactly.
+   .lp-btn--solid = deep blue on white text.  .lp-btn--white = white on blue. */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--lp-r-pill);
+  font-family: var(--lp-text);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 17px 38px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.lp-btn--sm { font-size: 15px; padding: 11px 24px; }
+
+.lp-btn--solid {
+  background: var(--lp-cta);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(16, 20, 140, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.lp-btn--solid:hover { background: var(--lp-cta-hi); transform: translateY(-2px); }
+
+.lp-btn--white {
+  background: #fff;
+  color: var(--lp-cta);
+  box-shadow: 0 12px 30px rgba(16, 20, 140, 0.22);
+}
+.lp-btn--white:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(16, 20, 140, 0.30); }
+
+.lp-btn--ghost {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--lp-line);
+  color: #fff;
+}
+.lp-btn--ghost:hover { background: rgba(255, 255, 255, 0.20); transform: translateY(-2px); }
+
+.lp-btn:active { transform: translateY(0); }
+
+/* -------------------------------------------------------------------- 7. HERO */
+.lp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
+  align-items: center;
+  gap: 40px;
+  padding: 64px 34px 30px;
+  min-height: 620px;
+}
+
+/* the proof pill — the reference's avatar stack, re-cast as the traded pair */
+.lp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 20px 7px 8px;
+  border-radius: var(--lp-r-pill);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lp-ink);
+}
+
+.lp-pill strong { font-weight: 600; }
+
+.lp-pill__marks { display: flex; }
+
+.lp-pill__mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-right: -10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  background: var(--lp-cta);
+  font-family: var(--lp-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: #fff;
+}
+.lp-pill__mark:nth-child(2) { background: var(--lp-teal); color: #0C2A33; }
+.lp-pill__mark:last-child { margin-right: 0; }
+
+/* the headline: line 1 solid, the rest at 56% — the reference's two-tone trick */
+.lp-h1 {
+  margin: 22px 0 0;
+  font-family: var(--lp-display);
+  font-size: clamp(36px, 4.1vw, 56px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--lp-mist);
+}
+
+/* Each line is its own block so the two-tone break lands exactly where the
+   reference puts it, rather than wherever the column happens to wrap. */
+.lp-h1 b,
+.lp-h1 span { display: block; font-weight: 500; }
+
+.lp-h1 b { color: var(--lp-ink); }
+
+.lp-hero__sub {
+  max-width: 30em;
+  margin: 22px 0 0;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--lp-body);
+}
+
+.lp-hero__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+/* stat row — icon circle + big number + caption, exactly the reference's shape.
+   Three across in one row: the moment it wraps, the comparison it is making
+   (AMM vs OTC vs the multiple) stops reading as a comparison. */
+.lp-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 24px;
+  margin-top: 48px;
+}
+
+.lp-stat { flex: 1 1 0; min-width: 0; }
+
+.lp-stat__head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.lp-stat__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--lp-line);
+}
+
+.lp-stat__v {
+  font-family: var(--lp-display);
+  font-size: 33px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+/* On the light frost, so it has to be near-white: the size drop from 33px to
+   14px carries the hierarchy, not a fade. */
+.lp-stat__k {
+  margin: 11px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--lp-body);
+}
+
+/* --------------------------------------------------- 8. THE TICKET STACK
+   The signature element. The reference's floating credit cards, re-authored as
+   the artifact this product actually produces: three signed order tickets.
+
+   CRITICAL: `transform` and `backdrop-filter` sit on the SAME element. A
+   transformed *ancestor* becomes the backdrop root, and the blur then samples
+   nothing — the ticket renders empty. So the stack itself is never transformed;
+   each ticket carries its own tilt, and the parallax feeds in through the
+   --lp-mx / --lp-my custom properties rather than a wrapper transform. */
+.lp-deal {
+  position: relative;
+  height: 512px;
+  --lp-mx: 0;
+  --lp-my: 0;
+}
+
+.lp-ticket {
+  position: absolute;
+  width: 366px;
+  padding: 22px;
+  border-radius: var(--lp-r-lg);
+  overflow: hidden;
+  box-shadow: var(--lp-sheen), var(--lp-drop-lift);
+  background: var(--lp-glass-solid);
+  border: 1px solid var(--lp-line);
+  transform:
+    translate3d(calc(var(--lp-mx) * var(--lp-depth) * 1px), calc(var(--lp-my) * var(--lp-depth) * 1px), 0)
+    rotate(var(--lp-tilt));
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .lp-ticket {
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+            backdrop-filter: blur(14px) saturate(1.5);
+  }
+}
+
+.lp-ticket--send { --lp-tilt: -7deg; --lp-depth: 1.6; top: 0;     right: 0;   z-index: 3; }
+.lp-ticket--recv { --lp-tilt:  5deg; --lp-depth: 1.1; top: 152px; right: 82px; z-index: 2; }
+.lp-ticket--fill { --lp-tilt: -3deg; --lp-depth: 0.6; top: 304px; right: 4px;  z-index: 1; }
+
+.lp-ticket__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 46px;
+}
+
+.lp-ticket__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.lp-ticket__val {
+  margin-top: 5px;
+  font-family: var(--lp-mono);
+  font-size: 13px;
+  color: #fff;
+}
+
+.lp-ticket__asset {
+  font-family: var(--lp-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* the accent band — the reference's coloured lower half of each card */
+.lp-ticket__band {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 -22px -22px;
+  padding: 16px 22px 18px;
+  background: linear-gradient(105deg, var(--lp-accent), transparent 180%);
+}
+
+/* The band has to sit clearly *under* the frosted upper half. A periwinkle at
+   canvas luminance disappears into it — so that one goes deeper than the token,
+   not lighter.
+
+   Each band also carries its own ink. The reference puts white type on its teal
+   card, which measures about 1.9:1 — fine in a mockup, unreadable in a browser.
+   Dark ink on the light bands (teal, steel) and white on the deep one takes the
+   same design past 8:1, and it reads crisper besides. */
+.lp-ticket--send {
+  --lp-accent: rgba(87, 216, 206, 0.88);
+  --lp-band-ink: #06242B;
+  --lp-band-ink-dim: rgba(6, 36, 43, 0.78);
+}
+.lp-ticket--recv {
+  --lp-accent: rgba(58, 70, 200, 0.92);
+  --lp-band-ink: #FFFFFF;
+  --lp-band-ink-dim: rgba(255, 255, 255, 0.84);
+}
+.lp-ticket--fill {
+  --lp-accent: rgba(174, 179, 190, 0.82);
+  --lp-band-ink: #161A32;
+  --lp-band-ink-dim: rgba(22, 26, 50, 0.92);
+}
+
+.lp-ticket__band .lp-ticket__label { color: var(--lp-band-ink-dim); }
+
+.lp-ticket__amount {
+  font-family: var(--lp-mono);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--lp-band-ink);
+}
+
+/* where the reference masks a card number, we mask the thing that is genuinely
+   opaque: the signature blob. */
+.lp-ticket__mask {
+  font-family: var(--lp-mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--lp-band-ink);
+}
+
+/* floating label chips pinned to the stack — the reference's "Customize Card" */
+.lp-chip {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 18px;
+  border-radius: var(--lp-r-pill);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--lp-drop);
+}
+
+.lp-chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  flex: none;
+}
+
+/* Anchored from the right so they stay pinned to the tickets' left edges as the
+   column resizes. They sit *beside* the tickets, not over them: the reference's
+   cards have empty space for a chip to overlap into, ours are dense with the
+   deal's actual terms, and covering "SEND LEG" to chase the mockup would be
+   copying the shape at the cost of the content. */
+.lp-chip--signed { top: 66px;  right: 370px; }
+.lp-chip--atomic { top: 384px; right: 370px; }
+.lp-chip--atomic::before { background: var(--lp-teal); }
+
+/* small round glass affordances, as in the reference's corner icon buttons */
+.lp-orb {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  box-shadow: var(--lp-drop);
+}
+
+.lp-orb--b { top: 470px; right: 34px; }
+
+/* --------------------------------------------------------------- 9. SECTIONS */
+.lp-section { padding: 110px 34px; }
+
+.lp-section__wrap { max-width: 1120px; margin: 0 auto; }
+
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 16px;
+  border-radius: var(--lp-r-pill);
+  /* no background here — it would beat the deep-frost rule on source order */
+  border: 1px solid var(--lp-line-soft);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--lp-body);
+}
+
+.lp-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.lp-h2 {
+  margin: 22px 0 0;
+  max-width: 16em;
+  font-family: var(--lp-display);
+  font-size: clamp(30px, 3.4vw, 46px);
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  color: var(--lp-ink);
+}
+
+.lp-lead {
+  max-width: 40em;
+  margin: 20px 0 0;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--lp-body);
+}
+
+.lp-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 52px;
+}
+
+.lp-card {
+  padding: 30px;
+  border-radius: var(--lp-r-lg);
+}
+
+/* problem: the slippage figures */
+.lp-card__label {
+  font-family: var(--lp-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lp-soft);
+}
+
+.lp-card__value {
+  margin: 14px 0 6px;
+  font-family: var(--lp-display);
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.lp-card__sub { font-size: 14px; color: var(--lp-body); }
+
+/* solution / security: titled cards */
+.lp-card__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--lp-line);
+  font-family: var(--lp-display);
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.lp-card__title {
+  margin: 0 0 10px;
+  font-family: var(--lp-display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lp-card__body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--lp-body);
+}
+
+/* the off-chain contrast strip */
+.lp-contrast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 24px 30px;
+  border-radius: var(--lp-r-lg);
+  font-size: 17px;
+  color: var(--lp-body);
+}
+
+.lp-contrast strong { color: var(--lp-ink); font-weight: 600; }
+.lp-contrast em { font-style: normal; color: var(--lp-teal); font-weight: 600; }
+
+.lp-contrast__badge {
+  padding: 9px 18px;
+  border-radius: var(--lp-r-pill);
+  background: #fff;
+  color: var(--lp-cta);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* steps */
+.lp-step__num {
+  font-family: var(--lp-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--lp-teal);
+}
+
+.lp-step__rule {
+  height: 1px;
+  margin: 16px 0 20px;
+  background: var(--lp-line-soft);
+}
+
+/* security: 2×2 cards + the frosted terminal */
+.lp-sec {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 52px;
+  align-items: start;
+}
+
+.lp-sec__cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.lp-sec__cards .lp-card { padding: 26px; }
+
+.lp-plaque {
+  border-radius: var(--lp-r-lg);
+  overflow: hidden;
+}
+
+.lp-plaque__bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--lp-line-soft);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lp-plaque__bar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.lp-plaque__bar em {
+  margin-left: 8px;
+  font-family: var(--lp-mono);
+  font-style: normal;
+  font-size: 12px;
+  color: var(--lp-soft);
+}
+
+.lp-plaque pre {
+  margin: 0;
+  padding: 24px 22px;
+  overflow-x: auto;
+  font-family: var(--lp-mono);
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--lp-body);
+}
+
+.lp-plaque .fn { color: #fff; font-weight: 600; }
+.lp-plaque .v  { color: #fff; }
+.lp-plaque .ok { color: var(--lp-teal); }
+.lp-plaque .cm { color: var(--lp-soft); }
+
+/* ------------------------------------------------------------------ 10. CTA */
+.lp-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: 56px 52px;
+  border-radius: var(--lp-r-xl);
+}
+
+.lp-cta__title {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.lp-cta__sub { margin: 12px 0 0; font-size: 17px; color: var(--lp-body); }
+
+/* --------------------------------------------------------------- 11. FOOTER */
+.lp-footer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 56px 30px;
+}
+
+.lp-footer__inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--lp-line-soft);
+}
+
+.lp-footer__tag { margin: 12px 0 0; font-size: 14px; color: var(--lp-soft); }
+
+.lp-footer__links { display: flex; flex-wrap: wrap; gap: 26px; font-size: 15px; color: var(--lp-body); }
+.lp-footer__links a { transition: color 0.18s ease; }
+.lp-footer__links a:hover { color: var(--lp-ink); }
+
+.lp-footer__fine {
+  margin-top: 22px;
+  font-family: var(--lp-mono);
+  font-size: 12px;
+  color: var(--lp-soft);
+}
+
+/* ---------------------------------------------------------------- 12. MOTION
+   The reveal MUST fail visible. The hidden state is gated behind `.lp-js` — a
+   class hero.js sets on <html> before paint — so if the script 404s, throws, or
+   is blocked, nothing is ever hidden and the page renders in full. It is also
+   scoped to no-preference, because the reduced-motion kill switch below only
+   suppresses the *transition*, not an opacity:0 *initial state*. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-js .lp-reveal {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+
+  .lp-js .lp-reveal.is-in {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--lp-delay, 0ms);
+  }
+
+  /* the tickets drift in from their tilt */
+  .lp-js .lp-deal .lp-ticket,
+  .lp-js .lp-deal .lp-chip,
+  .lp-js .lp-deal .lp-orb { opacity: 0; }
+
+  .lp-js .lp-deal.is-in .lp-ticket,
+  .lp-js .lp-deal.is-in .lp-chip,
+  .lp-js .lp-deal.is-in .lp-orb {
+    opacity: 1;
+    transition: opacity 0.8s ease var(--lp-delay, 0ms),
+                transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* the global kill switch */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ------------------------------------------------------------ 13. RESPONSIVE */
+@media (max-width: 1180px) {
+  .lp-nav__links { display: none; }   /* the links live in the footer at this width */
+  .lp-nav { gap: 14px; }
+  .lp-nav__actions { margin-left: auto; }
+}
+
+@media (max-width: 980px) {
+  .lp-canvas { padding: 12px; }
+  .lp-surface { padding: 16px 16px 48px; border-radius: 28px; }
+
+  .lp-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 48px 20px 20px;
+    gap: 64px;
+    min-height: 0;
+  }
+
+  /* One column means the tickets lose the gutter the chips lived in, and there
+     is nowhere to put them that isn't on top of the deal's own numbers. So they
+     go — the stack still says everything it needs to, and the two claims they
+     carried are made in full in the sections below. */
+  .lp-deal { height: 552px; margin: 0 auto; width: 100%; max-width: 400px; }
+  .lp-ticket { width: min(330px, 92%); }
+  .lp-ticket--send { top: 0;     right: auto; left: 0; }
+  .lp-ticket--recv { top: 176px; right: 0;    left: auto; }
+  .lp-ticket--fill { top: 352px; right: auto; left: 16px; }
+  .lp-chip, .lp-orb { display: none; }
+
+  .lp-stats { gap: 28px 40px; margin-top: 48px; }
+
+  .lp-section { padding: 76px 20px; }
+  .lp-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .lp-sec { grid-template-columns: minmax(0, 1fr); }
+  .lp-cta { padding: 40px 32px; }
+  .lp-footer { padding: 32px 20px 24px; }
+}
+
+@media (max-width: 620px) {
+  .lp-brand { font-size: 18px; }
+  .lp-nav { padding: 8px 8px 8px 14px; }
+  .lp-nav__actions .lp-btn--white { display: none; }   /* keep one clear action on mobile */
+
+  .lp-h1 { margin-top: 22px; }
+  .lp-hero__ctas { margin-top: 30px; }
+  .lp-hero__ctas .lp-btn { flex: 1 1 100%; }
+
+  .lp-stats { flex-direction: column; gap: 26px; }
+  .lp-sec__cards { grid-template-columns: minmax(0, 1fr); }
+  .lp-card { padding: 24px; }
+  .lp-cta { padding: 34px 24px; }
+  .lp-cta .lp-btn { width: 100%; }
+}
