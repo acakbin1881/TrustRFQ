@@ -21,10 +21,11 @@ export default defineConfig({
   },
 
   build: {
-    // otc.html + intent.html are the entries. hero.html / hero.js / styles.css /
-    // the config scripts live in public/ and are copied verbatim, never bundled,
-    // so the hand-written landing keeps shipping exactly as it does today.
-    rollupOptions: { input: ['otc.html', 'intent.html'] },
+    // otc.html is the ONE entry — the desk is the whole app. hero.html /
+    // hero.js / styles.css / intent.css / the config scripts live in public/ and
+    // are copied verbatim, never bundled, so the hand-written landing keeps
+    // shipping exactly as it does today.
+    rollupOptions: { input: ['otc.html'] },
 
     // Vite's modulepreload polyfill is the one inline <script> it would emit.
     // vercel.json's CSP has no 'unsafe-inline' and must never gain one — an

@@ -4,14 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TrustRFQ — OTC Desk</title>
-  <meta name="description" content="The TrustRFQ desk: create wallet-signed OTC orders on Stellar and settle them atomically on-chain.">
-  <meta name="theme-color" content="#E7E9F2">
+  <meta name="description" content="The TrustRFQ desk: send wallet-signed OTC offers on Stellar — to one counterparty or to every taker watching the pair — and settle them atomically on-chain.">
+  <meta name="theme-color" content="#E2E5F3">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- ORDER IS LOAD-BEARING. intent.css must come SECOND: `.counter-form input`
+       and styles.css's base `input[type="text"]` have equal specificity, so
+       source order decides the winner — and the counter-form inputs must win or
+       they render invisible against their own sunken well. -->
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/intent.css">
 </head>
 <body>
   <div id="root"></div>

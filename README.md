@@ -10,10 +10,11 @@ permissionless `fill` (no separate on-chain `approve` step).
 
 | File | What it is |
 |------|------------|
-| `hero.html` | Landing page — electric-indigo glassmorphism, hand-written, never bundled. Links to the desk and the intent board. |
-| `otc.html` | The desk shell — wallet gate, RFQ ticket, incoming/sent inboxes, settlement UI (markup only; styles in `styles.css`). |
+| `hero.html` | Landing page — electric-indigo glassmorphism, hand-written, never bundled. Links to the desk. |
+| `otc.html` | **The one app entry.** The desk shell — wallet gate, the compose ticket, incoming/sent, settlement UI. Loads `styles.css` **then** `intent.css` (order is load-bearing). |
 | `otc.js` | The app logic (ES module) — externalized from `otc.html` so the CSP needs no `'unsafe-inline'` for scripts. |
-| `styles.css` | The **desk's** design system (`otc.html` / `intent.html`). The landing does not load it. |
+| `styles.css` | The **desk's** design system (`otc.html`). The landing does not load it. |
+| `intent.css` | Threads / broadcasts / pairs / balances styles; consumes `styles.css` tokens, loaded after it. |
 | `hero.css` | The **landing's** design system — self-contained, `.lp-`-prefixed, no overlap with `styles.css`. |
 | `hero.js` | Landing-only: scroll reveal + pointer parallax (self-hosted; honors `prefers-reduced-motion`, and fails *visible* — if it never runs, nothing is hidden). |
 | `favicon.svg` | The TrustRFQ swap-mark. |

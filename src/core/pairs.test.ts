@@ -64,6 +64,15 @@ describe('orderPairKey', () => {
 
   it('returns null when a leg is unknown', () => {
     expect(orderPairKey({ maker_token: 'XLM', taker_token: 'USDC:GFAKE' })).toBeNull();
+  });
+
+  // Load-bearing for the ticket: both of its token selects are populated from
+  // TOKENS, so "unknown token" is unreachable there and a null key can ONLY mean
+  // the two legs are the same. That is what blocks a same-token broadcast (a
+  // broadcast needs a pair) while leaving a same-token DIRECTED order legal —
+  // XLM→XLM is the two-wallet settlement E2E's vehicle.
+  it('returns null when both legs are the same token', () => {
     expect(orderPairKey({ maker_token: 'XLM', taker_token: 'XLM' })).toBeNull();
+    expect(orderPairKey({ maker_token: USDC, taker_token: USDC })).toBeNull();
   });
 });

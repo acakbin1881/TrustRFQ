@@ -5,9 +5,9 @@
 // arrive as JS numbers from PostgREST — String(...) restores the string
 // convention before display.
 
-import { orderTokensKnown, tokenLabel } from '../../core/tokens';
-import type { Order, RoundResolution, RoundRow, Side } from '../../core/types';
-import { TokenBadge } from '../../ui/TokenBadge';
+import { orderTokensKnown, tokenLabel } from '../core/tokens';
+import type { Order, RoundResolution, RoundRow, Side } from '../core/types';
+import { TokenBadge } from './TokenBadge';
 
 export interface RoundTimelineProps {
   order: Order;

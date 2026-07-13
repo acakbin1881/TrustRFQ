@@ -7,9 +7,9 @@
 // Class names (CSS lands later in public/intent.css): bal-strip,
 // bal-strip__chip, bal-strip__token, bal-strip__amount, bal-strip__note.
 
-import { balanceOf, fmtBalance } from '../../core/balances';
-import type { BalanceMap } from '../../core/balances';
-import { TOKENS } from '../../core/tokens';
+import { balanceOf, fmtBalance } from '../core/balances';
+import type { BalanceMap } from '../core/balances';
+import { TOKENS } from '../core/tokens';
 
 export interface BalanceStripProps {
   balances: BalanceMap | null;

@@ -1,7 +1,7 @@
-// The desk's single section control: a floating pill (bottom-center) that
-// names the active section, and a centered modal sheet listing all sections.
-// Replaces the old .tabs bar on the desk only — the intent page keeps .tabs.
-// The sheet only switches which .panel is active; panels stay mounted in App.
+// The app's ONE nav control: a floating pill (bottom-center) that names the
+// active section, and a centered modal sheet listing all of them. Generic over
+// N options; the desk passes three. The sheet only switches which .panel is
+// active — panels stay mounted in App, so drafts and list state survive.
 
 import { useEffect, useRef, useState } from 'react';
 
@@ -42,15 +42,22 @@ export function SectionSheet<T extends string>({ options, active, onSelect }: Se
         return;
       }
       if (e.key === 'Tab') {
-        // minimal focus trap: cycle within the sheet's option buttons
+        // focus trap: cycle within the sheet's option buttons. Also catch the
+        // case where focus fell OUT of the panel (e.g. a click on the panel's
+        // padding blurs to <body>) — otherwise Tab would walk the obscured
+        // page behind the aria-modal dialog.
         const els = panelRef.current?.querySelectorAll<HTMLButtonElement>('.sheet__option');
         if (!els || els.length === 0) return;
         const first = els[0];
         const last = els[els.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
+        const activeEl = document.activeElement;
+        if (!panelRef.current?.contains(activeEl)) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        } else if (e.shiftKey && activeEl === first) {
           e.preventDefault();
           last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
+        } else if (!e.shiftKey && activeEl === last) {
           e.preventDefault();
           first.focus();
         }

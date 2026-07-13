@@ -39,7 +39,11 @@
       "Bash(md5)",
       "Bash(git check-ignore *)",
       "mcp__supabase__list_migrations",
-      "Bash(perl -0ne 'while \\(/<script\\([^>]*\\)>\\(.*?\\)<\\\\/script>/gs\\) { print \"BODY[\", length\\($2\\), \"]: attrs=$1\\\\n\" if length\\($2\\) > 0 }' dist/otc.html dist/intent.html)"
+      "Bash(perl -0ne 'while \\(/<script\\([^>]*\\)>\\(.*?\\)<\\\\/script>/gs\\) { print \"BODY[\", length\\($2\\), \"]: attrs=$1\\\\n\" if length\\($2\\) > 0 }' dist/otc.html dist/intent.html)",
+      "Bash(grep -n 'CounterForm\\\\|className=\"order\\\\|className={`order' /Users/acakbin1881/Projects/TrustRFQ/src/intent/ui/ThreadView.tsx /Users/acakbin1881/Projects/TrustRFQ/src/intent/ui/TakerOffers.tsx /Users/acakbin1881/Projects/TrustRFQ/src/intent/ui/BroadcastList.tsx)",
+      "Bash(/Users/acakbin1881/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell --headless --disable-gpu --force-device-scale-factor=1 --window-size=900,900 --screenshot=desk.png --dump-dom file://__TRACKED_VAR__/desk-repro.html)",
+      "Bash(echo \"  \\(exit: $?\\)\")",
+      "Bash(set -e)"
     ],
     "additionalDirectories": [
       "/Users/acakbin1881/Projects/TrustRFQ/src/wallet"

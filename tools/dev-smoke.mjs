@@ -69,12 +69,22 @@ const proxy = createServer(async (req, res) => {
 
 setTimeout(() => { console.error('TIMEOUT'); shutdown(1); }, 120_000).unref();
 
+// Override with CHROME_PATH when Chrome isn't installed — e.g. a Playwright
+// cache: ~/Library/Caches/ms-playwright/chromium-*/chrome-mac-arm64/…/Google Chrome for Testing
+const CHROME = process.env.CHROME_PATH
+  ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
 proxy.listen(0, '127.0.0.1', () => {
   const url = `http://127.0.0.1:${proxy.address().port}/otc.html`;
   console.log(`dev-smoke: ${url} (seed=${SEED ? 'yes' : 'no'})`);
-  chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
+  chrome = spawn(CHROME, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     `--user-data-dir=/tmp/trustrfq-dev-smoke-${process.pid}`, url,
   ], { stdio: 'ignore' });
-  chrome.on('error', () => shutdown(1));
+  // A failed spawn used to exit(1) silently, which reads exactly like a failed
+  // smoke run. Say which binary was missing.
+  chrome.on('error', (err) => {
+    console.error(`could not launch a browser at ${CHROME} — set CHROME_PATH. (${err.message})`);
+    shutdown(1);
+  });
 });

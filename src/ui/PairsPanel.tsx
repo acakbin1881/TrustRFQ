@@ -4,9 +4,9 @@
 // toasted by useIntents through onError.
 
 import { useCallback } from 'react';
-import { ALL_PAIRS } from '../../core/pairs';
-import { useIntents } from '../../data/useIntents';
-import { useToast } from '../../ui/Toast';
+import { ALL_PAIRS } from '../core/pairs';
+import { useIntents } from '../data/useIntents';
+import { useToast } from './Toast';
 
 export interface PairsPanelProps {
   address: string;

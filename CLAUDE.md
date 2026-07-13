@@ -54,7 +54,8 @@ stack (see Stack below).
   stack. Spec: `docs/superpowers/specs/2026-07-10-react-ts-frontend-migration-design.md`.
 - **Intent/private-offer layer built (2026-07-11, branch `feat/intent-layer`).** Full spec
   (`docs/superpowers/specs/2026-07-10-intent-private-offer-layer-design.md`) implemented as a
-  second Vite entry (`intent.html` → `src/intent/`, served as `/intent`): pair-intent toggles,
+  second Vite entry (`intent.html` → `src/intent/`, served as `/intent` — **both folded into the
+  desk on 2026-07-13, see below**): pair-intent toggles,
   one-signature broadcast fan-out (per-taker `orders` rows + `broadcast_id`), isolated
   counter-offer threads (`rounds`, final terms written back onto the order row), settlement
   reused unchanged via `OrderCard`/`useSettlement`. DB reconciled live (2026-07-11):
@@ -70,19 +71,52 @@ stack (see Stack below).
   verified pixel-identical at 1440px and 375px. Fonts: Outfit + Plus Jakarta Sans + IBM Plex Mono
   (all on the already-allowed Google Fonts origin → **no CSP change**). All 30 text elements clear
   WCAG AA, measured against rendered pixels; zero CSP violations under the production headers.
-  Next: redesign the desk to match, so the two stop looking like different products.
+- **Desk redesigned (2026-07-12, branch `design`): light "milky swap" theme.** Rebuilt from a
+  user-supplied mobile reference: white cards (32px radii, borderless, soft lavender shadows) on a
+  cool-lavender canvas (`#EBEDF8→#D5D9EE`), near-black **ink accent** (the `--gold` token family
+  now holds ink values — names frozen for the intent contract), Inter + IBM Plex Mono. The three
+  tabs collapsed into a floating bottom pill (`src/ui/SectionSheet.tsx`) opening a centered modal
+  sheet; `.tabs` CSS survived for the intent page only (**both gone 2026-07-13**). Ticket = notched split-card (CSS mask on
+  the card, drop-shadow on a plain `.ticket__card-shadow` wrapper); counterparty/expiry/maker
+  fields live INSIDE the bottom card (user decision — no separate details card). intent.css got a
+  value-only harmony recolor; intent layout unchanged. Verified: 89 tests, clean build (zero
+  inline scripts), zero console errors, sheet a11y (Escape/backdrop/focus-return/scroll-lock),
+  drafts survive section switches, and **WCAG AA on rendered pixels — 51 text elements across 5
+  views, 0 fail** (glyph-diff sampling). A 4-lens adversarial review (14 agents) confirmed 4
+  findings, all fixed: invisible counter-form inputs on intent, sheet scroll-lock leaking across
+  disconnect (sheet now unmounts on disconnect), focus-trap escape via `<body>`, mask-erased card
+  shadow. Spec: `docs/superpowers/specs/2026-07-12-desk-light-redesign-design.md`.
+- **Merged to ONE page (2026-07-13, branch `design`). `intent.html` is gone.** The desk is the whole
+  app: one compose form where **the optional counterparty address is the only thing that decides
+  directed vs broadcast** — fill it and the offer goes to that wallet (one `orders` row); leave it
+  empty and it fans out to every taker watching the pair (one `broadcasts` row + per-taker rows).
+  The broadcast form's pair select and direction radios are **deleted**: `orderPairKey` derives the
+  pair from the two legs, and direction IS the leg order. One nav pill → New offer / Incoming
+  (offers + the pairs you watch) / Sent (direct offers + grouped broadcasts). **Every** offer is now
+  a `ThreadView` with Accept/Decline/Counter — the `OrderCard` list path is retired. **No DB
+  migration** (`rounds.order_id` never cared about `broadcast_id`). Three real defects closed by the
+  merge: (1) broadcast offers used to render on BOTH pages (the desk's `fetchOrders` has no
+  `broadcast_id` filter); (2) the desk's `OrderCard` accept could take stale round-0 terms on an
+  order with a live counter — the hazard `repairCounteredStatus` was written for; (3) the desk had
+  **no `amountTooLarge` guard**, so it could mint an order both parties sign but nobody can ever
+  fill (`BigInt('1e+21')` throws in `toStroops` at settlement). The directed path also gained the
+  fresh-Horizon balance gate the broadcast/counter paths already had. `src/intent/` moved into
+  `src/ui/`; `.tabs` CSS (53 lines) and `.wrap--desk` are dead and deleted; `otc.html` now loads
+  `styles.css` **then** `intent.css` (order is load-bearing).
 
 ## Stack
 
-- **Frontend: React + TypeScript on Vite** (migrated 2026-07-10). The desk (`otc.html` → `src/`)
-  is a client-only SPA compiled to static files; **no server runtime** (mirrors AirSwap's
-  architecture — their quote server is a separate deployable, and so will ours be). The landing
-  (`public/hero.html` + `hero.css` + `hero.js`) stays hand-written static HTML, copied verbatim into
-  the build. Deployed on Vercel via `npm run build` → `dist/`.
-- **Two visual systems, on purpose.** The desk is the dark "private desk" (`styles.css`); the landing
-  is electric-indigo glassmorphism (`hero.css`, added 2026-07-12 on branch `design`). They share no
-  CSS — the landing does not load `styles.css`, and every landing selector is `.lp-`-prefixed. Until
-  the desk is redesigned to match, expect them to look like different products.
+- **Frontend: React + TypeScript on Vite** (migrated 2026-07-10). **ONE entry: `otc.html` → `src/`**
+  (merged 2026-07-13) — a client-only SPA compiled to static files; **no server runtime** (mirrors
+  AirSwap's architecture — their quote server is a separate deployable, and so will ours be). The
+  landing (`public/hero.html` + `hero.css` + `hero.js`) stays hand-written static HTML, copied
+  verbatim into the build. Deployed on Vercel via `npm run build` → `dist/`.
+- **Two visual systems, on purpose.** The desk is the light "milky swap" theme
+  (`styles.css` + `intent.css`, **in that order** — see Gotchas); the landing is electric-indigo
+  glassmorphism (`hero.css`). They share no CSS — the landing does not load `styles.css`, and every
+  landing selector is `.lp-`-prefixed. **styles.css token NAMES and selectors are a compatibility
+  contract with `intent.css` and the JSX that hardcodes them**: change values freely, never rename
+  or drop. `--gold`/`--gold-hi`/`--gold-lo`/`--gold-ink` = the primary ink-accent family, not gold.
 - **Runtime config is deliberately un-bundled:** `public/otc-config.js` / `public/supabase-config.js`
   stay `window.*` scripts, so a Testnet reset is a one-file edit, not a rebuild (typed in
   `src/config.ts`).
@@ -96,21 +130,21 @@ stack (see Stack below).
 
 | Path | What |
 |------|------|
-| `otc.html` | **Vite entry** for the desk: head + `#root` + config scripts + `src/main.tsx`. |
+| `otc.html` | **The one Vite entry**: head + both stylesheets + `#root` + config scripts + `src/main.tsx`. |
+| `src/App.tsx` | The shell: topbar + gate + 3 sections. Owns every subscription. **Must never call `useSettlement`** (see Gotchas). |
+| `src/ui/Ticket.tsx` | **The one compose form** — an empty counterparty address means broadcast, a filled one means directed. |
 | `src/core/canonical.ts` | **The signature boundary** — `fillCanonicalArgs` etc., pinned by golden vectors. |
 | `src/core/fill.ts` | Chain ops: `signFillAuth` / `submitFill`, wallet injected as `WalletSigner`. |
 | `src/core/tokens.ts` | Token allow-list (quarantine boundary) + validation/display helpers. |
 | `src/config.ts` | Typed reader of the `window.*` runtime config (the only module that may). |
-| `src/data/` | Supabase client, `orders.ts` queries/mutations, `useOrders` (+ realtime). |
+| `src/data/` | Supabase client + queries/hooks: `orders`, `broadcasts`, `rounds`, `intents`, `useBalances` (+ realtime). |
 | `src/wallet/` | Wallets-kit singleton + `walletSign`, `WalletContext` (connect/disconnect). |
-| `src/ui/` | `Gate`, `Ticket`, `OrderCard`, `SettlementStrip`, `Toast`, `useSettlement`, `useNow`. |
-| `intent.html` + `src/intent/` | **Intent page** (second Vite entry): pairs panel, broadcast ticket/list, thread views. |
-| `src/core/pairs.ts` / `negotiation.ts` / `balances.ts` | Pure intent-layer logic (pair keys, rounds/`currentTerms`, Horizon balance parsing) — unit-tested. |
-| `src/data/intents.ts` etc. | Intent-layer queries/hooks (`broadcasts`, `rounds`, `useBalances`, realtime). |
-| `public/intent.css` | Intent-page styles (sectioned; uses `styles.css` tokens, never edits it). |
-| `public/hero.html` + `hero.js` | Hand-written landing (never bundled); links → `otc.html`, `intent.html`. `hero.js` = scroll reveal + ticket parallax. |
+| `src/ui/` | Everything else: `Gate`, `SectionSheet`, `OfferList`, `ThreadView`, `BroadcastList`, `CounterForm`, `RoundTimeline`, `PairsPanel`, `BalanceStrip`, `OrderCard`, `SettlementStrip`, `Toast`, `useSettlement`, `useNow`. |
+| `src/core/pairs.ts` / `negotiation.ts` / `balances.ts` | Pure logic (pair keys, rounds/`currentTerms`, Horizon balance parsing) — unit-tested. |
+| `public/intent.css` | Threads / broadcasts / pairs / balances styles. Loaded by `otc.html` **after** `styles.css`; consumes its tokens, never edits it. |
+| `public/hero.html` + `hero.js` | Hand-written landing (never bundled); links → `otc.html`. `hero.js` = scroll reveal + ticket parallax. |
 | `public/hero.css` | **The landing's design system** — self-contained, `.lp-` prefixed, loads instead of `styles.css`. |
-| `public/styles.css` | **The desk's design system** (`otc.html`/`intent.html` only); JSX must keep its classes. |
+| `public/styles.css` | **The desk's design system** (`otc.html` only); JSX must keep its classes. |
 | `public/*-config.js` | Runtime config (`window.*`): Supabase URL/key, RPC/Horizon/passphrase/contract id. |
 | `fixtures/canonical-args.json` | Golden vectors pinning `canonical.ts` to the vanilla bytes. |
 | `tools/capture.html` + `capture-server.mjs` | Regenerates the golden vectors from the vanilla esm.sh stack. |
@@ -157,6 +191,27 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Gotchas (do not rediscover)
 
+- **`src/App.tsx` must NEVER call `useSettlement`.** Its `txBusy` is a `useRef`, i.e. **per
+  instance**. `ThreadView` is the only render site of `OrderCard` and therefore the only place a
+  settlement can start; it serializes every sign/settle through a **module-scope `settleLock`**. A
+  second `useSettlement` instance in the shell would be invisible to that lock and could race a
+  ThreadView settle — two wallet prompts, two `submitFill`s, two competing `settlement_status`
+  writes. Panels stay mounted, so up to **three** ThreadViews are alive at once. Invariant:
+  `grep -rn "^import.*useSettlement\|useSettlement(" src/` → exactly 3 lines (definition, import,
+  one call — all in `useSettlement.ts` + `ThreadView.tsx`).
+- **`otc.html` loads `styles.css` THEN `intent.css`, and the order is load-bearing.**
+  `.counter-form input` (intent.css) and the base `input[type="text"]` (styles.css) have **equal
+  specificity** — source order alone decides. Swap them and the counter-form inputs render invisible
+  against their own sunken well. (This bug already shipped once.)
+- **`intent.css`'s `[data-panel="…"]` rules track the desk's section names** (`create`/`incoming`/
+  `sent`). A stale name **fails silently** — no error, just lost spacing. Grep `data-panel` in both
+  `src/App.tsx` and `public/intent.css` after renaming a section.
+- **Desk: a CSS `mask` clips everything its own element paints — `box-shadow` AND
+  `filter: drop-shadow` output alike** (filter runs BEFORE mask in the paint pipeline; verified by
+  pixel probe 2026-07-12). That's why the notched swap cards' shadow lives on the plain
+  `.ticket__card-shadow` wrapper, not on the masked `.field--card` itself: the wrapper's
+  drop-shadow traces the already-masked (notched) silhouette. Moving the shadow back onto the
+  masked element makes it silently disappear.
 - **Landing: `transform` and `backdrop-filter` must be on the SAME element.** A transformed (or
   `filter`ed / `will-change`d) *ancestor* becomes the backdrop root, and any descendant's blur then
   samples nothing — the panel renders empty/black in Chrome and Safari. This is why the ticket
@@ -201,7 +256,7 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Verify before deploying
 
-1. `npm test` green — golden vectors byte-identical + token/pairs/negotiation/balances suites (89 tests).
+1. `npm test` green — golden vectors byte-identical + token/pairs/negotiation/balances suites (90 tests).
 2. `npm run build` clean; `dist/*.html` has **zero inline scripts**; `grep -r esm.sh dist/` empty.
 3. `cargo test …` green — 6 tests (swap, replay, expiry, zero-amount, scoped-auth, amount-tamper).
 4. `stellar contract build` produces `otc_swap.wasm` (target `wasm32v1-none`).

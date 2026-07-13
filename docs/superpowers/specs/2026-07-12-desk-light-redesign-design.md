@@ -31,10 +31,14 @@ supplied reference, not the landing's electric indigo.
    addresses/hashes/utility labels. Amounts get `font-variant-numeric: tabular-nums`.
 6. **CTA look = the reference's "Slide to Swap" pill** (white orb left, "›››" right) but a normal
    click button. Copy stays "Sign & send order".
+7. **(added mid-implementation, 2026-07-12)** The counterparty/expiry/signing-as fields do NOT get
+   their own card — they live INSIDE the bottom notched card, below a hairline, so the whole form
+   reads as one card unit ("ilk kartta olsun her şey"). And the canvas is the reference's cooler
+   lavender: `--bg #E2E5F3`, gradient `#EBEDF8 → #D5D9EE`.
 
 ## The reference, tokenized
 
-- Canvas: vertical gradient `#EEF0F7 → #DDE0EE` (flat fallback `#E7E9F2`).
+- Canvas: vertical gradient `#EBEDF8 → #D5D9EE` (flat fallback `#E2E5F3`) — cool lavender.
 - Cards: pure white, large radii (32px), soft lavender diffuse shadows — no borders.
 - Ink ramp: `#111218` primary; alphas .78/.66/.58 for secondary tiers (the .58 tier ≈ 4.7:1 on
   white — verified against rendered pixels; bump to .62 if any surface fails).
@@ -42,8 +46,10 @@ supplied reference, not the landing's electric indigo.
   white text on it.
 - Functional: green `#0E7C4A`, red `#C93838` (≥ 4.5:1 on white).
 - Signature element: the swap legs are **two white cards with a scalloped notch** — a circular
-  swap button sits in the gap and the card edges curve around it (CSS `mask` +
-  `filter: drop-shadow`, no new DOM). Everything else stays quiet.
+  swap button sits in the gap and the card edges curve around it. Technique: CSS `mask` on the
+  card; `filter: drop-shadow` on a plain `.ticket__card-shadow` wrapper (a mask clips its own
+  element's shadows/filter output — filter runs before mask — so the shadow must live one level
+  up, where it traces the notched silhouette). Everything else stays quiet.
 
 ## Compatibility contract (hard constraint)
 
