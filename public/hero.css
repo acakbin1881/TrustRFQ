@@ -1,7 +1,7 @@
 /* ============================================================================
    TrustRFQ — landing page ("glass desk").
    Self-contained: hero.html loads ONLY this file, never styles.css.
-   styles.css remains the desk's stylesheet (otc.html / intent.html) and must
+   styles.css remains the desk's stylesheet (otc.html) and must
    not be touched from here. Every selector is prefixed `.lp-` so the two
    systems cannot collide even if they are ever loaded together.
 
@@ -11,34 +11,49 @@
 
 /* ---------------------------------------------------------------- 1. TOKENS */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* canvas */
-  --lp-canvas:      #3B44F5;   /* the electric indigo the page sits on */
-  --lp-canvas-deep: #2A31D6;   /* vignette, deep shadow */
-  --lp-cta:         #1F2BEE;   /* solid button — deeper than the canvas, so it reads as raised */
+  /* THE GROUND IS WHITE.
+     Which does one thing you have to design around: a backdrop-filter over flat
+     white blurs white into white and produces *nothing*. The glass stops being
+     glass and becomes a grey rectangle. So the white is never flat — the light
+     pools in it (see .lp-canvas::before), and the frost has colour to sample. */
+  --lp-canvas:      #FFFFFF;
+  --lp-canvas-deep: #E4E8FA;   /* scrollbar track, vignette */
+  --lp-cta:         #1F2BEE;   /* kept: the focus ring and the fallback still need a real COLOUR */
   --lp-cta-hi:      #2E39FF;
 
-  /* ink
-     These sit high on purpose. White text tops out around 6:1 on a canvas this
-     bright, so readable body copy has to be near-white — hierarchy comes from
-     size and weight, not from fading the text toward the background. */
-  --lp-ink:   #FFFFFF;
-  --lp-mist:  rgba(255, 255, 255, 0.62);  /* the two-tone headline's dim lines (large text) */
-  --lp-body:  rgba(255, 255, 255, 0.90);
-  --lp-deep-ink: #0D1140;                 /* ink for the panel's MILKY half (tickets, chips) */
+  /* IRIDESCENCE — what the indigo became.
+     A holographic foil is not a colour, it is an image: it has to be a gradient,
+     so it can only ever be a BACKGROUND. Anywhere the old indigo was used as a
+     `color`, it stays a colour.
 
-  /* Below the hero the page inverts: the ground goes light and the electric blue
-     becomes the cards. Two worlds — a lit hero, then a printed page. MILK is what
-     the ticket stack still floats on, up in the hero's bright half. */
-  --lp-cloud:      #A7BCF2;                  /* the ground below the hero — cloud, not navy */
+     And foil is LIGHT. That is the whole consequence: every surface that turns
+     iridescent loses the right to white type on it. The primary button's label,
+     the step numbers, the receive leg's amount — all were white on indigo and all
+     flip to ink here. Put white back on any of these and it drops to ~1.5:1.
+
+     Two cuts of the same foil: flat for flat things, conic for round ones — a disc
+     of foil catches the light around its circumference, not across it. */
+  --lp-holo: linear-gradient(105deg,
+    #CFC9F7 0%, #BEE3F3 20%, #C9F1DF 40%, #F7E9CC 60%, #F3CBE1 80%, #CFC9F7 100%);
+  --lp-holo-disc: conic-gradient(from 210deg,
+    #E8E4FB, #C9F1DF, #F7E9CC, #F3CBE1, #CFC9F7, #BEE3F3, #E8E4FB);
+
+  /* ink — the whole hero flips. Every value that was white is now the same navy
+     the sections below always used, so the page finally has ONE ink. */
+  --lp-ink:   #0D1140;
+  --lp-mist:  rgba(13, 17, 64, 0.52);   /* the two-tone headline's dim lines — LARGE text only */
+  --lp-body:  rgba(13, 17, 64, 0.78);
+  --lp-deep-ink: #0D1140;               /* ink on the tickets and chips (unchanged — they were already dark) */
+
+  --lp-cloud:      #E8ECFB;                  /* the page banks into a faint lavender toward the close */
   --lp-fold:       880px;                    /* where the hero ends — see .lp-canvas::before */
-  --lp-hair:       rgba(13, 17, 64, 0.16);   /* hairlines on the cloud */
+  --lp-hair:       rgba(13, 17, 64, 0.12);
 
-  /* INK, by the surface it lands on. Nothing here is decoration — the same navy
-     that reads at 6.5:1 on the sheet is invisible on a pane, and vice versa. */
-  --lp-ink-1: #0D1140;                    /* on the SHEET (and the hero's milk): titles */
-  --lp-ink-2: rgba(13, 17, 64, 0.92);     /* on the SHEET: body */
+  /* INK, by the surface it lands on. */
+  --lp-ink-1: #0D1140;                    /* titles */
+  --lp-ink-2: rgba(13, 17, 64, 0.92);     /* body */
 
   /* Accents come in a FILL and a TEXT value, and they are not interchangeable.
      A colour that carries meaning as a SHAPE needs hue; the same colour carrying
@@ -49,31 +64,39 @@
   --lp-win-fill:  #0FA394;
   --lp-win-text:  #05413A;
 
-  /* glass — two frosts, and the difference is load-bearing.
-     LIGHT is the reference's milky frost: the hero panel, nav, tickets, chips.
-     It is also what wrecks contrast (it lifts the backdrop toward white, and
-     white-on-near-white has nowhere to go), so nothing but large or near-white
-     type may sit on it.
-     DEEP is a cool indigo frost for every surface that carries small copy —
-     the cards, the plaque, the CTA. Same blur, same border, same glassmorphism;
-     it just tints down instead of up, which buys ~3 stops of contrast. */
-  --lp-glass:        rgba(255, 255, 255, 0.10);
-  --lp-glass-solid:  rgba(255, 255, 255, 0.13);  /* no-backdrop-filter fallback */
+  /* glass, on a white ground.
+     The old page needed TWO frosts, because a milky frost on electric blue lifts
+     its backdrop so far toward white that even pure white text can't reach 4.5:1.
+     That whole problem is gone: the ink is dark now, so ONE frost serves every
+     surface. What the glass is made of stops being a contrast decision.
 
+     But it becomes a *separation* decision instead. A white pane on a white page
+     has no colour to hold it apart — it is held by its edge and its shadow, and
+     by the light pooling behind it. Those three are now load-bearing; thinning any
+     one of them dissolves the panel into the page. */
+  --lp-glass:        rgba(255, 255, 255, 0.58);
+  --lp-glass-solid:  rgba(255, 255, 255, 0.80);  /* no-backdrop-filter fallback */
 
-  --lp-line:         rgba(255, 255, 255, 0.24);
-  --lp-line-soft:    rgba(255, 255, 255, 0.14);
-  --lp-sheen:        inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  --lp-drop:         0 30px 70px rgba(18, 22, 110, 0.35);
-  --lp-drop-lift:    0 44px 90px rgba(14, 18, 100, 0.45);
+  --lp-line:         rgba(13, 17, 64, 0.10);
+  --lp-line-soft:    rgba(13, 17, 64, 0.07);
+  --lp-sheen:        inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  --lp-drop:         0 24px 60px rgba(38, 48, 140, 0.13);
+  --lp-drop-lift:    0 36px 84px rgba(38, 48, 140, 0.18);
 
   /* ticket accents — the reference's three cards */
   --lp-teal:  #57D8CE;          /* as a FILL (ticket band). Too light to use as text on glass. */
 
-  /* type */
-  --lp-display: 'Outfit', system-ui, sans-serif;
-  --lp-text:    'Plus Jakarta Sans', system-ui, sans-serif;
-  --lp-mono:    'IBM Plex Mono', ui-monospace, monospace;
+  /* TYPE — Apple's own.
+     SF Pro is not licensed as a webfont; there is nothing to download and nothing
+     to add to the CSP. `-apple-system` / `BlinkMacSystemFont` is the only honest
+     way to reach it, and on macOS and iOS it resolves to the real San Francisco —
+     the display cut above 20px, the text cut below, chosen by the OS itself.
+     Off Apple hardware it falls back to the platform's own UI face, which is what
+     Apple's own marketing pages do. This is why the landing no longer loads a
+     single webfont. */
+  --lp-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+  --lp-text:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  --lp-mono:    ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
 
   /* ONE column width. The hero panel, every section's content and the footer all
      measure to this, so their left and right edges land on the same line down the
@@ -86,7 +109,8 @@
   --lp-r-xl:   40px;
   --lp-r-lg:   24px;
 
-  --lp-ring: 0 0 0 3px rgba(255, 255, 255, 0.85);
+  /* the focus ring was white — on a white page that is no ring at all */
+  --lp-ring: 0 0 0 3px rgba(31, 43, 238, 0.55);
 }
 
 /* ------------------------------------------------------------------ 2. BASE
@@ -96,7 +120,16 @@
    right, which is worse than broken). */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+
+  /* Leaving the hero, the page settles ONTO the problem section instead of stopping
+     wherever the flick happened to end — so the ladder is framed when it starts to
+     deal. `proximity`, never `mandatory`: proximity only pulls when the scroll comes
+     to rest near the snap point, so it never fights the reader or traps the page.
+     Mandatory would hijack every scroll on the site. */
+  scroll-snap-type: y proximity;
+}
 
 body {
   margin: 0;
@@ -113,20 +146,66 @@ body {
 
 a { color: inherit; text-decoration: none; }
 
-::selection { background: rgba(255, 255, 255, 0.28); color: #fff; }
+::selection { background: rgba(31, 43, 238, 0.16); color: var(--lp-ink-1); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--lp-canvas-deep); }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(13, 17, 64, 0.22);
   border-radius: 999px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.42); }
+::-webkit-scrollbar-thumb:hover { background: rgba(13, 17, 64, 0.38); }
 
 :focus-visible {
   outline: none;
   box-shadow: var(--lp-ring);
   border-radius: var(--lp-r-pill);
+}
+
+/* HOLO DRIFT — the foil surfaces (the primary button, the two pair discs, the
+   rail's step numbers, the receive leg's band) live under a continuous, slow
+   colour cycle, so the iridescence never sits still.
+
+   You can't tween the colours INSIDE a `--lp-holo` gradient directly — CSS has no
+   native interpolation between two `background: linear-gradient(...)` values, and
+   registering it as an animatable @property is more machinery than this needs.
+   hue-rotate() sidesteps that: it rotates the hue of whatever the element already
+   paints — foil AND its dark ink both — as one wash, which is exactly how real
+   foil catches colour: the whole surface shifts together.
+   0deg -> 360deg is a full loop so it seams invisibly; a 0<->Xdeg oscillation
+   would visibly snap at each end. The text sitting on these surfaces is near-black
+   (--lp-ink-1), and hue-rotating a colour that dark barely moves its lightness —
+   confirmed against the rendered pixels at four points around the loop, not just
+   assumed (see contrast.mjs).
+
+   THE CATCH, and why saturate() rides along: the foil colours are pastels sitting
+   near white, and hue-rotating a near-white pixel moves it almost nowhere — the
+   cycle was technically running and visually invisible. Pushing saturation up
+   during the loop is what gives the hue something to actually rotate. The flat
+   foil additionally sweeps its (oversized) gradient across the surface, so the
+   bands travel like light on real foil rather than the whole plate just tinting. */
+/* the ladder's two motions: a value arriving, and a bar filling to its own --w */
+@keyframes lp-deal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes lp-fill {
+  from { width: 0; }
+  to   { width: var(--w); }
+}
+
+@keyframes lp-holo-drift {
+  0%   { filter: hue-rotate(0deg)   saturate(1.7); background-position:   0% 50%; }
+  50%  { filter: hue-rotate(180deg) saturate(2.1); background-position: 100% 50%; }
+  100% { filter: hue-rotate(360deg) saturate(1.7); background-position:   0% 50%; }
+}
+
+/* The discs are conic: background-position would shift their centre, not sweep a
+   band, so they cycle on hue + saturation alone. */
+@keyframes lp-holo-spin {
+  0%   { filter: hue-rotate(0deg)   saturate(1.7); }
+  50%  { filter: hue-rotate(180deg) saturate(2.1); }
+  100% { filter: hue-rotate(360deg) saturate(1.7); }
 }
 
 img, svg { display: block; max-width: 100%; }
@@ -168,7 +247,10 @@ img, svg { display: block; max-width: 100%; }
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .lp-ticket,
   .lp-pane {
-    background: rgba(255, 255, 255, 0.08);
+    /* On the old indigo ground an 8% white wash was already a visible frost. On
+       white it is nothing at all. The card has to bring most of its own opacity
+       now, and the blur only softens the light pooling underneath it. */
+    background: rgba(255, 255, 255, 0.66);
     -webkit-backdrop-filter: blur(14px) saturate(1.5);
             backdrop-filter: blur(14px) saturate(1.5);
   }
@@ -179,10 +261,13 @@ img, svg { display: block; max-width: 100%; }
    A full-bleed indigo canvas, with one large frosted surface inset inside it —
    the reference's inner panel. Ambient light blooms sit *behind* the surface so
    the frost has something to sample. */
+/* No top or side padding: the hero panel is full-bleed, so the canvas may not
+   hold a gutter above or beside it. The bottom gutter stays — it is what the
+   footer sits in. */
 .lp-canvas {
   position: relative;
   min-height: 100vh;
-  padding: 26px;
+  padding: 0 0 26px;
 }
 
 /* THE FIELD — the whole page, and the only ground there is. The sections sit
@@ -201,21 +286,25 @@ img, svg { display: block; max-width: 100%; }
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(72%  9% at 18% 27%, rgba(104, 136, 232, 0.45), transparent 72%),
-    radial-gradient(86% 10% at 88% 41%, rgba(255, 255, 255, 0.46), transparent 70%),
-    radial-gradient(78% 10% at 22% 57%, rgba(110, 144, 236, 0.40), transparent 72%),
-    radial-gradient(92% 11% at 78% 73%, rgba(255, 255, 255, 0.38), transparent 70%),
-    radial-gradient(84% 13% at 30% 93%, rgba(96, 128, 228, 0.50),  transparent 74%),
+    /* A broad lavender wash behind the hero. This is what the panel's frost
+       samples, and it is the only reason a white panel on a white page reads as
+       a panel at all — remove it and the whole hero flattens into a single sheet. */
+    radial-gradient(112% 62% at 50% 4%,  rgba(116, 139, 240, 0.26), transparent 72%),
+
+    radial-gradient(72%  9% at 18% 27%, rgba(105, 128, 236, 0.22), transparent 72%),
+    radial-gradient(86% 10% at 88% 41%, rgba(150, 172, 246, 0.28), transparent 70%),
+    radial-gradient(78% 10% at 22% 57%, rgba(105, 128, 236, 0.18), transparent 72%),
+    radial-gradient(92% 11% at 78% 73%, rgba(150, 172, 246, 0.26), transparent 70%),
+    radial-gradient(84% 13% at 30% 93%, rgba(96, 120, 230, 0.26),  transparent 74%),
     /* The break to cloud is anchored in PIXELS, off --lp-fold, not in percent.
        A percent stop is a fraction of the whole document, so it slides the moment
-       the page gets longer or shorter — and it slid straight up into the hero,
-       lightening the ground under white text that had no room to spare. The hero
-       is a fixed height; the page is not. Measure from the thing that holds still. */
+       the page gets longer or shorter. The hero is a fixed height; the page is not.
+       Measure from the thing that holds still. */
     linear-gradient(180deg,
       var(--lp-canvas) 0,
       var(--lp-canvas) var(--lp-fold),
-      #6E7BF2 calc(var(--lp-fold) + 90px),
-      var(--lp-cloud) calc(var(--lp-fold) + 250px),
+      #F4F6FD calc(var(--lp-fold) + 120px),
+      var(--lp-cloud) calc(var(--lp-fold) + 320px),
       var(--lp-cloud) 100%);
 }
 
@@ -226,7 +315,7 @@ img, svg { display: block; max-width: 100%; }
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(120% 100% at 50% 28%, transparent 64%, rgba(46, 66, 168, 0.16));
+  background: radial-gradient(120% 100% at 50% 28%, transparent 64%, rgba(46, 66, 168, 0.09));
 }
 
 /* The big panel deliberately does NOT use .lp-glass. An element with
@@ -235,43 +324,66 @@ img, svg { display: block; max-width: 100%; }
    what sits behind the panel is only a gradient, blurring it would change
    nothing anyway — a translucent white wash reads identically and keeps the
    children sampling the real page. */
+/* Full-bleed: the panel owns the top of the page, edge to edge. Only its bottom
+   boundary survives — same radius, same shadow — so it still reads as a distinct
+   sheet the rest of the page slides out from under. */
 .lp-surface {
   position: relative;
-  max-width: var(--lp-col);
-  margin: 30px auto 0;   /* pushed down off the top edge */
-  padding: 22px 22px 64px;
-  border-radius: var(--lp-r-xl);
+  margin: 0;
+  padding: 22px 26px 64px;
+  border-radius: 0 0 var(--lp-r-xl) var(--lp-r-xl);
   overflow: hidden;   /* clips the big arc */
+  /* This used to be a gradient running deep-to-milky across the panel, because the
+     copy was white and needed a dark half to sit on while the tickets needed a light
+     one. With the ink flipped, that split has no job left — the panel is one milk,
+     and light simply travels across it. */
   background:
     linear-gradient(103deg,
-      rgba(255, 255, 255, 0.07) 0%,
-      rgba(255, 255, 255, 0.12) 32%,
-      rgba(255, 255, 255, 0.34) 55%,
-      rgba(255, 255, 255, 0.54) 80%,
-      rgba(255, 255, 255, 0.46) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  box-shadow: var(--lp-sheen), 0 40px 100px rgba(16, 20, 110, 0.35);
+      rgba(255, 255, 255, 0.88) 0%,
+      rgba(255, 255, 255, 0.72) 48%,
+      rgba(255, 255, 255, 0.62) 78%,
+      rgba(255, 255, 255, 0.74) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-top: 0;   /* there is no top edge to draw any more */
+  box-shadow: var(--lp-sheen), 0 40px 100px rgba(38, 48, 140, 0.16);
 }
 
-/* the huge circle outline bleeding off the surface, straight from the reference */
+/* the content column inside the full-bleed panel — same --lp-col as the sections,
+   so the nav, the headline and every card below still line up on one edge */
+.lp-surface__wrap {
+  max-width: var(--lp-col);
+  margin: 0 auto;
+}
+
+/* Concentric circle outlines bleeding off the surface — the reference had one
+   ring; this is five, packed tighter, so the curve reads as a dense radial
+   pattern rather than two lonely arcs. Every ring shares ONE centre (49%, -17%)
+   through calc(), so widening the set to 5 rings is a one-line addition per ring,
+   not five independently eyeballed positions that drift out of concentric. */
 .lp-arc {
   position: absolute;
-  left: -10%;
-  bottom: -78%;
-  width: 118%;
+  /* ONE anchor point for every ring: left is a % of the container's WIDTH, bottom
+     a % of its HEIGHT — two different bases in a non-square box, so computing each
+     ring's own left/bottom offset from its width (as this used to) put every ring
+     at a slightly different vertical centre. translate() sidesteps that: its
+     percentages are the ELEMENT's own box, not the container's, so -50%/50% centres
+     any size ring on the exact same (left, bottom) point. */
+  left: 49%;
+  bottom: -17%;
+  width: var(--lp-w);
   aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  transform: translate(-50%, 50%);
+  border: 1px solid rgba(13, 17, 64, var(--lp-o));
   border-radius: 50%;
   pointer-events: none;
   z-index: 0;
 }
 
-.lp-arc--inner {
-  left: 4%;
-  bottom: -60%;
-  width: 90%;
-  border-color: rgba(255, 255, 255, 0.10);
-}
+.lp-arc--a { --lp-w: 78%;  --lp-o: 0.035; }
+.lp-arc--b { --lp-w: 90%;  --lp-o: 0.05;  }
+.lp-arc--c { --lp-w: 102%; --lp-o: 0.065; }
+.lp-arc--d { --lp-w: 118%; --lp-o: 0.09;  }
+.lp-arc--e { --lp-w: 128%; --lp-o: 0.05;  }
 
 /* everything inside the surface stacks above the arc */
 .lp-surface > *:not(.lp-arc) { position: relative; z-index: 1; }
@@ -285,11 +397,10 @@ img, svg { display: block; max-width: 100%; }
   gap: 22px;
   padding: 10px 10px 10px 22px;
   border-radius: var(--lp-r-pill);
-  /* the nav spans the panel, so its right end sits on the milky half — this
-     scrim is what keeps the white links readable all the way across */
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)),
-    rgba(10, 14, 70, 0.22);
+  /* It used to carry a dark scrim, because the links were white and the panel got
+     milky under them halfway across. Dark links need no scrim — the pill is now
+     just brighter milk on milk, read by its edge. */
+  background: rgba(255, 255, 255, 0.52);
 }
 
 .lp-brand {
@@ -303,15 +414,21 @@ img, svg { display: block; max-width: 100%; }
   white-space: nowrap;
 }
 
+/* The mark's SVG is stroked #fff in the markup, which on a white page is an empty
+   square. Flipping a token cannot reach it — the fill has to be overridden here.
+   Same for the stat icons below. */
 .lp-brand__mark {
   display: grid;
   place-items: center;
   width: 36px;
   height: 36px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.30);
+  background: rgba(13, 17, 64, 0.06);
+  border: 1px solid rgba(13, 17, 64, 0.14);
 }
+
+.lp-brand__mark svg [stroke] { stroke: var(--lp-ink-1); }
+.lp-brand__mark svg [fill]:not([fill="none"]) { fill: var(--lp-ink-1); }
 
 .lp-nav__links {
   display: flex;
@@ -333,14 +450,16 @@ img, svg { display: block; max-width: 100%; }
 
 .lp-nav__link:hover {
   border-color: var(--lp-line);
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .lp-nav__actions { display: flex; align-items: center; gap: 8px; }
 
 /* ----------------------------------------------------------------- 6. BUTTONS
    Two shapes only, both full pills — matching the reference exactly.
-   .lp-btn--solid = deep blue on white text.  .lp-btn--white = white on blue. */
+   Both now carry ink type on a light fill, so the ONLY thing separating primary
+   from secondary is the lavender bloom under the primary. Take the bloom away and
+   the page loses its hierarchy — there is no colour left to carry it. */
 .lp-btn {
   display: inline-flex;
   align-items: center;
@@ -359,26 +478,51 @@ img, svg { display: block; max-width: 100%; }
 
 .lp-btn--sm { font-size: 15px; padding: 11px 24px; }
 
+/* The primary button: a pane of glass with a lavender wash under it. Plain — one
+   fill, one edge, one shadow. No wrapper, no lamp, nothing animating.
+   The tint lives IN the glass rather than behind it, which is the whole reason this
+   version is three declarations instead of thirty. */
 .lp-btn--solid {
-  background: var(--lp-cta);
-  color: #fff;
-  box-shadow: 0 12px 30px rgba(16, 20, 140, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  background: rgba(219, 216, 249, 0.78);
+  color: var(--lp-ink-1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 26px rgba(103, 94, 205, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
-.lp-btn--solid:hover { background: var(--lp-cta-hi); transform: translateY(-2px); }
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .lp-btn--solid {
+    background: rgba(199, 194, 246, 0.42);
+    -webkit-backdrop-filter: blur(10px) saturate(1.5);
+            backdrop-filter: blur(10px) saturate(1.5);
+  }
+}
+.lp-btn--solid:hover {
+  background: rgba(199, 194, 246, 0.62);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(103, 94, 205, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
 
+/* The secondary button was white-on-blue. On a white page a white button is not a
+   button — it is a rectangle of page with a shadow. It becomes an outlined ink pill:
+   the same silhouette, now defined by its edge rather than by its fill. */
 .lp-btn--white {
-  background: #fff;
-  color: var(--lp-cta);
-  box-shadow: 0 12px 30px rgba(16, 20, 140, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--lp-ink-1);
+  border: 1px solid rgba(13, 17, 64, 0.18);
+  box-shadow: 0 10px 24px rgba(38, 48, 140, 0.10);
 }
-.lp-btn--white:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(16, 20, 140, 0.30); }
+.lp-btn--white:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(38, 48, 140, 0.16);
+}
 
 .lp-btn--ghost {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.55);
   border: 1px solid var(--lp-line);
-  color: #fff;
+  color: var(--lp-ink-1);
 }
-.lp-btn--ghost:hover { background: rgba(255, 255, 255, 0.20); transform: translateY(-2px); }
+.lp-btn--ghost:hover { background: #fff; transform: translateY(-2px); }
 
 .lp-btn:active { transform: translateY(0); }
 
@@ -415,15 +559,22 @@ img, svg { display: block; max-width: 100%; }
   height: 32px;
   margin-right: -10px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
-  background: var(--lp-cta);
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  background: var(--lp-holo-disc);
   font-family: var(--lp-mono);
   font-size: 8px;
   font-weight: 600;
   letter-spacing: -0.04em;
-  color: #fff;
+  color: var(--lp-ink-1);
+  animation: lp-holo-spin 9s linear infinite;
 }
-.lp-pill__mark:nth-child(2) { background: var(--lp-teal); color: #0C2A33; }
+/* the second disc catches the light from a different angle — two foil coins, not one
+   repeated — and drifts out of phase with the first, so the pair never turns the
+   same colour at the same moment */
+.lp-pill__mark:nth-child(2) {
+  background: conic-gradient(from 20deg, #C9F1DF, #F7E9CC, #F3CBE1, #CFC9F7, #BEE3F3, #C9F1DF);
+  animation-delay: -4.5s;
+}
 .lp-pill__mark:last-child { margin-right: 0; }
 
 /* the headline: line 1 solid, the rest at 56% — the reference's two-tone trick */
@@ -484,9 +635,12 @@ img, svg { display: block; max-width: 100%; }
   height: 40px;
   flex: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(13, 17, 64, 0.06);
   border: 1px solid var(--lp-line);
 }
+
+/* stroked #fff in the markup — invisible on white until overridden here */
+.lp-stat__icon svg [stroke] { stroke: var(--lp-ink-1); }
 
 .lp-stat__v {
   font-family: var(--lp-display);
@@ -596,10 +750,18 @@ img, svg { display: block; max-width: 100%; }
   --lp-band-ink: #06242B;
   --lp-band-ink-dim: rgba(6, 36, 43, 0.78);
 }
+/* The receive leg carried the page's last indigo, in white type. Foil is light, so
+   the type turns over with it — the band below overrides the flat accent entirely. */
 .lp-ticket--recv {
-  --lp-accent: rgba(58, 70, 200, 0.92);
-  --lp-band-ink: #FFFFFF;
-  --lp-band-ink-dim: rgba(255, 255, 255, 0.84);
+  --lp-accent: #CFC9F7;
+  --lp-band-ink: #1B1442;
+  --lp-band-ink-dim: rgba(27, 20, 66, 0.86);
+}
+.lp-ticket--recv .lp-ticket__band {
+  background: var(--lp-holo);
+  background-size: 300% 100%;   /* room for the drift to sweep the bands across */
+  animation: lp-holo-drift 9s linear infinite;
+  animation-delay: -1.5s;
 }
 .lp-ticket--fill {
   --lp-accent: rgba(174, 179, 190, 0.82);
@@ -641,7 +803,14 @@ img, svg { display: block; max-width: 100%; }
   box-shadow: var(--lp-drop);
 }
 
-.lp-chip { color: var(--lp-deep-ink); }
+/* The chips float ON the milk panel, so a translucent frost leaves them barely
+   there. They go solid white and are read by their shadow — the one place on the
+   page where an object is lighter than everything around it. */
+.lp-chip {
+  color: var(--lp-deep-ink);
+  background: #fff;
+  border-color: rgba(13, 17, 64, 0.08);
+}
 
 .lp-chip::before {
   content: '';
@@ -674,10 +843,21 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .lp-orb--b { top: 428px; right: 28px; }
+.lp-orb { background: #fff; border-color: rgba(13, 17, 64, 0.08); }
 .lp-orb svg [stroke] { stroke: var(--lp-deep-ink); }
 
 /* --------------------------------------------------------------- 9. SECTIONS */
 .lp-section { padding: 96px 44px; }
+
+/* The ONLY snap point on the page — the handoff from the hero to the problem.
+   Deliberately not applied to every section: snap points on tall sections make the
+   whole page feel like it is grabbing at you. Here it does one job, once.
+   scroll-margin-top keeps the section's top padding as breathing room above the
+   card rather than pinning the card itself to the window's edge. */
+#why {
+  scroll-snap-align: start;
+  scroll-margin-top: 0;
+}
 
 .lp-section__wrap { max-width: var(--lp-col); margin: 0 auto; }
 
@@ -772,6 +952,13 @@ img, svg { display: block; max-width: 100%; }
   border-bottom: 1px solid var(--lp-hair);
 }
 .lp-rung:last-child { border-bottom: 0; }
+
+/* Each row's place in the queue. nth-of-TYPE, not nth-child: the <figcaption> is
+   the figure's first child, so nth-child would push every index one out of step. */
+.lp-rung:nth-of-type(1) { --r: 0; }
+.lp-rung:nth-of-type(2) { --r: 1; }
+.lp-rung:nth-of-type(3) { --r: 2; }
+.lp-rung:nth-of-type(4) { --r: 3; }
 
 .lp-rung__size {
   font-family: var(--lp-display);
@@ -924,14 +1111,21 @@ img, svg { display: block; max-width: 100%; }
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--lp-cta);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 6px 18px rgba(16, 20, 110, 0.35);
+  background: var(--lp-holo-disc);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 18px rgba(90, 84, 200, 0.28);
   font-family: var(--lp-mono);
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--lp-ink-1);
+  animation: lp-holo-spin 9s linear infinite;
 }
+
+/* three nodes sit in one row, in view together — offsetting their phase is what
+   keeps them reading as three separate pieces of foil instead of one lit sign
+   blinking through its steps in sync */
+.lp-rail__step:nth-child(2) .lp-rail__node { animation-delay: -3s; }
+.lp-rail__step:nth-child(3) .lp-rail__node { animation-delay: -6s; }
 
 .lp-rail__title {
   margin: 26px 0 10px;
@@ -1056,10 +1250,13 @@ img, svg { display: block; max-width: 100%; }
 /* --------------------------------------------------------------- 11. FOOTER */
 /* The footer lands on the cloud, not on the deep canvas — so it is printed, not
    lit. The brand mark has to flip with it: white strokes vanish on cloud. */
+/* The canvas no longer supplies a side gutter, so the footer carries its own —
+   the same 44px the sections use, added OUTSIDE the column so its content still
+   lands on exactly the --lp-col edge. */
 .lp-footer {
-  max-width: var(--lp-col);
+  max-width: calc(var(--lp-col) + 88px);
   margin: 0 auto;
-  padding: 40px 0 30px;
+  padding: 40px 44px 30px;
   color: var(--lp-ink-2);
 }
 
@@ -1095,12 +1292,18 @@ img, svg { display: block; max-width: 100%; }
 }
 
 /* ---------------------------------------------------------------- 12. MOTION
-   The reveal MUST fail visible. The hidden state is gated behind `.lp-js` — a
-   class hero.js sets on <html> before paint — so if the script 404s, throws, or
-   is blocked, nothing is ever hidden and the page renders in full. It is also
-   scoped to no-preference, because the reduced-motion kill switch below only
-   suppresses the *transition*, not an opacity:0 *initial state*. */
-@media (prefers-reduced-motion: no-preference) {
+   The reveal MUST fail visible. Every hidden state below is gated behind `.lp-js`
+   — a class hero.js sets on <html> before paint, and ONLY when it can also take it
+   back off (IntersectionObserver present, motion not reduced, or the ?motion=on
+   preview flag set). If the script 404s, throws, or is blocked, the class never
+   lands, nothing is ever hidden, and the page renders in full.
+
+   `.lp-js` is the SINGLE gate. These rules used to also sit inside an
+   @media (prefers-reduced-motion: no-preference) wrapper, which made the media
+   query a second, redundant gate — and one that ?motion=on could not open, since
+   a media query cannot be overridden from script. One gate, held by JS, is both
+   simpler and previewable. Reduced motion is still honoured: hero.js will not set
+   .lp-js under it, so nothing is hidden and nothing moves. */
   .lp-js .lp-reveal {
     opacity: 0;
     transform: translateY(22px);
@@ -1112,6 +1315,48 @@ img, svg { display: block; max-width: 100%; }
     transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
                 transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
     transition-delay: var(--lp-delay, 0ms);
+  }
+
+  /* THE LADDER DEALS ITSELF OUT.
+     The card does not fade in — it is already on the page. Only its VALUES arrive,
+     row by row, in the order you'd read them: the size, then the bar it costs, then
+     the percentage, then the money. Each row waits its turn (--r is its index), so
+     the four of them land as a sequence rather than a flash.
+
+     The bar fills on an ease-IN curve, which is the opposite of the usual choice and
+     the point of the whole thing: it creeps, then runs away with you. That IS the
+     argument the table is making — slippage is not linear, it accelerates with size.
+     An ease-out fill would say the opposite.
+
+     Both hidden states below are gated on .lp-js and on no-preference, for the same
+     reason the reveal is: with the script gone (or motion reduced) nothing is ever
+     hidden, and the table simply shows its numbers. A chart that fails invisible is
+     a blank chart. */
+  .lp-js .lp-ladder .lp-rung__size,
+  .lp-js .lp-ladder .lp-rung__pct,
+  .lp-js .lp-ladder .lp-rung__loss { opacity: 0; }
+  .lp-js .lp-ladder .lp-rung__bar { width: 0; }
+
+  /* --lp-lead-in holds the whole table back until the eyebrow and the headline above
+     have arrived. Without it a fast scroll fires both observers in the same frame and
+     the section's title and its numbers animate on top of each other. */
+  .lp-ladder { --lp-lead-in: 0.45s; }
+
+  .lp-js .lp-ladder.is-in .lp-rung__size {
+    animation: lp-deal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s);
+  }
+  .lp-js .lp-ladder.is-in .lp-rung__bar {
+    animation: lp-fill 0.9s cubic-bezier(0.55, 0, 0.85, 0.2) both;   /* slow, then fast */
+    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s + 0.22s);
+  }
+  .lp-js .lp-ladder.is-in .lp-rung__pct {
+    animation: lp-deal 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s + 1.02s);   /* only once the bar has landed */
+  }
+  .lp-js .lp-ladder.is-in .lp-rung__loss {
+    animation: lp-deal 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s + 1.18s);
   }
 
   /* the tickets drift in from their tilt */
@@ -1126,12 +1371,18 @@ img, svg { display: block; max-width: 100%; }
     transition: opacity 0.8s ease var(--lp-delay, 0ms),
                 transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
-}
 
-/* the global kill switch */
+/* The global kill switch, exempted for .lp-motion — the class hero.js sets ONLY when
+   the page is opened with ?motion=on. Without that escape hatch there is no way to
+   watch the page move on a machine that has Reduce Motion switched on system-wide:
+   a media query cannot be overridden from script, so the animations would be
+   unreachable without touching the OS. The exemption is opt-in, per URL, and no
+   ordinary visitor can land on it — the default behaviour is unchanged. */
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  html:not(.lp-motion) { scroll-behavior: auto; }
+  html:not(.lp-motion) *,
+  html:not(.lp-motion) *::before,
+  html:not(.lp-motion) *::after {
     animation: none !important;
     transition: none !important;
   }
@@ -1146,8 +1397,8 @@ img, svg { display: block; max-width: 100%; }
 
 @media (max-width: 980px) {
   :root { --lp-fold: 1560px; }   /* the hero stacks, so the fold drops with it */
-  .lp-canvas { padding: 12px; }
-  .lp-surface { padding: 16px 16px 48px; border-radius: 28px; }
+  .lp-canvas { padding: 0 0 12px; }
+  .lp-surface { padding: 16px 16px 48px; border-radius: 0 0 28px 28px; }
 
   .lp-hero {
     grid-template-columns: minmax(0, 1fr);
@@ -1173,7 +1424,7 @@ img, svg { display: block; max-width: 100%; }
 
   /* the slab un-divides into stacked panes; the rail turns vertical */
   .lp-slab { grid-template-columns: minmax(0, 1fr); }
-  .lp-slab__col { border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.16); }
+  .lp-slab__col { border-left: 0; border-top: 1px solid var(--lp-hair); }
   .lp-slab__col:first-child { border-top: 0; }
 
   .lp-rail { grid-template-columns: minmax(0, 1fr); gap: 30px; }
@@ -1181,7 +1432,7 @@ img, svg { display: block; max-width: 100%; }
     top: 25px; bottom: 25px; left: 25px; right: auto;
     width: 1px; height: auto;
     background: linear-gradient(180deg,
-      rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.10));
+      rgba(13, 17, 64, 0.10), rgba(13, 17, 64, 0.35), rgba(13, 17, 64, 0.10));
   }
   .lp-rail__step { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 0 20px; }
   .lp-rail__node { grid-row: span 2; }
@@ -1196,7 +1447,7 @@ img, svg { display: block; max-width: 100%; }
   .lp-rung__loss { display: none; }
 
   .lp-cta { padding: 40px 32px; }
-  .lp-footer { padding: 32px 20px 24px; }
+  .lp-footer { max-width: none; padding: 32px 22px 24px; }
 }
 
 @media (max-width: 620px) {

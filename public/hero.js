@@ -12,7 +12,17 @@
   'use strict';
 
   const root = document.documentElement;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* PREVIEW FLAG. `?motion=on` forces the page to animate even where the OS asks for
+     reduced motion. It exists because there is otherwise no way to SEE this page move
+     on a machine with Reduce Motion enabled system-wide — a media query cannot be
+     overridden from script, so the choice would be "change your OS settings" or
+     "never look at it". Opt-in, per URL: nobody reaches it by accident, and the
+     default behaviour for every real visitor is untouched. */
+  const forced = new URLSearchParams(window.location.search).get('motion') === 'on';
+  if (forced) root.classList.add('lp-motion');   // exempts the CSS kill switch
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches && !forced;
   const canObserve = 'IntersectionObserver' in window;
 
   // Only arm the hidden state if we can actually un-hide it again.
@@ -51,27 +61,51 @@
     window.addEventListener('blur', rest);
   };
 
-  const start = () => {
-    const revealables = document.querySelectorAll('.lp-reveal, .lp-deal');
-    const revealAll = () => revealables.forEach((el) => el.classList.add('is-in'));
-
-    if (!root.classList.contains('lp-js')) {
-      revealAll();
-      return;
-    }
-
+  /* Watch a set, add `is-in` once, stop watching. */
+  const watch = (nodes, options) => {
     const io = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         entry.target.classList.add('is-in');
         io.unobserve(entry.target);
       });
-    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+    }, options);
+    nodes.forEach((el) => io.observe(el));
+  };
 
-    revealables.forEach((el) => io.observe(el));
+  const start = () => {
+    const revealables = document.querySelectorAll('.lp-reveal, .lp-deal');
+    /* The ladder has NO hidden state of its own — the card is already on the page.
+       `is-in` only starts its rows dealing (see the ladder block in hero.css §12).
+       It gets its own, much higher threshold because the sequence runs ~3s and the
+       card is tall: at the 5% the others use, the last rows would deal themselves
+       out below the fold, where nobody is looking. */
+    const ladders = document.querySelectorAll('.lp-ladder');
 
-    // Failsafe: if the observer somehow never fires, show everything anyway.
-    window.setTimeout(revealAll, 3000);
+    const showAll = () => {
+      revealables.forEach((el) => el.classList.add('is-in'));
+      ladders.forEach((el) => el.classList.add('is-in'));
+    };
+
+    if (!root.classList.contains('lp-js')) {
+      showAll();
+      return;
+    }
+
+    watch(revealables, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+    watch(ladders, { threshold: 0.45 });
+
+    /* Failsafe, if the observer never fires. It must NOT blanket-reveal the ladder:
+       a reader still on the hero at 3s would have the whole sequence play out below
+       the fold and arrive to a table that has already finished dealing. So the timer
+       asks first whether the observer is alive — by 3s the hero's own revealables are
+       long past their threshold, and if not one of them carries `is-in`, nothing is
+       listening and the ladder must show its numbers or show nothing at all. */
+    window.setTimeout(() => {
+      const observerAlive = [...revealables].some((el) => el.classList.contains('is-in'));
+      revealables.forEach((el) => el.classList.add('is-in'));
+      if (!observerAlive) ladders.forEach((el) => el.classList.add('is-in'));
+    }, 3000);
 
     parallax();
   };

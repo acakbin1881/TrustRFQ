@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TrustRFQ — Peer-to-peer OTC on Stellar</title>
   <meta name="description" content="TrustRFQ is a private over-the-counter desk for Stellar. Agree terms peer-to-peer, sign the exact amounts with both wallets, and settle atomically on-chain — no order book, no slippage, no custody.">
-  <meta name="theme-color" content="#3B44F5">
+  <meta name="theme-color" content="#FFFFFF">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- No webfont link. The landing is set in San Francisco via the system stack
+       (see --lp-display in hero.css) — SF Pro has no webfont licence, so there is
+       nothing to fetch. The desk still loads Google Fonts, so the CSP entry stays. -->
   <link rel="stylesheet" href="hero.css">
   <!-- Not deferred: hero.js sets .lp-js on <html>, which arms the reveal's hidden
        state. Deferred, the browser can paint before that lands and you see the
@@ -21,8 +21,16 @@
 
 <div class="lp-canvas">
   <div class="lp-surface">
-    <div class="lp-arc" aria-hidden="true"></div>
-    <div class="lp-arc lp-arc--inner" aria-hidden="true"></div>
+    <div class="lp-arc lp-arc--a" aria-hidden="true"></div>
+    <div class="lp-arc lp-arc--b" aria-hidden="true"></div>
+    <div class="lp-arc lp-arc--c" aria-hidden="true"></div>
+    <div class="lp-arc lp-arc--d" aria-hidden="true"></div>
+    <div class="lp-arc lp-arc--e" aria-hidden="true"></div>
+
+    <!-- The panel is full-bleed, but its CONTENT is not: this wrap holds the nav and
+         the hero on the same --lp-col line as every section below. Without it, the
+         headline would run to the window's edge and the page would lose its column. -->
+    <div class="lp-surface__wrap">
 
     <!-- ============================ NAV ============================ -->
     <header class="lp-nav lp-glass">
@@ -45,7 +53,6 @@
       </nav>
 
       <div class="lp-nav__actions">
-        <a class="lp-btn lp-btn--white lp-btn--sm" href="intent.html">Intent board</a>
         <a class="lp-btn lp-btn--solid lp-btn--sm" href="otc.html">Open the desk</a>
       </div>
     </header>
@@ -67,54 +74,9 @@
           <span>you agreed on.</span>
         </h1>
 
-        <p class="lp-hero__sub lp-reveal" style="--lp-delay:160ms">
-          Agree terms directly with your counterparty, sign the exact amounts with both
-          wallets, and settle both legs in a single on-chain transaction.
-        </p>
-
-        <div class="lp-hero__ctas lp-reveal" style="--lp-delay:240ms">
+        <div class="lp-hero__ctas lp-reveal" style="--lp-delay:160ms">
           <a class="lp-btn lp-btn--solid" href="otc.html">Open the desk</a>
           <a class="lp-btn lp-btn--white" href="#how">See how it works</a>
-        </div>
-
-        <div class="lp-stats lp-reveal" style="--lp-delay:320ms">
-          <div class="lp-stat">
-            <div class="lp-stat__head">
-              <span class="lp-stat__icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 18 L10 11 L14 15 L20 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M20 11 V6 H15" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </span>
-              <span class="lp-stat__v">18%+</span>
-            </div>
-            <p class="lp-stat__k">On an AMM, $2M block</p>
-          </div>
-
-          <div class="lp-stat">
-            <div class="lp-stat__head">
-              <span class="lp-stat__icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 3 L20 12 L12 21 L4 12 Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-                </svg>
-              </span>
-              <span class="lp-stat__v">&lt;10 bps</span>
-            </div>
-            <p class="lp-stat__k">Same block, OTC desk</p>
-          </div>
-
-          <div class="lp-stat">
-            <div class="lp-stat__head">
-              <span class="lp-stat__icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 8 H20 M16 4 L20 8 L16 12" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M20 16 H4 M8 12 L4 16 L8 20" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </span>
-              <span class="lp-stat__v">100×</span>
-            </div>
-            <p class="lp-stat__k">Cheaper, and on-chain</p>
-          </div>
         </div>
       </div>
 
@@ -192,6 +154,8 @@
         </span>
       </div>
     </section>
+
+    </div><!-- /.lp-surface__wrap -->
   </div>
 
   <main>
@@ -199,12 +163,13 @@
     <section class="lp-section" id="why">
       <div class="lp-section__wrap">
         <div class="lp-eyebrow lp-pane lp-reveal">The problem</div>
-        <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">On-chain liquidity can't move institutional size</h2>
-        <p class="lp-lead lp-reveal" style="--lp-delay:120ms">Stellar's deepest XLM/USDC liquidity sits in
-          the single-digit millions. The constant-product model (x · y = k) turns punitive at scale — every
-          block trade pays a structural slippage tax.</p>
+        <h2 class="lp-h2 lp-reveal" style="--lp-delay:90ms">On-chain liquidity can't move institutional size</h2>
 
-        <figure class="lp-ladder lp-pane lp-reveal" style="--lp-delay:180ms">
+        <!-- No .lp-reveal on the card: it is ALREADY there when you arrive. What
+             animates is what it says — each row deals itself out (size → bar → pct
+             → loss), and only after the heading above has landed. The card is the
+             table; the numbers are the hand being played. -->
+        <figure class="lp-ladder lp-pane">
           <figcaption class="lp-ladder__head">
             <span class="lp-ladder__title">What it costs to move the block</span>
             <span class="lp-ladder__axis">0%<i></i>20%</span>
@@ -383,7 +348,6 @@
       </div>
       <nav class="lp-footer__links">
         <a href="otc.html">Open the desk</a>
-        <a href="intent.html">Intent board</a>
         <a href="#why">Why OTC</a>
         <a href="#how">How it works</a>
         <a href="#security">Security</a>
