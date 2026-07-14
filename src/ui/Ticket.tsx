@@ -7,21 +7,32 @@
 // direction IS the leg order.
 //
 // Both legs feed both paths, so the validation runs once, and the balance gate
-// and the too-large-amount guard now cover the directed path too (the desk used
-// to allow an amount that BigInt cannot parse back at settlement — an order both
+// and the too-large-amount guard cover the directed path too (the desk used to
+// allow an amount that BigInt cannot parse back at settlement — an order both
 // parties could sign but nobody could ever fill).
+//
+// Layout (redesigned 2026-07-13 from the "New RFQ Ticket v2" handoff): an
+// AirSwap-style OTC ticket. A frosted hero holds the two legs side by side with
+// the swap orb pinned to the exact centre; a white strip below carries
+// counterparty → expiry → CTA; a signature line closes the card. The legs grid
+// is `1fr auto 1fr` with the legs justified INWARD on purpose: the side tracks
+// stay equal, so swapping a narrow token (XLM) for a wide one (USDC) cannot
+// drift the orb off centre. A plain flex row does drift — do not "simplify" it.
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ADDR_MSG, checkAddress, normalizeAddress } from '../core/address';
 import { canAfford, type BalanceMap } from '../core/balances';
 import { canonicalPayload } from '../core/canonical';
 import { amountTooLarge, composeBroadcastPayload } from '../core/negotiation';
 import { orderPairKey, pairLabel } from '../core/pairs';
-import { ADDR_RE, TOKENS, tokenLabel, validAmount } from '../core/tokens';
+import { TOKENS, tokenLabel, validAmount } from '../core/tokens';
 import { fanOut, insertBroadcast, updateBroadcastStatus } from '../data/broadcasts';
 import { fetchIntentAddresses } from '../data/intents';
 import { insertOrder } from '../data/orders';
 import { useIntentCount } from '../data/useIntentCount';
 import { walletSign } from '../wallet/kit';
+import { AddressSeal } from './AddressSeal';
+import { TokenSelect } from './TokenSelect';
 import { errMsg, useToast } from './Toast';
 
 const DEFAULT_MAKER_TOKEN = 'XLM';
@@ -30,6 +41,26 @@ const DEFAULT_TAKER_TOKEN = TOKENS[1].value; // USDC
 // Client-side sanity cap on fan-out (DoS friction, not enforcement); real
 // per-maker limits are deferred.
 const MAX_FANOUT = 100;
+
+/** The amount inputs size themselves to their content, AirSwap-style. */
+const chWidth = (v: string) => `${Math.min(Math.max((v || '0').length, 1), 14)}ch`;
+
+// …and step their glyphs down as the number gets longer. Each leg is capped at
+// half the hero (see the layout note above), so a realistic amount at the full
+// 46px would overrun its track and wrap the token code under the number. The
+// steps live in CSS so the mobile breakpoints keep control of the actual sizes.
+const amountClass = (v: string) =>
+  v.length >= 12 ? 'input--num is-xxlong'
+    : v.length >= 9 ? 'input--num is-xlong'
+      : v.length >= 7 ? 'input--num is-long'
+        : 'input--num';
+
+/** Implied rate, formatted for a read-back chip. Never a quote — see below. */
+function fmtRate(x: number): string {
+  if (!isFinite(x) || x <= 0) return '';
+  if (x >= 1) return x.toLocaleString('en-US', { maximumFractionDigits: x >= 100 ? 2 : 4 });
+  return String(parseFloat(x.toPrecision(4)));
+}
 
 interface TicketProps {
   /** null while disconnected — the ticket stays mounted (hidden) so drafts survive */
@@ -47,16 +78,26 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
   const [makerToken, setMakerToken] = useState(DEFAULT_MAKER_TOKEN);
   const [takerToken, setTakerToken] = useState(DEFAULT_TAKER_TOKEN);
   const [takerAddress, setTakerAddress] = useState('');
+  // Address errors stay SOFT until the field has been touched (blurred, or made
+  // valid, or a submit attempted) — half a pasted address is not a mistake yet.
+  const [touched, setTouched] = useState(false);
   const [expValue, setExpValue] = useState('60');
   const [expUnit, setExpUnit] = useState('3600000'); // hours
   const [busy, setBusy] = useState(false);
 
+  const printRef = useRef<HTMLDivElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
   // THE discriminator. Everything below reads off these two.
-  const directed = takerAddress.trim().length > 0;
+  const directed = takerAddress.length > 0;
   const pairKey = orderPairKey({ maker_token: makerToken, taker_token: takerToken });
-  // Both selects are populated from TOKENS, so "unknown token" is unreachable
+  // Both pickers are populated from TOKENS, so "unknown token" is unreachable
   // here — a null pair key can only mean the two legs are the same token.
   const sameToken = pairKey === null;
+
+  const addrCode = checkAddress(takerAddress, address);
+  const addrOk = addrCode === 'ok';
+  const addrErr = touched && directed && !addrOk;
 
   // Subscriber count, only while it means something. The `address &&` guard is
   // load-bearing: this form stays MOUNTED while disconnected so drafts survive,
@@ -71,8 +112,46 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
   // for one frame. `count === null` (still loading) must NOT disable.
   const disabled = busy || (!directed && sameToken) || (!directed && count === 0);
 
+  // A local echo of the two numbers the maker typed — NOT a fetched quote and
+  // never to become one. It exists so a fat-fingered zero is visible as an
+  // absurd rate before the wallet prompt, not after settlement.
+  const rates = useMemo(() => {
+    const a = parseFloat(makerAmount.replace(/,/g, ''));
+    const b = parseFloat(takerAmount.replace(/,/g, ''));
+    const ta = tokenLabel(makerToken);
+    const tb = tokenLabel(takerToken);
+    const live = isFinite(a) && a > 0 && isFinite(b) && b > 0;
+    return {
+      live,
+      aLabel: `1 ${ta} =`,
+      bLabel: `1 ${tb} =`,
+      aChip: live ? `${fmtRate(b / a)} ${tb}` : '—',
+      bChip: live ? `${fmtRate(a / b)} ${ta}` : '—',
+    };
+  }, [makerAmount, takerAmount, makerToken, takerToken]);
+
+  // The field is one line that scrolls sideways: a "printed" layer underneath
+  // renders the address with its head bolded and its last 8 characters on an ink
+  // chip, and a transparent textarea sits on top carrying the caret. The two
+  // must scroll together or the chip drifts away from the glyphs it belongs to.
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+    ta.scrollLeft = 1e6; // keep the tail — the part you actually compare — in view
+    if (printRef.current) printRef.current.scrollLeft = ta.scrollLeft;
+  }, [takerAddress]);
+
+  const tailShown = takerAddress.length === 56 && addrCode !== 'start' && addrCode !== 'charset';
+
+  function swapLegs() {
+    setMakerAmount(takerAmount);
+    setTakerAmount(makerAmount);
+    setMakerToken(takerToken);
+    setTakerToken(makerToken);
+  }
+
   function reset() {
-    setMakerAmount(''); setTakerAmount(''); setTakerAddress('');
+    setMakerAmount(''); setTakerAmount(''); setTakerAddress(''); setTouched(false);
     setMakerToken(DEFAULT_MAKER_TOKEN); setTakerToken(DEFAULT_TAKER_TOKEN);
     setExpValue('60'); setExpUnit('3600000');
   }
@@ -84,7 +163,7 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
 
     const maker_amount = makerAmount.trim();
     const taker_amount = takerAmount.trim();
-    const taker_address = takerAddress.trim();
+    const taker_address = takerAddress;
     const v = parseInt(expValue, 10);
     const u = parseInt(expUnit, 10);
 
@@ -93,10 +172,10 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
     if (!validAmount(taker_amount)) return toast('Enter a valid "receive" amount (max 7 decimals).', 'err');
     if (amountTooLarge(maker_amount) || amountTooLarge(taker_amount))
       return toast('Amount too large (max 10,000,000,000,000).', 'err');
-    if (directed && !ADDR_RE.test(taker_address))
-      return toast('Counterparty address is not a valid Stellar address.', 'err');
-    if (directed && taker_address === address)
-      return toast('Counterparty cannot be your own address.', 'err');
+    if (directed && !addrOk) {
+      setTouched(true);
+      return toast(ADDR_MSG[addrCode as Exclude<typeof addrCode, 'ok'>], 'err');
+    }
     if (!directed && sameToken)
       return toast('A broadcast needs two different tokens — pick a different token, or enter a counterparty address to send this as a directed offer.', 'err');
     if (!(v > 0)) return toast('Expiry must be greater than zero.', 'err');
@@ -106,9 +185,9 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
     setBusy(true);
     try {
       // Gate on a FRESH balance, never a stale map (canAfford fails closed on
-      // null). This now covers the directed path too: a maker proposing terms
-      // they cannot honor burns the TAKER's signature and fee when the SAC
-      // transfer reverts at settlement — identical in both modes.
+      // null). This covers the directed path too: a maker proposing terms they
+      // cannot honor burns the TAKER's signature and fee when the SAC transfer
+      // reverts at settlement — identical in both modes.
       let fresh: BalanceMap | null;
       try {
         fresh = await refreshBalances();
@@ -189,90 +268,166 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
     }
   }
 
+  const addrClass = ['field', 'addr', addrOk ? 'is-ok' : '', addrErr ? 'is-err' : ''].filter(Boolean).join(' ');
+
   return (
-    <form className="ticket ticket--swap" id="orderForm" autoComplete="off" onSubmit={submit}>
-      <div className="ticket__head">
-        <h2 className="ticket__title">New offer</h2>
-        <p className="ticket__sub">
-          Name a counterparty and the offer goes to them alone; leave the address empty and it goes to
-          every taker watching the pair. Either way your wallet signs the terms — what you sign is
-          exactly what settles.
-        </p>
-      </div>
-
-      {/* The two legs are the reference's white cards; the swap orb sits in a
-          scalloped notch between them (mask CSS on field--card-top/-bottom).
-          Each card sits in a .ticket__card-shadow wrapper: the mask clips
-          everything its own element paints INCLUDING shadows, so the
-          drop-shadow must live one level up to survive (and trace the notch).
-          Nothing may change these cards' HEIGHT without moving the notch —
-          that is why no per-leg balance hint lives here (the topbar's
-          BalanceStrip is the one source of truth). Select comes before the
-          input so the visual order (chip left, amount right) matches tab order. */}
+    <form className={busy ? 'ticket ticket--swap is-busy' : 'ticket ticket--swap'}
+      id="orderForm" autoComplete="off" onSubmit={submit}>
+      {/* The shadow lives on this wrapper, not on the card: the old notched
+          design masked the card, and a CSS mask clips everything its own element
+          paints — box-shadow and drop-shadow alike. The notch is gone, but the
+          wrapper stays, because a `filter` here would ALSO make it the backdrop
+          root and silently kill the hero's backdrop-filter. box-shadow does not. */}
       <div className="ticket__card-shadow">
-        <div className="field field--card field--card-top">
-          <label className="field__label" htmlFor="makerAmount">You send</label>
-          <div className="leg">
-            <select id="makerToken" aria-label="Token you send" disabled={busy}
-              value={makerToken} onChange={(e) => setMakerToken(e.target.value)}>
-              {TOKENS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-            <input type="text" id="makerAmount" className="input--num" inputMode="decimal" placeholder="0.00"
-              value={makerAmount} disabled={busy} onChange={(e) => setMakerAmount(e.target.value)} />
+        <div className="ticket__card">
+
+          <div className="ticket__hero">
+            <div className="ticket__legs">
+              <div className="leg-col field field--card field--card-top">
+                <label className="field__label" htmlFor="makerAmount">You send</label>
+                <div className="leg">
+                  <input type="text" id="makerAmount" className={amountClass(makerAmount)} inputMode="decimal"
+                    placeholder="0" spellCheck={false} style={{ width: chWidth(makerAmount) }}
+                    value={makerAmount} disabled={busy}
+                    onChange={(e) => setMakerAmount(e.target.value)} />
+                  <TokenSelect id="makerToken" label="Token you send" value={makerToken}
+                    options={TOKENS} disabled={busy} onChange={setMakerToken} />
+                </div>
+                <p className={rates.live ? 'readback' : 'readback is-idle'} aria-live="polite">
+                  <span>{rates.aLabel}</span> <span className="readback__chip">{rates.aChip}</span>
+                </p>
+              </div>
+
+              <div className="ticket__swap">
+                <span className="swap-seam" aria-hidden="true" />
+                <button type="button" className="ticket__swap-btn" disabled={busy}
+                  aria-label="Swap the two legs" onClick={swapLegs}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M8 20V5M8 5l-3.1 3.2M8 5l3.1 3.2" />
+                    <path d="M16 4v15M16 19l-3.1-3.2M16 19l3.1-3.2" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="leg-col field field--card field--card-bottom">
+                <label className="field__label" htmlFor="takerAmount">You receive</label>
+                <div className="leg">
+                  <TokenSelect id="takerToken" label="Token you receive" value={takerToken}
+                    options={TOKENS} disabled={busy} onChange={setTakerToken} />
+                  <input type="text" id="takerAmount" className={amountClass(takerAmount)} inputMode="decimal"
+                    placeholder="0" spellCheck={false} style={{ width: chWidth(takerAmount) }}
+                    value={takerAmount} disabled={busy}
+                    onChange={(e) => setTakerAmount(e.target.value)} />
+                </div>
+                <p className={rates.live ? 'readback' : 'readback is-idle'} aria-live="polite">
+                  <span>{rates.bLabel}</span> <span className="readback__chip">{rates.bChip}</span>
+                </p>
+              </div>
+            </div>
+            <div className="hero-flow" aria-hidden="true" />
           </div>
-        </div>
-      </div>
 
-      <div className="ticket__swap" aria-hidden="true"><span>⇅</span></div>
+          <div className="field--details">
+            <div className={addrClass}>
+              <div className="addrline">
+                <span className="addr__seal" role="img"
+                  aria-label="Address seal — a mark derived from this address; a different address draws a different seal">
+                  <AddressSeal state={addrOk ? 'ok' : addrErr ? 'err' : 'idle'} address={takerAddress} size={28} />
+                </span>
+                <div className="addr__field">
+                  <div className="addr__print" ref={printRef} aria-hidden="true">
+                    <span className="g--head">{takerAddress.slice(0, 4)}</span>
+                    <span>{takerAddress.slice(4, Math.max(takerAddress.length - 8, 4))}</span>
+                    {takerAddress.length > 12 ? (
+                      <span className={tailShown ? 'g--tail' : undefined}>{takerAddress.slice(-8)}</span>
+                    ) : null}
+                  </div>
+                  <textarea id="takerAddress" className="input--addr addr__ta" rows={1}
+                    placeholder="Counterparty wallet address" spellCheck={false}
+                    autoCapitalize="characters" autoCorrect="off"
+                    aria-label="Counterparty wallet address"
+                    aria-invalid={addrErr}
+                    value={takerAddress} disabled={busy}
+                    onChange={(e) => {
+                      const raw = normalizeAddress(e.target.value);
+                      setTakerAddress(raw);
+                      // A complete, valid address is self-evidently "touched" —
+                      // show the green state without waiting for a blur.
+                      if (checkAddress(raw, address) === 'ok') setTouched(true);
+                    }}
+                    // read the DOM value, not the render closure: a paste
+                    // followed immediately by a blur (or a browser autofill)
+                    // blurs before React has re-rendered with the new value,
+                    // and a stale `takerAddress` here would leave a bad address
+                    // sitting in the field with no error shown.
+                    onBlur={(e) => { if (e.currentTarget.value) setTouched(true); }}
+                    onScroll={(e) => {
+                      if (printRef.current) printRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                    }}
+                    ref={taRef} />
+                </div>
+                {!directed ? <span className="addr-optional">(optional)</span> : null}
+              </div>
 
-      <div className="ticket__card-shadow">
-      <div className="field field--card field--card-bottom">
-        <label className="field__label" htmlFor="takerAmount">You receive</label>
-        <div className="leg">
-          <select id="takerToken" aria-label="Token you receive" disabled={busy}
-            value={takerToken} onChange={(e) => setTakerToken(e.target.value)}>
-            {TOKENS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-          <input type="text" id="takerAmount" className="input--num" inputMode="decimal" placeholder="0.00"
-            value={takerAmount} disabled={busy} onChange={(e) => setTakerAmount(e.target.value)} />
-        </div>
+              {/* One line, three jobs: it explains the directed/broadcast fork
+                  while empty, confirms the checksum when valid, and names the
+                  specific problem when not. */}
+              <span className={addrErr ? 'hint is-err' : addrOk ? 'hint is-ok' : 'hint'}>
+                {addrErr
+                  ? ADDR_MSG[addrCode as Exclude<typeof addrCode, 'ok'>]
+                  : addrOk
+                    ? <><b>Checksum OK.</b> Compare the highlighted tail with the address your counterparty sent you.</>
+                    : sameToken
+                      ? 'Leave empty to broadcast — pick two different tokens first.'
+                      : `Name a taker and the offer goes to them alone. Leave it empty to broadcast to every taker watching ${pairLabel(pairKey)}.`}
+              </span>
+            </div>
 
-        {/* the rest of the terms live INSIDE the notched card unit (user
-            decision 2026-07-12): a quiet hairline section, not a fourth card */}
-        <div className="field--details">
-          <div className="field">
-            <label className="field__label" htmlFor="takerAddress">Counterparty wallet address (optional)</label>
-            <input type="text" id="takerAddress" className="input--addr" placeholder="G…" spellCheck={false}
-              value={takerAddress} disabled={busy} onChange={(e) => setTakerAddress(e.target.value)} />
-            <div className="hint">
-              {directed
-                ? 'This offer goes only to this wallet.'
-                : sameToken
-                  ? 'Leave empty to broadcast — pick two different tokens first.'
-                  : `Leave empty to broadcast to every taker watching ${pairLabel(pairKey)}.`}
+            <div className="field exp">
+              <div className="row2">
+                <svg className="exp__clock" width="19" height="19" viewBox="0 0 19 19" fill="none"
+                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+                  <circle cx="9.5" cy="9.5" r="7.75" />
+                  <path d="M9.5 5.5v4.2l2.8 1.7" />
+                </svg>
+                <label className="field__label" htmlFor="expValue">Expires in</label>
+                <input type="number" id="expValue" className="input--num input--exp" min={1} step={1}
+                  value={expValue} disabled={busy} onChange={(e) => setExpValue(e.target.value)} />
+                <select id="expUnit" className="exp-unit" aria-label="Expiry unit" disabled={busy}
+                  value={expUnit} onChange={(e) => setExpUnit(e.target.value)}>
+                  <option value="60000">Minutes</option>
+                  <option value="3600000">Hours</option>
+                  <option value="86400000">Days</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn--gold" id="sendBtn" disabled={disabled}>
+                <span className="btn__label">
+                  {busy ? 'Waiting for signature…' : directed ? 'Sign & send order' : 'Sign & broadcast offer'}
+                </span>
+                <span className="btn__chevs" aria-hidden="true">
+                  <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1.5 7h14M15.5 7l-5-5M15.5 7l-5 5" />
+                  </svg>
+                </span>
+                <span className="btn__orb" aria-hidden="true"><span className="spin" /></span>
+              </button>
             </div>
           </div>
 
-          <div className="field">
-            <label className="field__label" htmlFor="expValue">Expires in</label>
-            <div className="row2">
-              <input type="number" id="expValue" className="input--num" min={1} step={1}
-                value={expValue} disabled={busy} onChange={(e) => setExpValue(e.target.value)} />
-              <select id="expUnit" aria-label="Expiry unit" disabled={busy}
-                value={expUnit} onChange={(e) => setExpUnit(e.target.value)}>
-                <option value="60000">Minutes</option>
-                <option value="3600000">Hours</option>
-                <option value="86400000">Days</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="field">
+          <div className="signline">
             <span className="field__label">Signing as (maker)</span>
-            <div className="maker-addr" id="makerAddrBox">{address ?? '—'}</div>
+            <span className="signline__seal" aria-hidden="true">
+              {address ? <AddressSeal state="ok" address={address} size={20} /> : null}
+            </span>
+            <span className="maker-addr" id="makerAddrBox">{address ?? '—'}</span>
           </div>
+
         </div>
-      </div>
       </div>
 
       {/* Broadcast mode only: in directed mode "N takers subscribed" would be a
@@ -288,20 +443,9 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
                 ? 'No takers are subscribed to this pair yet — there is no one to send to.'
                 : `${count} taker${count === 1 ? '' : 's'} subscribed — each will receive a private offer.`}
         </div>
-      ) : null}
-
-      <div className="form-actions">
-        <button type="submit" className="btn btn--gold" id="sendBtn" disabled={disabled}>
-          <span className="btn__orb" aria-hidden="true">✓</span>
-          {busy ? 'Waiting for signature…' : directed ? 'Sign & send order' : 'Sign & broadcast offer'}
-          <span className="btn__chevs" aria-hidden="true">›››</span>
-        </button>
-        <span className="hint" id="formHint">
-          {directed
-            ? "You'll be asked to sign the order in your wallet."
-            : 'You sign once — the same signed terms go to every subscribed taker.'}
-        </span>
-      </div>
+      ) : (
+        <span className="hint hint--canvas">You'll be asked to sign the order in your wallet.</span>
+      )}
     </form>
   );
 }

@@ -104,6 +104,20 @@ stack (see Stack below).
   `src/ui/`; `.tabs` CSS (53 lines) and `.wrap--desk` are dead and deleted; `otc.html` now loads
   `styles.css` **then** `intent.css` (order is load-bearing).
 
+- **RFQ ticket redesigned (2026-07-13, branch `design`): AirSwap-style OTC ticket.** Imported from the
+  Claude Design project *"TrustRFQ order compose screen"* (`New RFQ Ticket v2.html` + its handoff
+  README) via the `claude_design` MCP. One square-cornered card: a frosted **hero** with the two legs
+  side by side and the swap orb pinned to the exact centre, a white **details strip** (counterparty →
+  expiry → CTA), and a **signline**. New: per-leg **rate read-backs** (a local echo of the two typed
+  numbers — never a quote), a custom **token listbox** (`src/ui/TokenSelect.tsx`) over a real hidden
+  `<select>`, and a counterparty field that does a **real strkey checksum check**
+  (`src/core/address.ts`, `StrKey.isValidEd25519PublicKey`) with graded errors, a highlighted address
+  **tail chip**, and a deterministic **address seal** (`src/ui/AddressSeal.tsx`) — a typo aid, not a
+  security control. **The directed/broadcast semantics are unchanged**: an empty counterparty address
+  still means broadcast, so the field stays optional and the subscriber-count line survives.
+  Verified in-browser (95 tests, clean build, zero inline scripts, zero console errors; legs never
+  wrap and the orb stays centred from 1 to 14 amount chars at 1440/1024/768/375).
+
 ## Stack
 
 - **Frontend: React + TypeScript on Vite** (migrated 2026-07-10). **ONE entry: `otc.html` → `src/`**
@@ -212,6 +226,18 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
   `.ticket__card-shadow` wrapper, not on the masked `.field--card` itself: the wrapper's
   drop-shadow traces the already-masked (notched) silhouette. Moving the shadow back onto the
   masked element makes it silently disappear.
+- **Ticket: `.ticket__card-shadow` must carry a `box-shadow`, never `filter: drop-shadow`.** The
+  hero uses `backdrop-filter`, and a `filter`ed ANCESTOR becomes the backdrop root — the blur would
+  then sample nothing and render flat. (The old notched design needed `drop-shadow` for the opposite
+  reason: a mask clipped the card's own `box-shadow`. The mask is gone, so the constraint inverted.)
+- **Ticket: never write a bare-element selector under `.ticket__swap`.** The deleted
+  `.ticket__swap span { …34px circle… }` rule (0,1,1) outranked `.swap-seam` (0,1,0) and silently
+  repainted the seam as a floating white disc. Cost an hour to find.
+- **Ticket: `.ticket__legs` is `1fr auto 1fr` with the legs justified INWARD, and `.leg` is
+  `nowrap`.** Equal side tracks are what keep the swap orb on the exact centre when a wider token
+  (USDC) replaces a narrower one (XLM) — a flex row drifts. And because each leg is capped at half
+  the hero, a long amount must SHRINK (the `is-long`/`is-xlong`/`is-xxlong` size steps + `flex: 0 1
+  auto`), not wrap: wrapping pushes the token code under the number and the two legs stop mirroring.
 - **Landing: `transform` and `backdrop-filter` must be on the SAME element.** A transformed (or
   `filter`ed / `will-change`d) *ancestor* becomes the backdrop root, and any descendant's blur then
   samples nothing — the panel renders empty/black in Chrome and Safari. This is why the ticket
