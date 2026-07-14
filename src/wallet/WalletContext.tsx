@@ -16,10 +16,12 @@ const Ctx = createContext<WalletState | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(() => localStorage.getItem(ADDRESS_KEY));
 
-  // reload with a stored session: re-select the remembered wallet module
+  // reload with a stored session: re-select the wallet module. Freighter is
+  // the only module registered, so a remembered id from the multi-wallet era
+  // (e.g. 'albedo') must not be replayed into the kit.
   useEffect(() => {
     if (localStorage.getItem(ADDRESS_KEY)) {
-      kit.setWallet(localStorage.getItem(WALLET_ID_KEY) || FREIGHTER_ID);
+      kit.setWallet(FREIGHTER_ID);
     }
   }, []);
 

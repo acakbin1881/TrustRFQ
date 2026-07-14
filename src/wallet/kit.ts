@@ -5,7 +5,7 @@
 import {
   StellarWalletsKit,
   WalletNetwork,
-  allowAllModules,
+  FreighterModule,
   FREIGHTER_ID,
 } from '@creit.tech/stellar-wallets-kit';
 
@@ -14,10 +14,13 @@ export { FREIGHTER_ID };
 export const WALLET_ID_KEY = 'otc_wallet_id';
 export const ADDRESS_KEY = 'otc_address';
 
+// Freighter only: the RFQ flow needs SEP-43 signMessage AND signAuthEntry,
+// and Freighter is the only kit module supporting both that our users can
+// actually install (Hana/Klever/HOT are either niche or mainnet-pinned).
 export const kit = new StellarWalletsKit({
   network: WalletNetwork.TESTNET,
-  selectedWalletId: localStorage.getItem(WALLET_ID_KEY) || FREIGHTER_ID,
-  modules: allowAllModules(),
+  selectedWalletId: FREIGHTER_ID,
+  modules: [new FreighterModule()],
 });
 
 // sign a UTF-8 message with the connected wallet. signMessage support is
