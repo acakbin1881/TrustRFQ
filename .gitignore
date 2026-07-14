@@ -13,3 +13,6 @@ node_modules
 # Vite build output
 dist/
 .env*
+
+# Claude Design exports (source lives in src/ui/Ticket.tsx + public/styles.css)
+*.zip

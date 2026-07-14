@@ -1,27 +1,51 @@
-// The desk shell: topbar + wallet gate + sections (create / incoming / sent).
-// Structure and classes mirror styles.css. Sections are switched by the
-// floating SectionSheet control (the old .tabs bar lives on only on the
-// intent page). All three panels stay mounted with .is-active toggling —
-// keeps form state across section switches; CSS hides inactive panels.
+// The desk — the whole app, one page. Topbar (+ balance strip) + wallet gate +
+// three sections switched by the floating SectionSheet pill: New order (the one
+// compose form, where an optional counterparty address decides directed vs
+// broadcast), Incoming (offers to me + the pairs I watch), Sent (my direct
+// offers + my broadcasts, grouped).
+//
+// The shell owns EVERY data subscription (orders, broadcasts, balances) and
+// hands pre-filtered props down; no list component subscribes for itself.
+//
+// It deliberately does NOT call useSettlement. useSettlement's txBusy is a ref,
+// i.e. per instance, and ThreadView — the only render site of OrderCard, and so
+// the only place settlement can be started — serializes every settle/sign
+// through its own module-scope lock. A second instance here would be invisible
+// to that lock and could race a ThreadView settle: two wallet prompts, two
+// submits, two competing settlement_status writes. Invariant to keep:
+//   grep -rn "useSettlement" src/   →   exactly 2 hits (its definition, ThreadView).
 
 import { useCallback, useState } from 'react';
-import { isExpired, orderTokensKnown, trunc } from './core/tokens';
+import { isExpired, trunc } from './core/tokens';
+import type { BalanceMap } from './core/balances';
 import type { Order } from './core/types';
-import { updateOrder } from './data/orders';
+import { useBalances } from './data/useBalances';
+import { useBroadcasts } from './data/useBroadcasts';
 import { useOrders } from './data/useOrders';
-import { walletSign } from './wallet/kit';
 import { useWallet, WalletProvider } from './wallet/WalletContext';
+import { BalanceStrip } from './ui/BalanceStrip';
+import { BroadcastList } from './ui/BroadcastList';
 import { Gate } from './ui/Gate';
-import { OrderCard } from './ui/OrderCard';
+import { OfferList } from './ui/OfferList';
+import { PairsPanel } from './ui/PairsPanel';
 import { SectionSheet } from './ui/SectionSheet';
 import { Ticket } from './ui/Ticket';
 import { errMsg, ToastProvider, useToast } from './ui/Toast';
 import { useNow } from './ui/useNow';
-import { useSettlement } from './ui/useSettlement';
 
 type TabName = 'create' | 'incoming' | 'sent';
 
-function Topbar({ address, onDisconnect }: { address: string | null; onDisconnect: () => void }) {
+/** An offer still awaiting somebody's move. 'countered' counts: the desk has counter-offers now. */
+const isOpen = (o: Order, now: number) =>
+  (o.status === 'pending' || o.status === 'countered') && !isExpired(o, now);
+
+function Topbar({ address, balances, funded, loading, onDisconnect }: {
+  address: string | null;
+  balances: BalanceMap | null;
+  funded: boolean;
+  loading: boolean;
+  onDisconnect: () => void;
+}) {
   return (
     <header className="topbar">
       <a className="brand" href="hero.html">
@@ -35,6 +59,7 @@ function Topbar({ address, onDisconnect }: { address: string | null; onDisconnec
       </a>
       <span className="net-pill">Testnet</span>
       <div className="topbar__right">
+        {address ? <BalanceStrip balances={balances} funded={funded} loading={loading} /> : null}
         <div className="wallet-chip" id="walletChip">
           {address ? (
             <>
@@ -51,14 +76,28 @@ function Topbar({ address, onDisconnect }: { address: string | null; onDisconnec
 function Desk() {
   const { address, connect, disconnect } = useWallet();
   const toast = useToast();
-  const onLoadError = useCallback((m: string) => toast(m, 'err'), [toast]);
-  const { incoming, sent, loadIncoming, loadSent, refresh } = useOrders(address, onLoadError);
-  const { signOrder, settle } = useSettlement({ address, refresh, toast });
+  const onError = useCallback((m: string) => toast(m, 'err'), [toast]);
+
+  const { incoming, sent, refresh } = useOrders(address, onError);
+  const { broadcasts, refresh: refreshBroadcasts } = useBroadcasts(address, onError);
+  // ONE balances instance feeds the topbar strip, the Ticket's send gate, and
+  // every CounterForm.
+  const { balances, funded, loading, refresh: refreshBalances } = useBalances(address);
   const [tab, setTab] = useState<TabName>('create');
   const now = useNow(60000);
 
-  const incomingPending = incoming.filter((o) => o.status === 'pending' && !isExpired(o, now)).length;
-  const sentPending = sent.filter((o) => o.status === 'pending' && !isExpired(o, now)).length;
+  // A broadcast is ONE offer with N threads, so Sent shows the group, not the
+  // threads — and the direct orders are the ones without a broadcast_id.
+  const directedSent = sent.filter((o) => !o.broadcast_id);
+  const broadcastSent = sent.filter((o) => o.broadcast_id);
+
+  // The badges mean "open", not "your move". Knowing whose move it is needs
+  // currentTerms(order, rounds), and the shell does not subscribe to rounds —
+  // only an expanded ThreadView does. Subscribing for every order would mean N
+  // realtime channels. The intent page shipped with the same over-count.
+  const incomingCount = incoming.filter((o) => isOpen(o, now)).length;
+  const sentCount = directedSent.filter((o) => isOpen(o, now)).length
+    + broadcasts.filter((b) => b.status === 'active' && !isExpired(b, now)).length;
 
   const handleConnect = async () => {
     try {
@@ -68,84 +107,84 @@ function Desk() {
     }
   };
 
-  const takerAction = async (order: Order, action: 'accept' | 'decline') => {
-    if (isExpired(order, Date.now())) return toast('This order has expired.', 'err');
-    if (action === 'accept' && !orderTokensKnown(order))
-      return toast('Unrecognized asset — verify the issuer before accepting.', 'err');
-    try {
-      const taker_signature = await walletSign(JSON.stringify({ order_id: order.id, action }), address!);
-      const status = action === 'accept' ? 'accepted' : 'declined';
-      await updateOrder(order.id, { status, taker_signature }, { status: 'pending' });
-      toast(action === 'accept' ? 'Order accepted.' : 'Order declined.', 'ok');
-      await loadIncoming();
-    } catch (err) {
-      toast(errMsg(err, 'Action failed.'), 'err');
-    }
-  };
+  // Any thread/broadcast change → refetch both sides. This is also the `refresh`
+  // every ThreadView hands to useSettlement.
+  const onChanged = useCallback(async () => {
+    await Promise.all([refresh(), refreshBroadcasts()]);
+  }, [refresh, refreshBroadcasts]);
 
-  const cancelOrder = async (order: Order) => {
-    try {
-      await updateOrder(order.id, { status: 'cancelled' }, { status: 'pending' });
-      toast('Order cancelled.', 'ok');
-      await loadSent();
-    } catch (err) {
-      toast(errMsg(err, 'Could not cancel order.'), 'err');
-    }
-  };
+  const onSent = useCallback(async () => {
+    await Promise.all([refresh(), refreshBroadcasts()]);
+    setTab('sent');
+  }, [refresh, refreshBroadcasts]);
 
   return (
     <>
       <div className="backdrop starfield" aria-hidden="true" />
-      <Topbar address={address} onDisconnect={disconnect} />
-      {/* Gate and desk are both mounted, visibility-toggled like vanilla's
-          display switches — so a half-typed ticket draft (and the active
-          section) survive disconnect/reconnect. The SectionSheet sits inside
-          #app: position:fixed inside a display:none parent renders nothing,
-          so it hides with the gate for free. */}
-      <main className="wrap wrap--desk">
+      <Topbar address={address} balances={balances} funded={funded} loading={loading}
+        onDisconnect={disconnect} />
+      {/* Gate and desk are both mounted, visibility-toggled — so a half-typed
+          ticket draft, the active section, and BroadcastList's banner dismissals
+          all survive disconnect/reconnect and section switches. The SectionSheet
+          is the one exception: it UNMOUNTS on disconnect, because display:none
+          would hide its pixels but leak its open-state side effects (body scroll
+          lock + document keydown listener). Unmounting runs the effect cleanup;
+          its only state is open/closed, so nothing worth keeping is lost. */}
+      <main className="wrap">
         <Gate onConnect={() => void handleConnect()} hidden={!!address} />
         <section id="app" style={address ? undefined : { display: 'none' }}>
+          {address ? (
             <SectionSheet
               active={tab}
               onSelect={setTab}
               options={[
-                { id: 'create', label: 'New order', glyph: '+' },
-                { id: 'incoming', label: 'Incoming', glyph: '↓', count: incomingPending },
-                { id: 'sent', label: 'Sent', glyph: '↑', count: sentPending },
+                { id: 'create', label: 'New offer', glyph: '+' },
+                { id: 'incoming', label: 'Incoming', glyph: '↓', count: incomingCount },
+                { id: 'sent', label: 'Sent', glyph: '↑', count: sentCount },
               ] as const}
             />
+          ) : null}
 
-            <div className={tab === 'create' ? 'panel is-active' : 'panel'} data-panel="create">
-              <Ticket address={address} onSent={async () => { await loadSent(); setTab('sent'); }} />
-            </div>
+          {/* NOT gated on address: Ticket takes `string | null` on purpose, so a
+              draft survives a disconnect. The two list panels ARE gated — their
+              components require a non-null address. */}
+          <div className={tab === 'create' ? 'panel is-active' : 'panel'} data-panel="create">
+            <Ticket address={address} refreshBalances={refreshBalances} onSent={onSent} />
+          </div>
 
-            <div className={tab === 'incoming' ? 'panel is-active' : 'panel'} data-panel="incoming">
-              <div id="incomingList">
-                {incoming.length === 0
-                  ? <div className="empty">No orders addressed to your wallet yet.</div>
-                  : incoming.map((o) => (
-                      <OrderCard key={o.id} order={o} role="incoming" now={now}
-                        onAccept={(ord) => void takerAction(ord, 'accept')}
-                        onDecline={(ord) => void takerAction(ord, 'decline')}
-                        onSign={(ord, side) => void signOrder(ord, side)}
-                        onSettle={(ord) => void settle(ord)} />
-                    ))}
-              </div>
-            </div>
+          <div className={tab === 'incoming' ? 'panel is-active' : 'panel'} data-panel="incoming">
+            {address ? (
+              <>
+                {/* every incoming order — directed AND broadcast fan-out rows.
+                    They used to appear on two different pages as two different
+                    cards; now each is one thread, once. */}
+                <OfferList address={address} orders={incoming} side="taker" now={now}
+                  balances={balances} refreshBalances={refreshBalances} onChanged={onChanged}
+                  emptyText="No offers addressed to your wallet yet. Toggle a pair below to also receive broadcast offers." />
+                <PairsPanel address={address} />
+              </>
+            ) : null}
+          </div>
 
-            <div className={tab === 'sent' ? 'panel is-active' : 'panel'} data-panel="sent">
-              <div id="sentList">
-                {sent.length === 0
-                  ? <div className="empty">You haven't sent any orders yet.</div>
-                  : sent.map((o) => (
-                      <OrderCard key={o.id} order={o} role="sent" now={now}
-                        onCancel={(ord) => void cancelOrder(ord)}
-                        onSign={(ord, side) => void signOrder(ord, side)}
-                        onSettle={(ord) => void settle(ord)} />
-                    ))}
-              </div>
-            </div>
-          </section>
+          <div className={tab === 'sent' ? 'panel is-active' : 'panel'} data-panel="sent">
+            {address ? (
+              directedSent.length === 0 && broadcasts.length === 0 ? (
+                <div className="empty">You haven't sent any offers yet.</div>
+              ) : (
+                <>
+                  <div className="list-head">Direct offers</div>
+                  <OfferList address={address} orders={directedSent} side="maker" now={now}
+                    balances={balances} refreshBalances={refreshBalances} onChanged={onChanged}
+                    emptyText="You haven't sent any direct offers yet." />
+                  <div className="list-head">Broadcasts</div>
+                  <BroadcastList address={address} broadcasts={broadcasts} orders={broadcastSent}
+                    now={now} balances={balances} refreshBalances={refreshBalances}
+                    onChanged={onChanged} />
+                </>
+              )
+            ) : null}
+          </div>
+        </section>
       </main>
     </>
   );

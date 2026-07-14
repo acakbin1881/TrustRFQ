@@ -152,6 +152,9 @@
   color: var(--text-4);
   margin-bottom: 14px;
 }
+/* light theme: base inputs are borderless sunken wells (styles.css) — on the
+   counter form's own sunken well they'd vanish, so raise them to white */
+.counter-form input { background: var(--bg-raised); }
 /* fixed-token pill occupying the .leg grid's select column */
 .counter-token {
   display: inline-flex;
@@ -283,28 +286,10 @@
 
 /* === intent layer: maker (appended by a later task) === */
 
-/* Broadcast ticket — direction picker (which token the maker gives) */
-.broadcast-dir { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.broadcast-dir__opt {
-  padding: 12px 10px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--line-2);
-  background: rgba(17, 18, 24, 0.04);
-  color: var(--text-3);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-.broadcast-dir__opt:disabled { opacity: 0.45; cursor: not-allowed; }
-.broadcast-dir__opt.is-active {
-  color: var(--text-1);
-  border-color: rgba(17, 18, 24, 0.5);
-  background: rgba(17, 18, 24, 0.06);
-}
-
-/* live "N takers subscribed" line above the Send button */
+/* live "N takers subscribed" line above the Send button. Only rendered while
+   the counterparty address is EMPTY — that is what makes an offer a broadcast.
+   (The pair select and direction picker that used to live here are gone: the
+   ticket's two legs already carry both, via orderPairKey.) */
 .broadcast-subs { font-size: 13px; color: var(--text-3); line-height: 1.5; }
 .broadcast-subs--zero { color: var(--red); }
 
@@ -346,8 +331,20 @@
 
 /* === intent layer: page shell + balances (appended by a later task) === */
 
-/* Topbar "Desk" nav link back to otc.html (btn provides the shape) */
-.topbar__desk-link { flex: none; }
+/* Sub-heading that separates the two blocks inside the Sent panel (direct
+   offers, then broadcasts) — a broadcast is one offer with N threads, a
+   different object, so it gets its own grouped list rather than being flattened
+   in with the direct ones. */
+.list-head {
+  margin: 34px 0 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+.list-head:first-child { margin-top: 0; }
 
 /* Balance strip (spec §4.5) — quiet mono chips in the topbar, one per
    allow-listed token; the note covers loading / failed / unfunded states */
@@ -395,6 +392,8 @@
   .topbar .bal-strip { display: none; }
 }
 
-/* Shell spacing: each panel stacks two blocks (offers + pairs; ticket + list) */
-[data-panel="offers"] .pairs-panel { margin-top: 28px; }
-[data-panel="broadcast"] .intent-broadcasts { margin-top: 28px; }
+/* Shell spacing: each list panel stacks two blocks (incoming offers + the pairs
+   you watch; direct offers + your broadcasts). These selectors track the desk's
+   panel names — a stale one fails SILENTLY (no error, just lost separation). */
+[data-panel="incoming"] .pairs-panel { margin-top: 28px; }
+[data-panel="sent"] .intent-broadcasts { margin-top: 4px; }

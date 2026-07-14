@@ -147,12 +147,35 @@ export async function declineInitialTerms(order: Order, taker_signature: string)
 }
 
 /**
+ * The maker's withdrawal of an offer they are still waiting on (the desk's old
+ * cancelOrder, re-homed into the thread). Scoped to open statuses via
+ * updateOrderWhileOpen's default — a thread is cancellable while 'pending' OR
+ * 'countered' (I countered back and I'm waiting), and the old pending-only
+ * write would have silently no-opped on the latter. The 0-row check makes a
+ * race with a concurrent accept/decline fail honestly.
+ *
+ * A taker's still-pending counter round is deliberately LEFT pending: there is
+ * no 'cancelled' resolution in the enum, 'declined' would be a lie, and
+ * currentTerms already reports awaiting=null once the order is closed. This is
+ * exactly what the broadcast sweep does (cancelRemainingThreads never touches
+ * rounds either).
+ */
+export async function cancelOrderThread(order: Order): Promise<void> {
+  await updateOrderWhileOpen(order.id, { status: 'cancelled' });
+}
+
+/**
  * Heal counterOffer's partial-failure window: the round insert landed but the
  * follow-up status write didn't, leaving the order 'pending' with a live
- * pending round (n>=1) — the Phase-1 desk would then accept stale round-0
- * terms. Scoped to status='pending' (a no-op if anything already moved the
- * row) and swallows its own errors: this is opportunistic repair, fired from
- * ThreadView; the next mount retries.
+ * pending round (n>=1). The original hazard — the Phase-1 desk accepting stale
+ * round-0 terms — is gone with the OrderCard accept path (every order is a
+ * thread now, and ThreadView.act only takes the round-0 branch when there is no
+ * pending round). What remains is still worth healing: a row that says
+ * 'pending' while a live counter round exists lies to every naive
+ * orders.status reader — the section counts, the status badges, BroadcastList's
+ * tally, and anyone doing SQL triage. Scoped to status='pending' (a no-op if
+ * anything already moved the row) and swallows its own errors: this is
+ * opportunistic repair, fired from ThreadView; the next mount retries.
  */
 export async function repairCounteredStatus(order: Order): Promise<void> {
   try {

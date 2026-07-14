@@ -7,20 +7,21 @@
 // funds-critical is reimplemented here.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BalanceMap } from '../../core/balances';
-import { currentTerms } from '../../core/negotiation';
-import { orderPairKey, pairLabel } from '../../core/pairs';
-import { fmtRemaining, isExpired, orderTokensKnown, trunc } from '../../core/tokens';
-import type { Order, Side } from '../../core/types';
+import type { BalanceMap } from '../core/balances';
+import { currentTerms } from '../core/negotiation';
+import { orderPairKey, pairLabel } from '../core/pairs';
+import { fmtRemaining, isExpired, orderTokensKnown, trunc } from '../core/tokens';
+import type { Order, Side } from '../core/types';
 import {
-  acceptInitialTerms, acceptRound, declineInitialTerms, declineRound, repairCounteredStatus,
-} from '../../data/rounds';
-import { useRounds } from '../../data/useRounds';
-import { OrderCard } from '../../ui/OrderCard';
-import { errMsg, useToast } from '../../ui/Toast';
-import { TokenBadge } from '../../ui/TokenBadge';
-import { useSettlement } from '../../ui/useSettlement';
-import { walletSign } from '../../wallet/kit';
+  acceptInitialTerms, acceptRound, cancelOrderThread, declineInitialTerms, declineRound,
+  repairCounteredStatus,
+} from '../data/rounds';
+import { useRounds } from '../data/useRounds';
+import { OrderCard } from './OrderCard';
+import { errMsg, useToast } from './Toast';
+import { TokenBadge } from './TokenBadge';
+import { useSettlement } from './useSettlement';
+import { walletSign } from '../wallet/kit';
 import { CounterForm } from './CounterForm';
 import { RoundTimeline } from './RoundTimeline';
 
@@ -34,10 +35,13 @@ export interface ThreadViewProps {
   onChanged: () => Promise<void>;
 }
 
-// One settlement action at a time across EVERY mounted ThreadView (several
-// threads can be expanded in sequence via BroadcastList/TakerOffers) — module
-// scope restores the page-global mutex the desk has, without touching the
-// frozen useSettlement.
+// One settlement action at a time across EVERY mounted ThreadView. This is now
+// the page's ONLY settlement mutex: ThreadView is the sole render site of
+// OrderCard, so App.tsx no longer calls useSettlement at all (whose txBusy ref
+// is per-instance and would be invisible to this lock). Panels stay mounted, so
+// up to three ThreadViews can be alive at once — Incoming's list, Sent's list,
+// and Sent's BroadcastList. Module scope is what serializes them, without
+// touching the frozen useSettlement.
 const settleLock = { current: false };
 
 /** Status chip incl. the intent-layer 'countered' status (styles.css has no badge for it). */
@@ -127,6 +131,23 @@ export function ThreadView({ order, side, address, balances, refreshBalances, no
     }
   };
 
+  // The maker's withdrawal while waiting on the counterparty. Only offered when
+  // it is NOT my move: with the move, Decline already closes the thread, and
+  // two buttons that both close it (declined vs cancelled) only confuse.
+  const cancel = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await cancelOrderThread(order);
+      toast('Offer cancelled.', 'ok');
+      await onChanged();
+    } catch (err) {
+      toast(errMsg(err, 'Could not cancel the offer.'), 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="thread">
       <div className="thread__head">
@@ -201,7 +222,15 @@ export function ThreadView({ order, side, address, balances, refreshBalances, no
               ) : null}
             </>
           ) : open && !expired ? (
-            <div className="thread__wait">Waiting for the counterparty to respond…</div>
+            <>
+              <div className="thread__wait">Waiting for the counterparty to respond…</div>
+              {side === 'maker' ? (
+                <div className="order__actions">
+                  <button className="btn btn--danger btn--sm" disabled={busy}
+                    onClick={() => void cancel()}>Cancel offer</button>
+                </div>
+              ) : null}
+            </>
           ) : null}
         </>
       )}
