@@ -25,7 +25,7 @@ import { canAfford, type BalanceMap } from '../core/balances';
 import { canonicalPayload } from '../core/canonical';
 import { amountTooLarge, composeBroadcastPayload } from '../core/negotiation';
 import { orderPairKey, pairLabel } from '../core/pairs';
-import { TOKENS, tokenLabel, validAmount } from '../core/tokens';
+import { TOKENS, tokenLabel, trunc, validAmount } from '../core/tokens';
 import { fanOut, insertBroadcast, updateBroadcastStatus } from '../data/broadcasts';
 import { fetchIntentAddresses } from '../data/intents';
 import { insertOrder } from '../data/orders';
@@ -424,7 +424,7 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
             <span className="signline__seal" aria-hidden="true">
               {address ? <AddressSeal state="ok" address={address} size={20} /> : null}
             </span>
-            <span className="maker-addr" id="makerAddrBox">{address ?? '—'}</span>
+            <span className="maker-addr" id="makerAddrBox">{address ? trunc(address) : '—'}</span>
           </div>
 
         </div>

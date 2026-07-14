@@ -41,7 +41,16 @@ export const isTxHash = (h?: string | null): boolean => /^[0-9a-f]{64}$/i.test(h
 export const isExpired = (o: Pick<Order, 'expiration'>, now: number = Date.now()): boolean =>
   new Date(o.expiration).getTime() < now;
 
-export const trunc = (a?: string | null): string => (a ? `${a.slice(0, 5)}…${a.slice(-5)}` : '');
+// TEMPORARY (test aid): swap the three test wallets for readable names. Delete before shipping.
+const TEST_ACCOUNT_LABELS: Record<string, string> = {
+  GDPFKJXQCOFQXUH5A2QEHGQRCIUYYITVRGOQ6C6CUG3J722EHQZVPQG3: 'Account 1',
+  GDVHQK45JAWPZ74QAMCX2LWLG4Y2HBWQK545PIPDR3XS6PHULKE4BNAU: 'Account 2',
+  GCR5PZZTUPVJBFOET25U3A72XKP3C7QRDRDGJNCNSZQ7GFHX64CZY4LV: 'Account 3',
+  GARMTL4QFLHWGXEY6JQET5D3DA744D2JQFMIQAGHTLIBVHSCLQ2NEAQU: 'Account 4',
+};
+
+export const trunc = (a?: string | null): string =>
+  a ? (TEST_ACCOUNT_LABELS[a] ?? `${a.slice(0, 5)}…${a.slice(-5)}`) : '';
 
 export function fmtRemaining(iso: string, now: number = Date.now()): string {
   let ms = new Date(iso).getTime() - now;
