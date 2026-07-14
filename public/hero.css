@@ -120,16 +120,11 @@
    right, which is worse than broken). */
 *, *::before, *::after { box-sizing: border-box; }
 
-html {
-  scroll-behavior: smooth;
-
-  /* Leaving the hero, the page settles ONTO the problem section instead of stopping
-     wherever the flick happened to end — so the ladder is framed when it starts to
-     deal. `proximity`, never `mandatory`: proximity only pulls when the scroll comes
-     to rest near the snap point, so it never fights the reader or traps the page.
-     Mandatory would hijack every scroll on the site. */
-  scroll-snap-type: y proximity;
-}
+/* No scroll-snap. The hero→problem handoff is driven by hero.js (see filmIntro),
+   which takes the FIRST downward gesture and rides it to the section, once. Snap and
+   the script would fight each other for the same scroll — snap re-pulling the page
+   while the script is mid-flight — so there is exactly one mechanism, not two. */
+html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
@@ -184,6 +179,27 @@ a { color: inherit; text-decoration: none; }
    during the loop is what gives the hue something to actually rotate. The flat
    foil additionally sweeps its (oversized) gradient across the surface, so the
    bands travel like light on real foil rather than the whole plate just tinting. */
+/* THE CARET. Present only while hero.js is mid-word (.is-typing), and drawn as a
+   pseudo-element so it never enters the text being typed — typeOut rewrites
+   textContent on every frame, and a real character in there would be erased and
+   retyped along with it. Sized in `em` so it matches whatever it is trailing: a 13px
+   loss figure and a 44px headline get their own caret, not one shared size. */
+.lp-type.is-typing::after {
+  content: '';
+  display: inline-block;
+  width: 0.08em;
+  min-width: 1px;
+  height: 1em;
+  margin-left: 0.06em;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: lp-caret 0.75s steps(1) infinite;
+}
+@keyframes lp-caret {
+  0%, 50%   { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
 /* the ladder's two motions: a value arriving, and a bar filling to its own --w */
 @keyframes lp-deal {
   from { opacity: 0; transform: translateY(8px); }
@@ -192,6 +208,15 @@ a { color: inherit; text-decoration: none; }
 @keyframes lp-fill {
   from { width: 0; }
   to   { width: var(--w); }
+}
+
+/* The loss figure's arrival: small, then past full size, then home. Enough of an
+   overshoot to catch the eye, not enough to read as a bug. */
+@keyframes lp-punch {
+  0%   { opacity: 0; transform: scale(0.72); }
+  55%  { opacity: 1; transform: scale(1.16); }
+  75%  { transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes lp-holo-drift {
@@ -849,15 +874,10 @@ img, svg { display: block; max-width: 100%; }
 /* --------------------------------------------------------------- 9. SECTIONS */
 .lp-section { padding: 96px 44px; }
 
-/* The ONLY snap point on the page — the handoff from the hero to the problem.
-   Deliberately not applied to every section: snap points on tall sections make the
-   whole page feel like it is grabbing at you. Here it does one job, once.
-   scroll-margin-top keeps the section's top padding as breathing room above the
-   card rather than pinning the card itself to the window's edge. */
-#why {
-  scroll-snap-align: start;
-  scroll-margin-top: 0;
-}
+/* The film's stage. hero.js scrolls here on the first downward gesture out of the
+   hero; scroll-margin-top keeps the section's own top padding as breathing room so
+   the eyebrow does not land pinned against the window's edge. */
+#why { scroll-margin-top: 0; }
 
 .lp-section__wrap { max-width: var(--lp-col); margin: 0 auto; }
 
@@ -897,6 +917,19 @@ img, svg { display: block; max-width: 100%; }
   margin: 20px 0 0;
   font-size: 18px;
   line-height: 1.6;
+  color: var(--lp-ink-2);
+}
+
+/* The solution section's three claims. A list, set as a list — no bullets, because
+   each line already opens with the word "No". */
+.lp-claims {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 18px;
+  line-height: 1.5;
   color: var(--lp-ink-2);
 }
 
@@ -945,7 +978,8 @@ img, svg { display: block; max-width: 100%; }
 
 .lp-rung {
   display: grid;
-  grid-template-columns: 148px minmax(0, 1fr) 74px 104px;
+  /* last column: the loss figure is now 18px bold mono — "$360K+ lost" needs the room */
+  grid-template-columns: 148px minmax(0, 1fr) 74px 142px;
   align-items: center;
   gap: 20px;
   padding: 15px 0;
@@ -990,18 +1024,27 @@ img, svg { display: block; max-width: 100%; }
   background: linear-gradient(90deg, rgba(232, 69, 106, 0.5), var(--lp-loss-fill));
 }
 
+/* The percentage is the reading, not the point. It states the rate quietly and hands
+   off to the money — which is the figure a desk actually feels. */
 .lp-rung__pct {
   font-family: var(--lp-mono);
   font-size: 17px;
   font-weight: 600;
-  color: var(--lp-loss-text);
+  color: var(--lp-ink-2);
   text-align: right;
 }
 
+/* THE MONEY. Red, and the last thing in the row to arrive — it lands with a snap
+   (lp-punch, §12) rather than the row's usual soft fade. */
 .lp-rung__loss {
-  font-size: 13px;
-  color: var(--lp-ink-2);
+  font-family: var(--lp-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--lp-loss-text);
   text-align: right;
+  /* Scaling from the right edge keeps the figure's right margin pinned while it
+     grows — transform-origin: center would swing it out past the card's padding. */
+  transform-origin: 100% 50%;
 }
 
 /* the punchline: same trade, a bar you can barely see */
@@ -1040,21 +1083,6 @@ img, svg { display: block; max-width: 100%; }
   border-left: 1px solid var(--lp-hair);
 }
 .lp-slab__col:first-child { border-left: 0; }
-
-.lp-slab__icon {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  margin-bottom: 22px;
-  border-radius: 14px;
-  background: rgba(13, 17, 64, 0.08);
-  border: 1px solid rgba(13, 17, 64, 0.14);
-  font-family: var(--lp-display);
-  font-size: 21px;
-  font-weight: 600;
-  color: var(--lp-ink-1);
-}
 
 .lp-slab__title {
   margin: 0 0 10px;
@@ -1337,26 +1365,49 @@ img, svg { display: block; max-width: 100%; }
   .lp-js .lp-ladder .lp-rung__loss { opacity: 0; }
   .lp-js .lp-ladder .lp-rung__bar { width: 0; }
 
-  /* --lp-lead-in holds the whole table back until the eyebrow and the headline above
-     have arrived. Without it a fast scroll fires both observers in the same frame and
-     the section's title and its numbers animate on top of each other. */
-  .lp-ladder { --lp-lead-in: 0.45s; }
+  /* THE FILM'S SCRIPT — every timing on the problem section is here, in one place.
+
+     --lp-lead-in is the table's cue, and it is NOT a taste value — it is derived. The
+     headline starts at 900ms and is typed at 44ms/char (data-lp-speed in the markup)
+     over 48 characters, so the last letter lands at roughly 900 + 40 + 2100 ≈ 3.0s.
+     The table waits that out with a beat to spare. Change the headline's wording or
+     its typing speed and this number has to move with it, or the numbers start
+     talking over the sentence that sets them up.
+
+     --lp-row is how long one row owns the stage. Each row plays its four beats in
+     order — the size, then the bar it costs, then the percentage, then the money —
+     and the next row's size lands just as the previous row's money settles. Rows
+     read as a sequence, not a shuffle: that is the whole difference between a chart
+     appearing and a chart being ARGUED. Total run ≈ 8.5s. */
+  .lp-ladder {
+    --lp-lead-in: 3.4s;
+    --lp-row: 1.55s;
+  }
+
+  /* This row's cue = the lead-in, plus its place in the queue. */
+  .lp-rung { --lp-cue: calc(var(--lp-lead-in) + var(--r) * var(--lp-row)); }
 
   .lp-js .lp-ladder.is-in .lp-rung__size {
-    animation: lp-deal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s);
+    animation: lp-deal 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--lp-cue);
   }
   .lp-js .lp-ladder.is-in .lp-rung__bar {
-    animation: lp-fill 0.9s cubic-bezier(0.55, 0, 0.85, 0.2) both;   /* slow, then fast */
-    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s + 0.22s);
+    /* Fast, then easing to a stop — the bar lunges out and settles into its number. */
+    animation: lp-fill 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--lp-cue) + 0.3s);
   }
   .lp-js .lp-ladder.is-in .lp-rung__pct {
     animation: lp-deal 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s + 1.02s);   /* only once the bar has landed */
+    animation-delay: calc(var(--lp-cue) + 1.0s);    /* only once the bar has come to rest */
   }
+  /* The punchline of the row, and it does not merely fade in like the rest — it
+     overshoots and settles. The bounce is in the keyframes, NOT in a springy
+     timing function, because the caret-less typewriter rewrites this cell's text
+     and an ease-out-back on a `both`-filled animation would leave it mid-spring if
+     the row is re-cued. Straight ease, curve baked into the frames. */
   .lp-js .lp-ladder.is-in .lp-rung__loss {
-    animation: lp-deal 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(var(--lp-lead-in) + var(--r) * 0.52s + 1.18s);
+    animation: lp-punch 0.62s ease-out both;
+    animation-delay: calc(var(--lp-cue) + 1.25s);
   }
 
   /* the tickets drift in from their tilt */
@@ -1443,8 +1494,10 @@ img, svg { display: block; max-width: 100%; }
 
   .lp-ladder { padding: 24px 20px 20px; }
   .lp-ladder__axis { display: none; }
-  .lp-rung { grid-template-columns: 110px minmax(0, 1fr) 66px; gap: 14px; }
-  .lp-rung__loss { display: none; }
+  /* Narrow: one number has to go, and it is the PERCENTAGE — the money is the point
+     of the row, and it is the cell that now carries the colour and the motion. */
+  .lp-rung { grid-template-columns: 108px minmax(0, 1fr) 118px; gap: 14px; }
+  .lp-rung__pct { display: none; }
 
   .lp-cta { padding: 40px 32px; }
   .lp-footer { max-width: none; padding: 32px 22px 24px; }

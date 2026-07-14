@@ -162,8 +162,12 @@
     <!-- ===== WHY OTC — a curve, so it is drawn as one ===== -->
     <section class="lp-section" id="why">
       <div class="lp-section__wrap">
-        <div class="lp-eyebrow lp-pane lp-reveal">The problem</div>
-        <h2 class="lp-h2 lp-reveal" style="--lp-delay:90ms">On-chain liquidity can't move institutional size</h2>
+        <!-- The film's first two beats. The headline waits out the eyebrow rather than
+             racing it; the ladder below waits out both (--lp-lead-in in hero.css). -->
+        <div class="lp-eyebrow lp-pane lp-reveal lp-type" style="--lp-delay:200ms">The problem</div>
+        <!-- 44ms/char, not the length-derived default: this sentence is typed at reading
+             pace on purpose. --lp-lead-in in hero.css is set to clear it. -->
+        <h2 class="lp-h2 lp-reveal lp-type" data-lp-speed="44" style="--lp-delay:900ms">On-chain liquidity can't move institutional size</h2>
 
         <!-- No .lp-reveal on the card: it is ALREADY there when you arrive. What
              animates is what it says — each row deals itself out (size → bar → pct
@@ -176,35 +180,28 @@
           </figcaption>
 
           <div class="lp-rung">
-            <div class="lp-rung__size">$250K</div>
+            <div class="lp-rung__size lp-type">$250K</div>
             <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:25%"></div></div>
-            <div class="lp-rung__pct">3–5%</div>
-            <div class="lp-rung__loss">~$10K lost</div>
+            <div class="lp-rung__pct lp-type">3–5%</div>
+            <div class="lp-rung__loss lp-type">~$10K lost</div>
           </div>
           <div class="lp-rung">
-            <div class="lp-rung__size">$1M</div>
+            <div class="lp-rung__size lp-type">$1M</div>
             <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:65%"></div></div>
-            <div class="lp-rung__pct">9–13%</div>
-            <div class="lp-rung__loss">~$110K lost</div>
+            <div class="lp-rung__pct lp-type">9–13%</div>
+            <div class="lp-rung__loss lp-type">~$110K lost</div>
           </div>
           <div class="lp-rung">
-            <div class="lp-rung__size">$2M</div>
+            <div class="lp-rung__size lp-type">$2M</div>
             <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:92%"></div></div>
-            <div class="lp-rung__pct">18%+</div>
-            <div class="lp-rung__loss">$360K+ lost</div>
-          </div>
-
-          <div class="lp-rung lp-rung--otc">
-            <div class="lp-rung__size">$1M <em>on an OTC desk</em></div>
-            <div class="lp-rung__track"><div class="lp-rung__bar" style="--w:1.5%"></div></div>
-            <div class="lp-rung__pct">&lt;10 bps</div>
-            <div class="lp-rung__loss">~$1K</div>
+            <div class="lp-rung__pct lp-type">18%+</div>
+            <div class="lp-rung__loss lp-type">$360K+ lost</div>
           </div>
         </figure>
 
-        <p class="lp-note lp-reveal" style="--lp-delay:240ms">That last bar is not a rounding error. The same
-          $1M clears off-chain on Coinbase or Binance OTC for roughly <strong>$1,000</strong> —
-          <strong>100× cheaper</strong> than the pool.</p>
+        <p class="lp-note lp-reveal" style="--lp-delay:240ms">Those are pool prices. The same $1M clears
+          off-chain on Coinbase or Binance OTC for roughly <strong>$1,000</strong> —
+          <strong>100× cheaper</strong>.</p>
       </div>
     </section>
 
@@ -212,29 +209,30 @@
     <section class="lp-section">
       <div class="lp-section__wrap">
         <div class="lp-eyebrow lp-pane lp-reveal">The solution</div>
-        <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">RFQ execution, settled on-chain</h2>
-        <p class="lp-lead lp-reveal" style="--lp-delay:120ms">TrustRFQ decouples price discovery from AMM
-          pools. Terms are agreed peer-to-peer, off-book — then settled as a deterministic atomic swap.
-          Institutional execution, on-chain on Stellar.</p>
+        <h2 class="lp-h2 lp-reveal" style="--lp-delay:60ms">OTC Desk</h2>
+        <!-- Three claims, each naming what it is NOT. Stacked, not run together in a
+             paragraph: they are a list and they read as one. -->
+        <ul class="lp-claims lp-reveal" style="--lp-delay:120ms">
+          <li>No slippage, unlike DEXs</li>
+          <li>No intent leak, unlike order books</li>
+          <li>No risk, unlike custodians</li>
+        </ul>
 
         <div class="lp-slab lp-pane lp-reveal" style="--lp-delay:180ms">
           <article class="lp-slab__col">
-            <div class="lp-slab__icon">0</div>
             <h3 class="lp-slab__title">Zero slippage</h3>
-            <p class="lp-slab__body">Quotes are firm — a fixed amount-in for a fixed amount-out. What the
-              maker signs is exactly what settles. No curve, no impact.</p>
+            <p class="lp-slab__body">Liquidity pools on Stellar DEXs are too shallow, which causes price
+              slippage. As a result, trading at large sizes becomes costly.</p>
           </article>
           <article class="lp-slab__col">
-            <div class="lp-slab__icon">∅</div>
             <h3 class="lp-slab__title">No intent leak</h3>
-            <p class="lp-slab__body">Block size never hits a lit order book. Orders are routed privately to
-              one counterparty, so bots can't front-run and liquidity can't flee.</p>
+            <p class="lp-slab__body">Order books, by their very nature, leak trading intent, which gives
+              rise to a front-running problem.</p>
           </article>
           <article class="lp-slab__col">
-            <div class="lp-slab__icon">⇄</div>
             <h3 class="lp-slab__title">Atomic settlement</h3>
-            <p class="lp-slab__body">A Soroban smart contract moves both legs in a single transaction.
-              Either both sides settle or neither does — no counterparty risk.</p>
+            <p class="lp-slab__body">When users try to solve these issues through peer-to-peer settlement,
+              solutions like CEXs or off-chain platforms step in. Capital leaves the Stellar ecosystem.</p>
           </article>
         </div>
       </div>

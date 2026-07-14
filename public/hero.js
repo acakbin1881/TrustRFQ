@@ -73,14 +73,80 @@
     nodes.forEach((el) => io.observe(el));
   };
 
+  /* THE TYPEWRITER.
+     Text on the problem section is not faded in, it is TYPED — as if someone were at
+     a keyboard while you watch.
+
+     Two things make this safe rather than clever:
+
+     · It never invents the schedule. The delays all live in CSS (--lp-lead-in, --lp-row),
+       and a duplicate copy of them here would drift the first time either is touched.
+       So nothing is scheduled: each element is typed when ITS OWN reveal begins, caught
+       via animationstart / transitionstart. CSS stays the single source of timing.
+     · It fails visible. The full text ships in the HTML and is only lifted out at the
+       moment typing starts. Script blocked, script broken, motion reduced — the words
+       are simply there, whole.
+
+     minWidth/minHeight are pinned from the element's real box before it is emptied.
+     Without that, the pill collapses to nothing and the two-line headline reflows the
+     page under the reader as each line fills. */
+  const typeOut = (el) => {
+    if (el.dataset.lpTyped) return;
+    el.dataset.lpTyped = '1';
+
+    const text = el.textContent;
+    if (!text.trim()) return;
+
+    const box = el.getBoundingClientRect();
+    el.style.minWidth = Math.ceil(box.width) + 'px';
+    el.style.minHeight = Math.ceil(box.height) + 'px';
+    el.textContent = '';
+    el.classList.add('is-typing');
+
+    /* ms per character. The default lets long strings type faster, so a headline does
+       not outstay a two-word eyebrow — but any element can override it with
+       data-lp-speed when its pace is a deliberate choice rather than a fallout of its
+       length. The headline does exactly that: it is the sentence the whole section
+       rests on, and it earns being typed slowly enough to read as it lands. */
+    const speed = Number(el.dataset.lpSpeed) || Math.max(16, Math.min(48, 1100 / text.length));
+    let i = 0;
+
+    const tick = () => {
+      el.textContent = text.slice(0, ++i);
+      if (i < text.length) { window.setTimeout(tick, speed); return; }
+      el.classList.remove('is-typing');
+      el.style.minWidth = '';
+      el.style.minHeight = '';
+    };
+    window.setTimeout(tick, 40);
+  };
+
+  const typewriter = () => {
+    if (reduced) return;
+
+    // The reveal that fires is on the CELL; the text to type may be a span inside it.
+    const target = (node) => {
+      if (!(node instanceof Element)) return null;
+      if (node.classList.contains('lp-type')) return node;
+      return node.querySelector(':scope > .lp-type');
+    };
+
+    const onBegin = (event) => {
+      const el = target(event.target);
+      if (el) typeOut(el);
+    };
+
+    // the ladder's values reveal via animation; the eyebrow and headline via transition
+    document.addEventListener('animationstart', onBegin);
+    document.addEventListener('transitionstart', onBegin);
+  };
+
   const start = () => {
     const revealables = document.querySelectorAll('.lp-reveal, .lp-deal');
     /* The ladder has NO hidden state of its own — the card is already on the page.
-       `is-in` only starts its rows dealing (see the ladder block in hero.css §12).
-       It gets its own, much higher threshold because the sequence runs ~3s and the
-       card is tall: at the 5% the others use, the last rows would deal themselves
-       out below the fold, where nobody is looking. */
+       `is-in` only starts its rows dealing (see the ladder block in hero.css §12). */
     const ladders = document.querySelectorAll('.lp-ladder');
+    const firstBeat = document.querySelector('#why .lp-eyebrow');
 
     const showAll = () => {
       revealables.forEach((el) => el.classList.add('is-in'));
@@ -93,7 +159,31 @@
     }
 
     watch(revealables, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
-    watch(ladders, { threshold: 0.45 });
+
+    /* THE FILM'S CLOCK IS THE EYEBROW'S CLOCK.
+       Every delay on this section — the eyebrow's 200ms, the headline's 900ms, the
+       table's --lp-lead-in — is measured from one instant, so all three must be counted
+       from the SAME zero. That zero is the eyebrow's reveal: the film's first beat.
+
+       Hence the observer below is aimed at the eyebrow and uses the IDENTICAL options
+       to the reveal watcher above. Two other anchors were tried and both are wrong:
+       · The CARD. Scrolling by hand, the card appears seconds after the headline does,
+         so the table would count its lead-in from a zero far in the future and the
+         numbers would land long after the sentence they answer.
+       · The SECTION. It starts intersecting when its top edge merely peeks above the
+         fold — while the eyebrow and headline are still off-screen and have not
+         revealed at all. The clock then starts BEFORE the first beat, and the rows
+         overtake the sentence. Measured: rows arriving 1.45s ahead of the headline. */
+    if (firstBeat && ladders.length) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          ladders.forEach((el) => el.classList.add('is-in'));
+          io.unobserve(entry.target);
+        });
+      }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+      io.observe(firstBeat);
+    }
 
     /* Failsafe, if the observer never fires. It must NOT blanket-reveal the ladder:
        a reader still on the hero at 3s would have the whole sequence play out below
@@ -108,6 +198,7 @@
     }, 3000);
 
     parallax();
+    typewriter();   // must be armed BEFORE anything reveals, or its first beat is missed
   };
 
   if (document.readyState === 'loading') {
