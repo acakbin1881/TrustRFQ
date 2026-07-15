@@ -127,7 +127,10 @@
       "Bash(pkill -f \"Google Chrome for Testing\")",
       "Bash(timeout 30 node shot2.mjs)",
       "Bash(node __TRACKED_VAR__/shot.mjs 1440 950 __TRACKED_VAR__/sec-1440.png)",
-      "Bash(node __TRACKED_VAR__/shot.mjs 390 860 __TRACKED_VAR__/sec-390.png)"
+      "Bash(node __TRACKED_VAR__/shot.mjs 390 860 __TRACKED_VAR__/sec-390.png)",
+      "Bash(lsof -nP -iTCP -sTCP:LISTEN)",
+      "Bash(awk 'NR==1 || $1!=\"\" {print}')",
+      "Bash(git --no-pager diff .claude/settings.json)"
     ],
     "additionalDirectories": [
       "/Users/acakbin1881/Projects/TrustRFQ/src/wallet",
