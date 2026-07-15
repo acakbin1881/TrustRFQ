@@ -35,8 +35,14 @@ stack (see Stack below).
 - **DB migrated (live).** Supabase project `zaflldqvenbgfaxtzbjc`: auth-model columns
   (`maker_auth`/`taker_auth`, `settlement_status`), table in `supabase_realtime` with
   `replica identity full` (verified).
-- **Pending to go live:** two-wallet **XLM↔XLM** E2E in the browser (verifies wallet
-  `signAuthEntry` end-to-end). Targets **Testnet** only.
+- **Two-wallet browser E2E: PASSED (2026-07-14) — the last thing blocking go-live.** A real RFQ
+  (offer → counter → accept → maker sign → taker sign → settle) settled on Testnet through two
+  Freighter wallets, and it was **cross-asset** (10 XLM ↔ 1 USDC), so the trustline path ran too.
+  Order `41dbd5ef-9bb3-49d2-b9f7-cec13f13e6bb`, tx
+  `af0392ff49ac9478a95fd8059bc64f62fd715d1de84d16d4acd912c5268a63aa`, ledger 3604560
+  (Horizon: `successful: true`). Wallet-signed auth entries now work end-to-end — the spikes had
+  only ever proven the `Keypair` path. Getting there needed one fix: see the wallets-kit
+  `signAuthEntry` gotcha below. Targets **Testnet** only.
 - **STELLAR.md compliance audit (2026-06-30): passed.** All fund/signature-critical paths verified;
   strict CSP + security headers added (`vercel.json`), `otc.html`'s module externalized to `otc.js`.
   Accepted risks (Testnet MVP): public anon-key reads; off-chain RFQ signatures stored but
@@ -152,7 +158,7 @@ stack (see Stack below).
 | `src/core/tokens.ts` | Token allow-list (quarantine boundary) + validation/display helpers. |
 | `src/config.ts` | Typed reader of the `window.*` runtime config (the only module that may). |
 | `src/data/` | Supabase client + queries/hooks: `orders`, `broadcasts`, `rounds`, `intents`, `useBalances` (+ realtime). |
-| `src/wallet/` | Wallets-kit singleton + `walletSign`, `WalletContext` (connect/disconnect). |
+| `src/wallet/` | Wallets-kit singleton + `walletSign` / `walletSignAuthEntry`, `WalletContext` (connect/disconnect). `authSignature.ts` = pure, unit-tested normaliser for the kit's broken `signAuthEntry` encoding (see Gotchas). |
 | `src/ui/` | Everything else: `Gate`, `SectionSheet`, `OfferList`, `ThreadView`, `BroadcastList`, `CounterForm`, `RoundTimeline`, `PairsPanel`, `BalanceStrip`, `OrderCard`, `SettlementStrip`, `Toast`, `useSettlement`, `useNow`. |
 | `src/core/pairs.ts` / `negotiation.ts` / `balances.ts` | Pure logic (pair keys, rounds/`currentTerms`, Horizon balance parsing) — unit-tested. |
 | `public/intent.css` | Threads / broadcasts / pairs / balances styles. Loaded by `otc.html` **after** `styles.css`; consumes its tokens, never edits it. |
@@ -205,6 +211,21 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Gotchas (do not rediscover)
 
+- **stellar-wallets-kit 1.9.5 DOUBLE-ENCODES the signature from `signAuthEntry` — never feed its
+  return straight to `authorizeEntry`.** Freighter resolves with a base64 **string**; the kit's
+  Freighter module then does `Buffer.from(signedAuthEntry).toString('base64')`, and `Buffer.from(<a
+  string>)` takes that string's **utf-8 bytes** — so what you get back is base64 OF the base64.
+  Decode it once and you hold the 88 ASCII bytes of the inner base64, not a 64-byte ed25519
+  signature; `Stellar.authorizeEntry` then rejects every entry with the maximally unhelpful
+  **`signature doesn't match payload`** (thrown from its own `Keypair.verify`, so it reads like a
+  key/args mismatch and sends you hunting the wrong bug — it cost a full debugging session). The kit
+  guards this exact case in its `signMessage` (`typeof x === 'string' ? x : Buffer.from(x)…`) and
+  **forgets to in `signAuthEntry`** — an upstream bug, not ours. `src/wallet/authSignature.ts`
+  normalises it (decode once; if it isn't 64 bytes, unwrap the extra layer), so `src/core/` never
+  sees the quirk and a correctly-encoded signature still passes through untouched. **Never widen
+  `WalletSigner.signAuthEntry` back to returning the wallet's raw string** — it returns raw
+  signature bytes precisely so this can't regress. The frozen vanilla `otc.js:456` still has the
+  bug; it is not deployed.
 - **`src/App.tsx` must NEVER call `useSettlement`.** Its `txBusy` is a `useRef`, i.e. **per
   instance**. `ThreadView` is the only render site of `OrderCard` and therefore the only place a
   settlement can start; it serializes every sign/settle through a **module-scope `settleLock`**. A
@@ -282,7 +303,8 @@ enforcing-mode simulate, assemble + submit. **`fillCanonicalArgs` must stay dete
 
 ## Verify before deploying
 
-1. `npm test` green — golden vectors byte-identical + token/pairs/negotiation/balances suites (90 tests).
+1. `npm test` green — golden vectors byte-identical + token/pairs/negotiation/balances/auth-signature
+   suites (98 tests).
 2. `npm run build` clean; `dist/*.html` has **zero inline scripts**; `grep -r esm.sh dist/` empty.
 3. `cargo test …` green — 6 tests (swap, replay, expiry, zero-amount, scoped-auth, amount-tamper).
 4. `stellar contract build` produces `otc_swap.wasm` (target `wasm32v1-none`).

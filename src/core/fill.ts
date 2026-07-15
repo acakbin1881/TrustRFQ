@@ -15,7 +15,6 @@
 // so tampered terms surface as a simulation error, never a signed tx.
 
 import * as Stellar from '@stellar/stellar-sdk';
-import { Buffer } from 'buffer';
 import { assetFor, fillCanonicalArgs } from './canonical';
 import type { Order, Side } from './types';
 
@@ -27,10 +26,15 @@ export interface WalletSigner {
     xdr: string,
     opts: { address: string; networkPassphrase: string },
   ): Promise<{ signedTxXdr: string }>;
+  /**
+   * Sign a Soroban auth-entry preimage. MUST resolve to the raw ed25519
+   * signature bytes — normalising the wallet's own encoding is the adapter's
+   * job (src/wallet/authSignature.ts), not this module's.
+   */
   signAuthEntry(
     preimageXdr: string,
     opts: { address: string; networkPassphrase: string },
-  ): Promise<{ signedAuthEntry: string }>;
+  ): Promise<Uint8Array>;
 }
 
 export interface ChainConfig {
@@ -115,12 +119,9 @@ export async function signFillAuth(c: ChainConfig, order: Order, side: Side, sig
   const validUntil = await authValidUntil(c, order);
   const signed = await Stellar.authorizeEntry(
     mine,
-    async (preimage) => {
-      const { signedAuthEntry } = await signer.signAuthEntry(preimage.toXDR('base64'), {
-        address: myAddr, networkPassphrase: c.passphrase,
-      });
-      return Buffer.from(signedAuthEntry, 'base64');
-    },
+    (preimage) => signer.signAuthEntry(preimage.toXDR('base64'), {
+      address: myAddr, networkPassphrase: c.passphrase,
+    }),
     validUntil, c.passphrase,
   );
   return signed.toXDR('base64');

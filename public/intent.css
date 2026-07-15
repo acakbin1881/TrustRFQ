@@ -177,35 +177,107 @@
   margin-top: 16px;
 }
 
-/* Pairs panel */
-.pairs-panel {
-  position: relative;
-  max-width: 640px;
-  margin: 0 auto;
-  padding: clamp(24px, 4vw, 36px);
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-  border: 1px solid var(--line-3);
-  box-shadow: var(--shadow-card);
+/* Pairs zone: the glass capsule + the explainer note. `display: contents` is
+   load-bearing — it dissolves this wrapper so the capsule and the note become
+   direct grid items of `[data-panel="incoming"]` (see "Incoming layout" below):
+   the capsule sits in the left column above the offers, the note owns the whole
+   right column. A wrapper box could not put them in two different tracks.
+   Both frost their backdrop, so NOTHING between them and the page canvas may
+   carry transform/filter/will-change — a transformed ancestor becomes the
+   backdrop root and the blur then samples an empty layer (renders flat). The
+   open/close animation therefore lives on the capsule itself and on its inner
+   rows, never on a parent. */
+.pairs-zone { display: contents; }
+
+.pairs-glass {
+  align-self: flex-start;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 1px 1px rgba(255, 255, 255, 0.6) inset,
+    0 10px 30px rgba(70, 80, 140, 0.10),
+    0 2px 6px rgba(70, 80, 140, 0.06);
+  transition: box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.pairs-panel__head { margin-bottom: 6px; }
-.pairs-panel__title {
-  margin: 0 0 6px;
+.pairs-glass.is-open {
+  background: rgba(255, 255, 255, 0.68);
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 1px rgba(255, 255, 255, 0.7) inset,
+    0 26px 60px rgba(70, 80, 140, 0.16),
+    0 4px 12px rgba(70, 80, 140, 0.08);
+}
+
+.pairs-glass__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 22px;
+  background: none;
+  border: 0;
+  border-radius: 26px;
+  cursor: pointer;
+  text-align: left;
+}
+.pairs-glass__title {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  color: var(--text-1);
 }
-.pairs-panel__sub { margin: 0; font-size: 13.5px; color: var(--text-4); line-height: 1.6; }
+/* chevron: two hairlines rotated into a caret, flipped on open */
+.pairs-glass__chev {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-bottom: 3px;
+  border-right: 1.5px solid var(--text-3);
+  border-bottom: 1.5px solid var(--text-3);
+  transform: rotate(45deg);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pairs-glass.is-open .pairs-glass__chev {
+  transform: rotate(-135deg);
+  margin-bottom: -2px;
+}
+
+/* height reveal: 0fr → 1fr is animatable and needs no magic max-height */
+.pairs-glass__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pairs-glass.is-open .pairs-glass__reveal { grid-template-rows: 1fr; }
+.pairs-glass__rows {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.32s ease, transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pairs-glass.is-open .pairs-glass__rows {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.08s;
+}
 .pairs-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 15px 2px;
-  border-top: 1px solid var(--line-3);
+  padding: 14px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 -1px 0 rgba(17, 18, 24, 0.05);
 }
-.pairs-panel__head + .pairs-row { border-top: 0; margin-top: 12px; }
+.pairs-row:last-child { padding-bottom: 18px; }
 .pairs-row__label {
   font-family: var(--font-display);
   font-size: 15.5px;
@@ -244,6 +316,149 @@
   transform: translateX(20px);
   background: linear-gradient(180deg, var(--gold-hi), var(--gold));
   box-shadow: 0 2px 8px rgba(17, 18, 24, 0.3);
+}
+
+/* The note: a full-height glass slab holding the explainer. It sticks below the
+   topbar and runs to just short of the viewport floor, so the right half of the
+   page is one calm surface. Sticky (not fixed) keeps it inside the grid, so the
+   left column never has to reserve space for it. */
+.pairs-note {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  height: auto;
+  padding: var(--note-pad);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.46);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  box-shadow:
+    0 1px 1px rgba(255, 255, 255, 0.75) inset,
+    0 30px 70px rgba(70, 80, 140, 0.13),
+    0 2px 8px rgba(70, 80, 140, 0.05);
+}
+/* macOS System Settings glass: the rim picks up colour, the body stays neutral.
+   A gradient FILL clipped to a 1.25px rim by an xor mask — a plain `border`
+   cannot vary its colour along the edge. The mask only ever clips this
+   pseudo-element's own paint (the gradient), which is the whole point; keep it
+   off `.pairs-note` itself, whose shadow it would erase. */
+.pairs-note::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.25px;
+  pointer-events: none;
+  background: linear-gradient(145deg,
+    rgba(31, 43, 238, 0.42) 0%,
+    rgba(255, 255, 255, 0.92) 26%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(87, 216, 206, 0.42) 74%,
+    rgba(31, 43, 238, 0.34) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+/* and the colour bleeds a little way INSIDE the rim, the way real glass does */
+.pairs-note::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(115% 62% at 100% 0%, rgba(31, 43, 238, 0.10), transparent 58%),
+    radial-gradient(105% 58% at 0% 100%, rgba(87, 216, 206, 0.12), transparent 60%);
+}
+
+/* The explainer, promoted out of the box. It is the only copy that says what the
+   toggle DOES, so it stays real text (not a decorative watermark) and keeps AA
+   contrast at this size. */
+.pairs-hero {
+  position: relative;   /* above ::after's tint wash */
+  margin: 0;
+  /* Compact info line above the pairs bar: same size/weight as the pairs-glass
+     title, wrapping naturally as one sentence. The copy is still authored as
+     phrase <span>s (see PairsPanel); they now flow inline, so a ::after space
+     restores the word gaps the block layout used to give for free. */
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--text-2);
+}
+.pairs-hero span { display: inline; }
+.pairs-hero span::after { content: ' '; }
+
+/* ---- Incoming layout ----------------------------------------------------
+   The one panel that breaks the desk's 960px column: it goes full-bleed and
+   splits the page down the middle. LEFT half = the info bar (the explainer)
+   with the pairs capsule under it. RIGHT half = the offers (or the empty
+   state), floor to ceiling. Each box is capped and centred inside its half.
+   `.panel.is-active` (styles.css) sets `display: block` at the same
+   specificity — this wins on source order alone, which is exactly why
+   otc.html loads styles.css first. */
+[data-panel="incoming"].is-active {
+  --note-top: 96px;
+  --note-bottom: 28px;
+  --note-pad: 18px 22px;
+  --left-col: 560px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  column-gap: clamp(24px, 4vw, 64px);
+  align-items: start;
+  /* full-bleed out of .wrap's centred column, then re-gutter */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding: 4px clamp(20px, 3vw, 40px) 0;
+}
+/* LEFT column: the info bar on top (row 1), the pairs capsule under it (row 2),
+   both capped to --left-col and centred so their edges line up. RIGHT column:
+   the offers (or empty state), floor to ceiling. */
+[data-panel="incoming"] .pairs-note {
+  grid-column: 1;
+  grid-row: 1;
+  width: min(100%, var(--left-col));
+  margin: 0 auto 20px;
+}
+[data-panel="incoming"] .pairs-glass {
+  grid-column: 1;
+  grid-row: 2;
+  width: min(100%, var(--left-col));
+  margin: 0 auto;
+}
+[data-panel="incoming"] > .intent-offers,
+[data-panel="incoming"] > .empty {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+  width: min(100%, var(--left-col));
+  margin-inline: auto;
+}
+
+/* Stacked: the note stops being a full-height slab and becomes a normal card. */
+@media (max-width: 900px) {
+  [data-panel="incoming"].is-active {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    row-gap: 20px;
+  }
+  /* stack top-to-bottom: info bar, pairs bar, offers */
+  [data-panel="incoming"] .pairs-note { grid-column: 1; grid-row: 1; margin-bottom: 0; }
+  [data-panel="incoming"] .pairs-glass { grid-column: 1; grid-row: 2; }
+  [data-panel="incoming"] > .intent-offers,
+  [data-panel="incoming"] > .empty { grid-column: 1; grid-row: 3; }
+  .pairs-hero { font-size: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pairs-glass,
+  .pairs-glass__chev,
+  .pairs-glass__reveal,
+  .pairs-glass__rows { transition: none; }
 }
 
 /* === intent layer: taker === */
@@ -355,14 +570,17 @@
   flex-wrap: wrap;
   min-width: 0;
 }
+/* Cut to the .net-pill's pattern (styles.css): same padding, border and mono
+   type, so the balances read as one row with the network label they sit next
+   to. Keep them in step if that pill ever changes. */
 .bal-strip__chip {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  padding: 5px 12px;
+  padding: 4px 11px;
   border-radius: var(--r-pill);
   background: rgba(17, 18, 24, 0.04);
-  border: 1px solid var(--line-3);
+  border: 1px solid var(--line-1);
   font-family: var(--font-mono);
   white-space: nowrap;
 }
@@ -374,7 +592,7 @@
   color: var(--text-4);
 }
 .bal-strip__amount {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--text-2);
@@ -395,5 +613,6 @@
 /* Shell spacing: each list panel stacks two blocks (incoming offers + the pairs
    you watch; direct offers + your broadcasts). These selectors track the desk's
    panel names — a stale one fails SILENTLY (no error, just lost separation). */
-[data-panel="incoming"] .pairs-panel { margin-top: 28px; }
+/* incoming's own spacing now lives with its grid, above (.pairs-zone is
+   display:contents — it has no box left to give a margin to) */
 [data-panel="sent"] .intent-broadcasts { margin-top: 4px; }

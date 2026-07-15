@@ -109,6 +109,16 @@
   --lp-r-xl:   40px;
   --lp-r-lg:   24px;
 
+  /* THE NAV, as three numbers. The bar is fixed, so its height is not measured
+     from the flow any more — .lp-nav__gap has to be told what it is. Keep these
+     two in step with the nav's real rendered height (the .lp-btn--sm is its tallest
+     child: 46.5px + 2×10px padding + 2×1px border) or the hero jumps by the
+     difference. Measured, not guessed. */
+  --lp-nav-h:    68px;
+  --lp-nav-gap:  22px;   /* the panel's breathing room under the nav */
+  /* Apple's own decelerate curve: leaves fast, lands without a bounce. */
+  --lp-nav-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
   /* the focus ring was white — on a white page that is no ring at all */
   --lp-ring: 0 0 0 3px rgba(31, 43, 238, 0.55);
 }
@@ -355,7 +365,9 @@ img, svg { display: block; max-width: 100%; }
 .lp-surface {
   position: relative;
   margin: 0;
-  padding: 22px 26px 64px;
+  /* no top padding any more: the nav is fixed and flush to the page's top edge,
+     and .lp-nav__gap carries both its height and the room under it */
+  padding: 0 26px 64px;
   border-radius: 0 0 var(--lp-r-xl) var(--lp-r-xl);
   overflow: hidden;   /* clips the big arc */
   /* This used to be a gradient running deep-to-milky across the panel, because the
@@ -414,18 +426,86 @@ img, svg { display: block; max-width: 100%; }
 .lp-surface > *:not(.lp-arc) { position: relative; z-index: 1; }
 
 /* --------------------------------------------------------------------- 5. NAV
-   Floating pill bar: brand, outlined link pills, then the white + solid-blue
-   button pair (the reference's "Download App" / "Sign Up" slots). */
+   TWO STATES, ONE BAR.
+
+   At rest the nav has no material of its own: no fill, no border, no shadow, no
+   gap above it. It is flush to the top edge and reads as the panel's first row —
+   which is the point, because a chromed bar sitting on a page that has not moved
+   yet is chrome announcing itself for nothing.
+
+   Once the page moves, hero.js sets `.is-stuck` and the bar lifts off the edge:
+   a gap opens above it, the capsule pulls in from both sides, and the glass
+   arrives — white wash, blur, hairline, one soft drop. Everything that changes
+   is a transition on the SAME element, so the two states are one continuous
+   move rather than a swap.
+
+   The bar is fixed rather than sticky: sticky is confined to its containing
+   block, and inside .lp-surface (the hero panel) it would come unstuck the
+   moment the panel scrolled away. .lp-nav__gap holds its place in the flow. */
+.lp-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  padding: 0 26px;   /* == .lp-surface's side padding, so the nav keeps the column */
+  /* the bar spans the window; only the capsule inside it may take a click */
+  pointer-events: none;
+  transition: padding-top 0.6s var(--lp-nav-ease);
+}
+
+.lp-topbar.is-stuck { padding-top: 12px; }
+
+/* the seat the fixed nav left behind, inside the panel */
+.lp-nav__gap { height: calc(var(--lp-nav-h) + var(--lp-nav-gap)); }
+
 .lp-nav {
+  pointer-events: auto;
+  max-width: var(--lp-col);
+  margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 22px;
   padding: 10px 10px 10px 22px;
   border-radius: var(--lp-r-pill);
-  /* It used to carry a dark scrim, because the links were white and the panel got
-     milky under them halfway across. Dark links need no scrim — the pill is now
-     just brighter milk on milk, read by its edge. */
-  background: rgba(255, 255, 255, 0.52);
+  /* the resting state is deliberately nothing at all */
+  background: transparent;
+  border: 1px solid transparent;   /* held, not added later: a border that appears
+                                      on scroll would resize the bar by 2px */
+  box-shadow: none;
+  transition:
+    max-width        0.6s var(--lp-nav-ease),
+    background-color 0.5s ease,
+    border-color     0.5s ease,
+    box-shadow       0.5s ease,
+    -webkit-backdrop-filter 0.5s ease,
+            backdrop-filter 0.5s ease;
+}
+
+/* Opaque first (see §3): a browser without backdrop-filter gets a solid-enough
+   white, never a transparent bar with the page running through the type. */
+.lp-topbar.is-stuck .lp-nav {
+  max-width: calc(var(--lp-col) - 84px);   /* the capsule pulls in from the column */
+  background-color: rgba(255, 255, 255, 0.86);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),   /* the top-edge sheen — where the light catches */
+    0 1px 2px rgba(13, 17, 64, 0.05),          /* the hairline contact shadow */
+    0 12px 34px -12px rgba(38, 48, 140, 0.24); /* the float */
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  /* blur(0), not `none`: zero-to-blur interpolates, none-to-blur snaps. This is
+     the whole difference between the glass arriving and the glass appearing. */
+  .lp-nav {
+    -webkit-backdrop-filter: blur(0px) saturate(1);
+            backdrop-filter: blur(0px) saturate(1);
+  }
+  .lp-topbar.is-stuck .lp-nav {
+    background-color: rgba(255, 255, 255, 0.62);
+    -webkit-backdrop-filter: blur(22px) saturate(1.8);
+            backdrop-filter: blur(22px) saturate(1.8);
+  }
 }
 
 .lp-brand {
@@ -872,7 +952,13 @@ img, svg { display: block; max-width: 100%; }
 .lp-orb svg [stroke] { stroke: var(--lp-deep-ink); }
 
 /* --------------------------------------------------------------- 9. SECTIONS */
-.lp-section { padding: 96px 44px; }
+/* The capsule floats over the page, so an anchor jump has to stop short of it —
+   otherwise #how and #security land their first line underneath the nav. The
+   section's own 96px top padding absorbs most of it; this only pays for the bar. */
+.lp-section {
+  padding: 96px 44px;
+  scroll-margin-top: calc(var(--lp-nav-h) + 12px);
+}
 
 /* The film's stage. hero.js scrolls here on the first downward gesture out of the
    hero; scroll-margin-top keeps the section's own top padding as breathing room so
@@ -917,19 +1003,6 @@ img, svg { display: block; max-width: 100%; }
   margin: 20px 0 0;
   font-size: 18px;
   line-height: 1.6;
-  color: var(--lp-ink-2);
-}
-
-/* The solution section's three claims. A list, set as a list — no bullets, because
-   each line already opens with the word "No". */
-.lp-claims {
-  list-style: none;
-  margin: 20px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-  font-size: 18px;
-  line-height: 1.5;
   color: var(--lp-ink-2);
 }
 
@@ -1073,19 +1146,175 @@ img, svg { display: block; max-width: 100%; }
 .lp-slab {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 52px;
+  margin-top: 28px;   /* the "OTC Desk" heading captions these cards directly now */
   border-radius: var(--lp-r-lg);
   overflow: hidden;
 }
 
 .lp-slab__col {
-  padding: 34px 30px;
+  padding: 48px 40px;
   border-left: 1px solid var(--lp-hair);
 }
 .lp-slab__col:first-child { border-left: 0; }
 
+/* the mockup's index — a quiet mono tag over each claim, tracked wide so 01/02/03
+   read as labels, not quantities. It sits well clear of AA at this weight/colour. */
+.lp-slab__num {
+  display: block;
+  margin-bottom: 30px;
+  font-family: var(--lp-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  color: rgba(13, 17, 64, 0.45);
+}
+
 .lp-slab__title {
-  margin: 0 0 10px;
+  margin: 0 0 18px;
+  font-family: var(--lp-display);
+  font-size: clamp(26px, 2.2vw, 31px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--lp-ink-1);
+}
+
+.lp-slab__body {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--lp-ink-2);
+}
+
+/* ---- 9c. THE RAIL (how it works) ----------------------------------------
+   This one IS a sequence — the order carries information the reader needs — so
+   it is the only place on the page that earns its numbering. Each step is
+   indexed and capped by a ruled line running out to the column edge; the last
+   step's rule closes on a filled node, marking the end of the sequence. No
+   glass: after the ladder and the slab, the page needs a breath. */
+
+/* The eyebrow drops its pill here and reads as an editorial section marker —
+   uppercase, tracked, dimmed to the mist value the two-tone headline uses. */
+#how .lp-eyebrow {
+  padding: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lp-mist);
+}
+#how .lp-eyebrow::before { background: currentColor; }
+
+/* the two-tone claim: line 1 solid ink, line 2 at the mist value — the tonal
+   break lands at the sentence, so each line is its own block */
+.lp-rail__lede { max-width: 20em; }
+.lp-rail__lede b,
+.lp-rail__lede span { display: block; font-weight: 500; }
+.lp-rail__lede b    { color: var(--lp-ink-1); }
+.lp-rail__lede span { color: var(--lp-mist); }
+
+.lp-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px;
+  margin: 60px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-rail__step { position: relative; }
+
+/* number + hairline, the index that opens each step */
+.lp-rail__head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 52px;
+}
+
+.lp-rail__num {
+  font-family: var(--lp-mono);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--lp-mist);
+}
+
+.lp-rail__line {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  background: var(--lp-hair);
+}
+
+/* the sequence closes: the final step's rule lands on a filled node */
+.lp-rail__step:last-child .lp-rail__line::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lp-ink-1);
+  transform: translateY(-50%);
+}
+
+.lp-rail__title {
+  margin: 0 0 14px;
+  font-family: var(--lp-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--lp-ink-1);
+}
+
+.lp-rail__body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--lp-ink-2);
+}
+
+/* ---- 9d. THE SHIELD (security) ------------------------------------------
+   Four guarantees set as a 2×2 spec grid beside a two-tone claim. Same
+   material as the slab (one pane, divided by hairlines) because the four
+   guarantees are facets of ONE security model, not four separate cards. The
+   claim sits left; the grid, which carries the substance, gets the glass. */
+.lp-shield {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  align-items: center;
+  gap: 56px;
+}
+
+/* the two-tone claim: line 1 solid ink, line 2 at the mist value (the hero's
+   headline trick). Mist clears AA only at THIS (large) size. Each line is
+   its own block so the tonal break lands at the sentence, not at the wrap. */
+.lp-shield__title { margin-top: 20px; max-width: 11em; }
+.lp-shield__title b,
+.lp-shield__title span { display: block; font-weight: 500; }
+.lp-shield__title b    { color: var(--lp-ink-1); }
+.lp-shield__title span { color: var(--lp-mist); }
+
+.lp-shield__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-radius: var(--lp-r-lg);
+  overflow: hidden;
+}
+
+/* Full cross-hairlines with no doubled edge against the pane's own border:
+   every cell draws its own top + left line, then the first row drops its top
+   and the first column drops its left, leaving only the two interior lines. */
+.lp-shield__cell {
+  padding: 32px 30px;
+  border-top: 1px solid var(--lp-hair);
+  border-left: 1px solid var(--lp-hair);
+}
+.lp-shield__cell:nth-child(-n+2) { border-top: 0; }   /* first row */
+.lp-shield__cell:nth-child(odd)  { border-left: 0; }  /* first col */
+
+.lp-shield__name {
+  margin: 0 0 12px;
   font-family: var(--lp-display);
   font-size: 21px;
   font-weight: 600;
@@ -1093,165 +1322,12 @@ img, svg { display: block; max-width: 100%; }
   color: var(--lp-ink-1);
 }
 
-.lp-slab__body {
+.lp-shield__desc {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
   color: var(--lp-ink-2);
 }
-
-/* ---- 9c. THE RAIL (how it works) ----------------------------------------
-   This one IS a sequence — the order carries information the reader needs —
-   so it is the only place on the page that earns its numbering, and it gets a
-   line connecting the steps to say so. No glass: after the ladder and the slab,
-   the page needs a breath. */
-.lp-rail {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 34px;
-  margin: 62px 0 0;
-  padding: 0;
-  list-style: none;
-  position: relative;
-}
-
-/* the connecting line, threaded through the node centres */
-.lp-rail::before {
-  content: '';
-  position: absolute;
-  top: 25px;
-  left: 25px;
-  right: 25px;
-  height: 1px;
-  background: linear-gradient(90deg,
-    rgba(13, 17, 64, 0.10),
-    rgba(13, 17, 64, 0.35),
-    rgba(13, 17, 64, 0.10));
-}
-
-.lp-rail__step { position: relative; }
-
-.lp-rail__node {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: var(--lp-holo-disc);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 6px 18px rgba(90, 84, 200, 0.28);
-  font-family: var(--lp-mono);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--lp-ink-1);
-  animation: lp-holo-spin 9s linear infinite;
-}
-
-/* three nodes sit in one row, in view together — offsetting their phase is what
-   keeps them reading as three separate pieces of foil instead of one lit sign
-   blinking through its steps in sync */
-.lp-rail__step:nth-child(2) .lp-rail__node { animation-delay: -3s; }
-.lp-rail__step:nth-child(3) .lp-rail__node { animation-delay: -6s; }
-
-.lp-rail__title {
-  margin: 26px 0 10px;
-  font-family: var(--lp-display);
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--lp-ink-1);
-}
-
-.lp-rail__body {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--lp-ink-2);
-}
-
-/* ---- 9d. THE SPEC SHEET (security) --------------------------------------
-   Four guarantees, each a term and its definition — that is a spec, so it is
-   set as one: a definition list with hairlines, next to the contract that
-   enforces it. The code is the evidence, so it gets the glass and the weight. */
-.lp-spec {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 48px;
-  margin-top: 52px;
-}
-
-.lp-spec__list { margin: 0; }
-
-.lp-spec__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-  padding: 22px 0;
-  border-top: 1px solid var(--lp-hair);
-}
-.lp-spec__row:last-child { border-bottom: 1px solid var(--lp-hair); }
-
-.lp-spec__term {
-  font-family: var(--lp-display);
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--lp-ink-1);
-}
-
-.lp-spec__def {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--lp-ink-2);
-}
-
-.lp-plaque {
-  border-radius: var(--lp-r-lg);
-  overflow: hidden;
-}
-
-.lp-plaque__bar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--lp-hair);
-  background: rgba(13, 17, 64, 0.05);
-}
-
-.lp-plaque__bar span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(13, 17, 64, 0.22);
-}
-
-.lp-plaque__bar em {
-  margin-left: 8px;
-  font-family: var(--lp-mono);
-  font-style: normal;
-  font-size: 12px;
-  color: var(--lp-ink-2);
-}
-
-.lp-plaque pre {
-  margin: 0;
-  padding: 26px 22px;
-  overflow-x: auto;
-  font-family: var(--lp-mono);
-  font-size: 13px;
-  line-height: 1.9;
-  color: var(--lp-ink-2);
-}
-
-.lp-plaque .fn { color: var(--lp-ink-1); font-weight: 600; }
-.lp-plaque .v  { color: var(--lp-ink-1); }
-.lp-plaque .ok { color: var(--lp-win-text); font-weight: 600; }
-.lp-plaque .cm { color: var(--lp-ink-2); }
 
 /* ------------------------------------------------------------------ 10. CTA */
 .lp-cta {
@@ -1447,9 +1523,14 @@ img, svg { display: block; max-width: 100%; }
 }
 
 @media (max-width: 980px) {
-  :root { --lp-fold: 1560px; }   /* the hero stacks, so the fold drops with it */
+  :root { --lp-fold: 1560px; --lp-nav-gap: 16px; }   /* the hero stacks, so the fold drops with it */
   .lp-canvas { padding: 0 0 12px; }
-  .lp-surface { padding: 16px 16px 48px; border-radius: 0 0 28px 28px; }
+  .lp-surface { padding: 0 16px 48px; border-radius: 0 0 28px 28px; }
+
+  /* the capsule keeps the column at this width — there is no room to pull in */
+  .lp-topbar { padding: 0 16px; }
+  .lp-topbar.is-stuck { padding-top: 10px; }
+  .lp-topbar.is-stuck .lp-nav { max-width: var(--lp-col); }
 
   .lp-hero {
     grid-template-columns: minmax(0, 1fr);
@@ -1478,19 +1559,22 @@ img, svg { display: block; max-width: 100%; }
   .lp-slab__col { border-left: 0; border-top: 1px solid var(--lp-hair); }
   .lp-slab__col:first-child { border-top: 0; }
 
-  .lp-rail { grid-template-columns: minmax(0, 1fr); gap: 30px; }
-  .lp-rail::before {
-    top: 25px; bottom: 25px; left: 25px; right: auto;
-    width: 1px; height: auto;
-    background: linear-gradient(180deg,
-      rgba(13, 17, 64, 0.10), rgba(13, 17, 64, 0.35), rgba(13, 17, 64, 0.10));
+  .lp-rail { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .lp-rail__head { margin-bottom: 22px; }
+  /* stacked, every step's rule closes on the node — the sequence still reads top-down */
+  .lp-rail__step .lp-rail__line::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--lp-ink-1);
+    transform: translateY(-50%);
   }
-  .lp-rail__step { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 0 20px; }
-  .lp-rail__node { grid-row: span 2; }
-  .lp-rail__title { margin-top: 8px; }
-  .lp-rail__body { grid-column: 2; }
 
-  .lp-spec { grid-template-columns: minmax(0, 1fr); gap: 34px; }
+  .lp-shield { grid-template-columns: minmax(0, 1fr); gap: 34px; }
 
   .lp-ladder { padding: 24px 20px 20px; }
   .lp-ladder__axis { display: none; }
@@ -1504,6 +1588,7 @@ img, svg { display: block; max-width: 100%; }
 }
 
 @media (max-width: 620px) {
+  :root { --lp-nav-h: 64px; }   /* the nav's padding drops to 8px — so does its seat */
   .lp-brand { font-size: 18px; }
   .lp-nav { padding: 8px 8px 8px 14px; }
   .lp-nav__actions .lp-btn--white { display: none; }   /* keep one clear action on mobile */
@@ -1514,6 +1599,13 @@ img, svg { display: block; max-width: 100%; }
 
   .lp-stats { flex-direction: column; gap: 26px; }
   .lp-slab__col { padding: 26px 22px; }
+
+  /* the 2×2 shield stacks into a single column: reset the cross-hairlines to a
+     single top rule per cell (the first-row/first-col overrides no longer apply) */
+  .lp-shield__grid { grid-template-columns: minmax(0, 1fr); }
+  .lp-shield__cell,
+  .lp-shield__cell:nth-child(-n+2) { border-top: 1px solid var(--lp-hair); border-left: 0; }
+  .lp-shield__cell:first-child { border-top: 0; }
   .lp-rung { grid-template-columns: 88px minmax(0, 1fr) 60px; gap: 10px; }
   .lp-rung__size { font-size: 16px; }
   .lp-cta { padding: 34px 24px; }

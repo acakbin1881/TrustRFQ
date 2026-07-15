@@ -12,7 +12,7 @@ import { signFillAuth, submitFill } from '../core/fill';
 import { orderTokensKnown } from '../core/tokens';
 import type { Order, Side } from '../core/types';
 import { fetchSettlementStatus, updateOrder } from '../data/orders';
-import { kit } from '../wallet/kit';
+import { kit, walletSignAuthEntry } from '../wallet/kit';
 import { errMsg, type ToastKind } from './Toast';
 
 const chain: ChainConfig = {
@@ -25,7 +25,7 @@ const chain: ChainConfig = {
 const signerFor = (address: string): WalletSigner => ({
   address,
   signTransaction: (xdr, opts) => kit.signTransaction(xdr, opts),
-  signAuthEntry: (preimage, opts) => kit.signAuthEntry(preimage, opts),
+  signAuthEntry: (preimage, opts) => walletSignAuthEntry(preimage, opts),
 });
 
 interface Deps {

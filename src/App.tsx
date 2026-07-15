@@ -1,5 +1,5 @@
 // The desk — the whole app, one page. Topbar (+ balance strip) + wallet gate +
-// three sections switched by the floating SectionSheet pill: New order (the one
+// three sections switched by the SectionSheet capsule in the bar: New order (the one
 // compose form, where an optional counterparty address decides directed vs
 // broadcast), Incoming (offers to me + the pairs I watch), Sent (my direct
 // offers + my broadcasts, grouped).
@@ -15,7 +15,7 @@
 // submits, two competing settlement_status writes. Invariant to keep:
 //   grep -rn "useSettlement" src/   →   exactly 2 hits (its definition, ThreadView).
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { isExpired, trunc } from './core/tokens';
 import type { BalanceMap } from './core/balances';
 import type { Order } from './core/types';
@@ -39,12 +39,13 @@ type TabName = 'create' | 'incoming' | 'sent';
 const isOpen = (o: Order, now: number) =>
   (o.status === 'pending' || o.status === 'countered') && !isExpired(o, now);
 
-function Topbar({ address, balances, funded, loading, onDisconnect }: {
+function Topbar({ address, balances, loading, onDisconnect, nav }: {
   address: string | null;
   balances: BalanceMap | null;
-  funded: boolean;
   loading: boolean;
   onDisconnect: () => void;
+  /** the SectionSheet capsule — lives in the bar, so it reads as part of the layout */
+  nav: ReactNode;
 }) {
   return (
     <header className="topbar">
@@ -58,8 +59,14 @@ function Topbar({ address, balances, funded, loading, onDisconnect }: {
         TrustRFQ
       </a>
       <span className="net-pill">Testnet</span>
+      {/* balances sit with the network label, not with the wallet: both say
+          WHERE you are trading, and they line up on the bar's left run */}
+      {address ? <BalanceStrip balances={balances} loading={loading} /> : null}
       <div className="topbar__right">
-        {address ? <BalanceStrip balances={balances} funded={funded} loading={loading} /> : null}
+        {/* the nav capsule renders here but is position:fixed (styles.css), so it
+            floats top-centre and takes no room in this row; the wallet (address +
+            Disconnect) is the only thing left, out at the bar's top-right corner */}
+        {nav}
         <div className="wallet-chip" id="walletChip">
           {address ? (
             <>
@@ -82,7 +89,7 @@ function Desk() {
   const { broadcasts, refresh: refreshBroadcasts } = useBroadcasts(address, onError);
   // ONE balances instance feeds the topbar strip, the Ticket's send gate, and
   // every CounterForm.
-  const { balances, funded, loading, refresh: refreshBalances } = useBalances(address);
+  const { balances, loading, refresh: refreshBalances } = useBalances(address);
   const [tab, setTab] = useState<TabName>('create');
   const now = useNow(60000);
 
@@ -121,8 +128,19 @@ function Desk() {
   return (
     <>
       <div className="backdrop starfield" aria-hidden="true" />
-      <Topbar address={address} balances={balances} funded={funded} loading={loading}
-        onDisconnect={disconnect} />
+      <Topbar address={address} balances={balances} loading={loading}
+        onDisconnect={disconnect}
+        nav={address ? (
+          <SectionSheet
+            active={tab}
+            onSelect={setTab}
+            options={[
+              { id: 'create', label: 'New offer', glyph: '+' },
+              { id: 'incoming', label: 'Incoming', glyph: '↓', count: incomingCount },
+              { id: 'sent', label: 'Sent', glyph: '↑', count: sentCount },
+            ] as const}
+          />
+        ) : null} />
       {/* Gate and desk are both mounted, visibility-toggled — so a half-typed
           ticket draft, the active section, and BroadcastList's banner dismissals
           all survive disconnect/reconnect and section switches. The SectionSheet
@@ -133,18 +151,6 @@ function Desk() {
       <main className="wrap">
         <Gate onConnect={() => void handleConnect()} hidden={!!address} />
         <section id="app" style={address ? undefined : { display: 'none' }}>
-          {address ? (
-            <SectionSheet
-              active={tab}
-              onSelect={setTab}
-              options={[
-                { id: 'create', label: 'New offer', glyph: '+' },
-                { id: 'incoming', label: 'Incoming', glyph: '↓', count: incomingCount },
-                { id: 'sent', label: 'Sent', glyph: '↑', count: sentCount },
-              ] as const}
-            />
-          ) : null}
-
           {/* NOT gated on address: Ticket takes `string | null` on purpose, so a
               draft survives a disconnect. The two list panels ARE gated — their
               components require a non-null address. */}
@@ -155,13 +161,15 @@ function Desk() {
           <div className={tab === 'incoming' ? 'panel is-active' : 'panel'} data-panel="incoming">
             {address ? (
               <>
+                {/* the pairs capsule leads the panel (top-left) and carries the
+                    explainer as hero type to its right; the offers stack under it. */}
+                <PairsPanel address={address} />
                 {/* every incoming order — directed AND broadcast fan-out rows.
                     They used to appear on two different pages as two different
                     cards; now each is one thread, once. */}
                 <OfferList address={address} orders={incoming} side="taker" now={now}
                   balances={balances} refreshBalances={refreshBalances} onChanged={onChanged}
-                  emptyText="No offers addressed to your wallet yet. Toggle a pair below to also receive broadcast offers." />
-                <PairsPanel address={address} />
+                  emptyText="No offers addressed to your wallet yet. Toggle a pair above to also receive broadcast offers." />
               </>
             ) : null}
           </div>

@@ -8,6 +8,8 @@ import {
   FreighterModule,
   FREIGHTER_ID,
 } from '@creit.tech/stellar-wallets-kit';
+import { Buffer } from 'buffer';
+import { authSignatureBytes } from './authSignature';
 
 export { FREIGHTER_ID };
 
@@ -48,4 +50,16 @@ export async function walletSign(message: string, address: string): Promise<stri
   }
   if (!sig || typeof sig !== 'string') throw new Error('Wallet returned no signature.');
   return sig;
+}
+
+// Sign a Soroban auth-entry preimage and return the RAW signature bytes that
+// Stellar.authorizeEntry expects. The kit's own encoding of this value is broken
+// (see authSignature.ts) — normalising here keeps the quirk in the wallet
+// adapter, where it belongs, instead of leaking into src/core/.
+export async function walletSignAuthEntry(
+  preimageXdr: string,
+  opts: { address: string; networkPassphrase: string },
+): Promise<Buffer> {
+  const { signedAuthEntry } = await kit.signAuthEntry(preimageXdr, opts);
+  return authSignatureBytes(signedAuthEntry);
 }
