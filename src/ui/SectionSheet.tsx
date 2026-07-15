@@ -1,7 +1,8 @@
-// The app's ONE nav control: a floating pill (bottom-center) that names the
-// active section, and a centered modal sheet listing all of them. Generic over
-// N options; the desk passes three. The sheet only switches which .panel is
-// active — panels stay mounted in App, so drafts and list state survive.
+// The app's ONE nav control: a glass capsule in the topbar (top-right) that
+// names the active section, and a menu that unfolds beneath it listing all of
+// them. Generic over N options; the desk passes three. The menu only switches
+// which .panel is active — panels stay mounted in App, so drafts and list state
+// survive.
 
 import { useEffect, useRef, useState } from 'react';
 
@@ -74,29 +75,33 @@ export function SectionSheet<T extends string>({ options, active, onSelect }: Se
   }, [open]);
 
   return (
-    <>
+    <div className={open ? 'section-nav is-open' : 'section-nav'}>
       <button
         ref={triggerRef}
         type="button"
         className="section-fab"
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((v) => !v)}
       >
         <span className="section-fab__glyph" aria-hidden="true">{activeOpt.glyph}</span>
-        {activeOpt.label}
+        <span className="section-fab__label">{activeOpt.label}</span>
         {pending > 0 ? <span className="section-fab__count">{pending}</span> : null}
-        <span className="section-fab__menu" aria-hidden="true">≡</span>
+        <span className="section-fab__chevron" aria-hidden="true" />
       </button>
 
       {open ? (
-        <div className="sheet">
+        <>
           <div className="sheet__backdrop" onClick={close} />
           <div ref={panelRef} className="sheet__panel" role="dialog" aria-modal="true" aria-label="Desk sections">
-            {options.map((o) => (
+            {options.map((o, i) => (
               <button
                 key={o.id}
                 type="button"
+                // the stagger is the animation's whole trick: each row rides in a
+                // beat after the one above it. Index-driven, so it stays right
+                // for any N options.
+                style={{ '--row': i } as React.CSSProperties}
                 className={o.id === active ? 'sheet__option is-active' : 'sheet__option'}
                 onClick={() => { onSelect(o.id); close(); }}
               >
@@ -106,8 +111,8 @@ export function SectionSheet<T extends string>({ options, active, onSelect }: Se
               </button>
             ))}
           </div>
-        </div>
+        </>
       ) : null}
-    </>
+    </div>
   );
 }

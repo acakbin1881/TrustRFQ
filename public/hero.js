@@ -61,6 +61,37 @@
     window.addEventListener('blur', rest);
   };
 
+  /* THE NAV'S ONE BIT OF STATE.
+     Everything the capsule does is CSS; the script's whole job is to say whether
+     the page has left the top. It runs unconditionally — not behind `lp-js`, not
+     behind reduced-motion — because `is-stuck` is not an animation, it is the
+     nav's material. With Reduce Motion on, the same two states still apply; the
+     kill switch in hero.css simply cuts the transition between them.
+
+     rAF-throttled, and only touched when the answer actually changes, so a fling
+     down the page costs one class write, not one per scroll event. */
+  const capsule = () => {
+    const bar = document.querySelector('.lp-topbar');
+    if (!bar) return;
+
+    let frame = 0;
+    let stuck = null;
+
+    const sync = () => {
+      frame = 0;
+      const next = window.scrollY > 6;
+      if (next === stuck) return;
+      stuck = next;
+      bar.classList.toggle('is-stuck', next);
+    };
+
+    window.addEventListener('scroll', () => {
+      if (!frame) frame = window.requestAnimationFrame(sync);
+    }, { passive: true });
+
+    sync();   // reloading mid-page must land in the right state, not animate into it
+  };
+
   /* Watch a set, add `is-in` once, stop watching. */
   const watch = (nodes, options) => {
     const io = new IntersectionObserver((entries) => {
@@ -142,6 +173,8 @@
   };
 
   const start = () => {
+    capsule();   // before the lp-js gate: the nav is chrome, not choreography
+
     const revealables = document.querySelectorAll('.lp-reveal, .lp-deal');
     /* The ladder has NO hidden state of its own — the card is already on the page.
        `is-in` only starts its rows dealing (see the ladder block in hero.css §12). */

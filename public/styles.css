@@ -14,7 +14,7 @@
 :root {
   color-scheme: light;
 
-  --bg: #E2E5F3;
+  --bg: #EFF1FA;
   --bg-raised: #FFFFFF;
   --bg-sunken: #EFF1F7;
   --bg-toast: #15161B;
@@ -49,9 +49,13 @@
   --ring: 0 0 0 3px rgba(22, 23, 29, 0.22);
   --shadow-card: 0 20px 60px rgba(70, 80, 140, 0.12);
 
-  /* additive tokens (new in the light theme) — the reference's cool lavender */
-  --bg-grad-a: #EBEDF8;
-  --bg-grad-b: #D5D9EE;
+  /* additive tokens (new in the light theme) — the canvas starts white and banks
+     into the landing's pale lavender toward the floor. Do NOT take the top stop
+     to pure #FFF: the desk's cards are white, and they would lose their edge
+     against it up where the ticket sits. */
+  --bg-grad-a: #FCFCFE;
+  --bg-grad-b: #D6DCF4;
+  --bg-grad-mid: #EDF0FA;
   /* Opaque neutral strokes for the ticket. The --line-1/2/3 family above is
      alpha ink, which the ticket's frosted hero and 2px underlines make muddy;
      these are the handoff's flat lavender-grays, darkest last. Additive on
@@ -267,18 +271,27 @@ select option { background: var(--bg-raised); color: var(--text-1); }
    4. APP PAGE (otc.html)
    ========================================================================== */
 
-/* Fixed backdrop: quiet gray-lavender wash, top-lit */
+/* Fixed backdrop: white at the top, banking into the landing's pale lavender at
+   the floor. The mid stop holds the white for the first third so the gradient
+   reads as a slow fall rather than a two-colour ramp. */
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(180deg, var(--bg-grad-a), var(--bg-grad-b));
+  background: linear-gradient(180deg,
+    var(--bg-grad-a) 0%,
+    var(--bg-grad-mid) 44%,
+    var(--bg-grad-b) 100%);
 }
 .backdrop.starfield { opacity: 1; }
 .backdrop::after { content: none; }
 
 /* Top bar (shared shell on both pages) — floats on the canvas, fades out */
+/* The bar is full-bleed, but its RIGHT edge is pulled in to the ticket's column
+   (840px, centred) so the section capsule — last in the row — ends exactly on
+   the ticket's right edge. Only the right side moves: insetting the left one
+   too would squeeze brand + balances + wallet into 840px and wrap them. */
 .topbar {
   position: sticky;
   top: 0;
@@ -286,9 +299,11 @@ select option { background: var(--bg-raised); color: var(--text-1); }
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px clamp(20px, 4vw, 40px) 24px;
+  padding: 16px 0 24px;
+  padding-left: clamp(20px, 4vw, 40px);
+  padding-right: max(clamp(20px, 4vw, 40px), calc((100% - 840px) / 2));
   border-bottom: none;
-  background: linear-gradient(180deg, var(--bg-grad-a) 55%, rgba(235, 237, 248, 0));
+  background: linear-gradient(180deg, var(--bg-grad-a) 55%, rgba(252, 252, 254, 0));
 }
 .topbar__right {
   margin-left: auto;
@@ -322,7 +337,8 @@ select option { background: var(--bg-raised); color: var(--text-1); }
 /* Layout. One column for the whole desk: the ticket carries its own 640px
    max-width and self-centres, so this width only sets how much room the
    Incoming/Sent lists get — and the thread and broadcast cards want it. */
-.wrap { max-width: 960px; margin: 0 auto; padding: 40px clamp(20px, 4vw, 40px) 140px; }
+/* the bottom pad used to clear a bottom-center nav pill; the nav is in the bar now */
+.wrap { max-width: 960px; margin: 0 auto; padding: 40px clamp(20px, 4vw, 40px) 80px; }
 
 /* Wallet gate */
 .gate {
@@ -1231,122 +1247,201 @@ select option { background: var(--bg-raised); color: var(--text-1); }
   50% { box-shadow: 0 0 0 6px rgba(22, 23, 29, 0); }
 }
 
-/* ---------- 5. Section trigger + sheet (desk only) ------------------------ */
+/* ---------- 5. Section capsule + menu (desk only) -------------------------- */
 
-/* Floating pill, bottom-center: names the active section, opens the sheet */
-.section-fab {
+/* The one nav control: a glass capsule in the topbar's right group, and a menu
+   that unfolds beneath it. The capsule is the anchor — everything below is
+   positioned off it, so the menu tracks it at every width.
+   NOTE: the capsule and the panel each carry their own backdrop-filter, and
+   NEITHER may sit under a transformed/filtered ancestor — that ancestor would
+   become the backdrop root and the frost would sample nothing (see CLAUDE.md).
+   Hover/press transforms therefore live ON the blurred element itself. */
+/* Lifted OUT of the topbar's flow: the capsule floats at the TOP CENTRE of the
+   viewport, while the wallet chip (address + Disconnect) keeps the bar's
+   top-right corner to itself. z-index sits above the topbar (40) so the bar's
+   gradient can't paint over it.
+   Centred with `inset-inline: 0 + margin: auto + width: max-content`, NOT
+   translateX — a transformed element becomes the backdrop root for its own
+   descendants and .section-fab's frost would sample nothing (see CLAUDE.md).
+   The same shrink-to-fit width keeps .sheet__panel (width: 100%) exactly as
+   wide as the capsule at every breakpoint. */
+.section-nav {
   position: fixed;
-  left: 50%;
-  bottom: 28px;
-  transform: translateX(-50%);
+  top: 13px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: max-content;
   z-index: 50;
+  display: flex;
+  flex: none;
+}
+
+/* Fixed width, for two reasons: the menu below is exactly as wide as the
+   capsule, and a capsule that resized per label ('Sent' vs 'New offer') would
+   shove the whole bar sideways on every section switch. */
+.section-fab {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 22px;
-  border: none;
+  gap: 9px;
+  width: 196px;
+  height: 42px;
+  padding: 4px 14px 4px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: var(--r-pill);
-  background: var(--gold);
-  color: var(--gold-ink);
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  color: var(--text-1);
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  box-shadow: var(--shadow-float);
+  white-space: nowrap;
   cursor: pointer;
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  box-shadow:
+    0 1px 2px rgba(22, 23, 29, 0.04),
+    0 10px 26px rgba(70, 80, 140, 0.16);
+  transition:
+    background 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .section-fab:hover {
-  transform: translateX(-50%) translateY(-2px);
-  box-shadow: 0 24px 50px rgba(22, 23, 29, 0.34);
+  background: rgba(255, 255, 255, 0.72);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 2px rgba(22, 23, 29, 0.04),
+    0 14px 32px rgba(70, 80, 140, 0.22);
+}
+.section-fab:active { transform: scale(0.975); }
+.section-nav.is-open .section-fab {
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    0 1px 2px rgba(22, 23, 29, 0.04),
+    0 14px 32px rgba(70, 80, 140, 0.22);
 }
 .section-fab__glyph {
-  width: 26px; height: 26px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--gold);
+  color: var(--gold-ink);
   font-size: 14px;
   flex: none;
 }
+.section-fab__label { flex: none; }
 .section-fab__count {
   min-width: 20px;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: var(--r-pill);
-  background: var(--gold-ink);
-  color: var(--gold);
+  background: var(--gold);
+  color: var(--gold-ink);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.section-fab__menu { opacity: 0.6; font-size: 13px; }
+/* caret, drawn from a rotated corner — turns over when the menu opens */
+.section-fab__chevron {
+  width: 7px; height: 7px;
+  flex: none;
+  margin: -3px 2px 0 auto;
+  border-right: 1.5px solid var(--text-3);
+  border-bottom: 1.5px solid var(--text-3);
+  transform: rotate(45deg);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.section-nav.is-open .section-fab__chevron {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
 
-/* Centered modal sheet with the three sections */
-.sheet {
+/* Click-catcher. Deliberately unpainted: an Apple menu dims nothing — the
+   capsule's own lift is the "you are in a menu" signal. */
+.sheet__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 55;
-  display: grid;
-  place-items: center;
-  padding: 20px;
+  z-index: 1;
 }
-.sheet__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(23, 25, 38, 0.35);
-}
+
+/* The menu: the capsule's own width, hanging directly beneath it, growing
+   downward — the capsule appears to extend rather than to spawn a popover. The
+   reveal is a clip, not a scale, so the rows never squash. */
 .sheet__panel {
-  position: relative;
-  width: min(400px, 100%);
-  padding: 14px;
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-  box-shadow: var(--shadow-pop);
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 100%;
+  padding: 6px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+  box-shadow:
+    0 1px 2px rgba(22, 23, 29, 0.05),
+    0 24px 60px rgba(40, 46, 80, 0.22);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  animation: sheetIn 0.18s ease;
+  gap: 3px;
+  animation: menuIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-@keyframes sheetIn {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: none; }
+@keyframes menuIn {
+  from { opacity: 0; clip-path: inset(0 0 100% 0 round 22px); transform: translateY(-4px); }
+  to { opacity: 1; clip-path: inset(0 0 0 0 round 22px); transform: none; }
 }
 .sheet__option {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: 10px;
+  padding: 9px 11px;
   border: none;
-  border-radius: var(--r-md);
-  background: var(--bg-sunken);
+  border-radius: 16px;
+  background: transparent;
   color: var(--text-1);
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
   text-align: left;
   cursor: pointer;
-  transition: background 0.14s ease;
+  transition: background 0.2s ease, transform 0.2s ease;
+  /* rows arrive a beat after the panel, one after another (--row set in JSX) */
+  animation: rowIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(60ms + var(--row, 0) * 45ms);
 }
-.sheet__option:hover { background: rgba(17, 18, 24, 0.09); }
-.sheet__option.is-active { background: var(--gold); color: var(--gold-ink); }
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+.sheet__option:hover { background: rgba(17, 18, 24, 0.06); }
+.sheet__option:active { transform: scale(0.985); }
+.sheet__option.is-active { background: rgba(17, 18, 24, 0.07); }
 .sheet__option-glyph {
-  width: 36px; height: 36px;
+  width: 28px; height: 28px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(17, 18, 24, 0.06);
-  font-size: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(17, 18, 24, 0.07);
+  color: var(--text-2);
+  font-size: 14px;
   flex: none;
 }
-.sheet__option.is-active .sheet__option-glyph { background: rgba(255, 255, 255, 0.16); }
+.sheet__option.is-active .sheet__option-glyph {
+  background: var(--gold);
+  box-shadow: none;
+  color: var(--gold-ink);
+}
 .sheet__option-count {
   margin-left: auto;
-  min-width: 24px;
-  padding: 3px 9px;
+  min-width: 22px;
+  padding: 2px 7px;
   border-radius: var(--r-pill);
-  background: rgba(17, 18, 24, 0.08);
+  background: rgba(17, 18, 24, 0.07);
   color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -1354,9 +1449,15 @@ select option { background: var(--bg-raised); color: var(--text-1); }
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.sheet__option.is-active .sheet__option-count {
-  background: rgba(255, 255, 255, 0.18);
-  color: var(--gold-ink);
+
+@media (prefers-reduced-motion: reduce) {
+  .section-fab,
+  .section-fab__chevron,
+  .sheet__panel,
+  .sheet__option { animation: none; transition: none; }
+  .section-fab:hover,
+  .section-fab:active,
+  .sheet__option:active { transform: none; }
 }
 
 /* Toast (base styles MUST live on the ID — className is overwritten at runtime).
@@ -1364,7 +1465,7 @@ select option { background: var(--bg-raised); color: var(--text-1); }
 #toast {
   position: fixed;
   left: 50%;
-  bottom: 96px;
+  bottom: 28px;
   transform: translate(-50%, 16px);
   max-width: min(480px, 92vw);
   padding: 13px 22px;
@@ -1404,14 +1505,26 @@ select option { background: var(--bg-raised); color: var(--text-1); }
 }
 
 @media (max-width: 680px) {
-  .wrap { padding: 28px 18px 130px; }
+  .wrap { padding: 28px 18px 64px; }
   .legs { grid-template-columns: 1fr; gap: 8px; }
   .legs__swap { justify-self: center; transform: rotate(90deg); }
   .leg { grid-template-columns: 1fr; }
   .topbar .net-pill { display: none; }
   .order { padding: 18px 16px 18px; }
-  .section-fab { bottom: 18px; padding: 12px 18px; font-size: 14px; }
-  #toast { bottom: 84px; }
+  /* one row can't hold brand + capsule + wallet, so the right group takes its
+     own line and the capsule drops to its glyph + count */
+  /* .wrap's mobile gutter is 18px, not the clamp's 20px — match it or the bar
+     and the ticket stop lining up */
+  .topbar { flex-wrap: wrap; row-gap: 12px; padding-inline: 18px; padding-bottom: 18px; }
+  .topbar__right { width: 100%; justify-content: flex-end; }
+  /* the capsule stays top-centred; only its own width shrinks */
+  .section-fab { width: auto; padding: 4px 8px 4px 5px; gap: 7px; }
+  .section-fab__label { display: none; }
+  .wallet-chip__addr { white-space: nowrap; }
+  /* the capsule shrinks to its glyph, so the menu can't borrow its width — it
+     takes its own, still hanging from the capsule's right edge */
+  .sheet__panel { width: max-content; min-width: 200px; }
+  #toast { bottom: 24px; }
 
   /* the legs stack, so the seam lies down with them */
   .ticket--swap .ticket__hero { padding: 44px 24px 48px; }

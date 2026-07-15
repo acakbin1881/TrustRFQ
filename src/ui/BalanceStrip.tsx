@@ -2,7 +2,9 @@
 // presentational — data comes in from useBalances, no fetching here. One chip
 // per allow-listed token; an absent trustline renders 0 (BalanceMap omits it).
 // A null map means the last fetch failed — unknown ≠ zero, so it says
-// "unavailable" instead of rendering 0s.
+// "unavailable" instead of rendering 0s. An unfunded account just reads 0s: the
+// strip carries no warning, because the Ticket's send gate is what actually
+// stops an offer you cannot cover.
 //
 // Class names (CSS lands later in public/intent.css): bal-strip,
 // bal-strip__chip, bal-strip__token, bal-strip__amount, bal-strip__note.
@@ -13,11 +15,10 @@ import { TOKENS } from '../core/tokens';
 
 export interface BalanceStripProps {
   balances: BalanceMap | null;
-  funded: boolean;
   loading: boolean;
 }
 
-export function BalanceStrip({ balances, funded, loading }: BalanceStripProps) {
+export function BalanceStrip({ balances, loading }: BalanceStripProps) {
   if (loading) {
     return (
       <div className="bal-strip">
@@ -40,7 +41,6 @@ export function BalanceStrip({ balances, funded, loading }: BalanceStripProps) {
           <span className="bal-strip__amount">{fmtBalance(balanceOf(balances, t.value))}</span>
         </span>
       ))}
-      {!funded && <span className="bal-strip__note">Account not funded (Testnet)</span>}
     </div>
   );
 }
