@@ -18,3 +18,9 @@ window.NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
 
 // <-- fill after `stellar contract deploy` (starts with 'C'); empty = settlement disabled
 window.OTC_CONTRACT_ID = 'CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ';
+
+// Reflector price oracle (SEP-40), testnet "External CEXs & DEXs" feed. Read
+// read-only via RPC simulation to suggest a reference fair price on the compose
+// ticket — never signed, never on the settlement path. Empty = the suggestion
+// silently turns off. Update on a Testnet reset, same as OTC_CONTRACT_ID.
+window.REFLECTOR_ORACLE_ID = 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63';

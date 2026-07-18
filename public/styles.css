@@ -718,6 +718,39 @@ select option { background: var(--bg-raised); color: var(--text-1); }
 }
 .readback.is-idle .readback__chip { color: var(--text-3); }
 
+/* Reflector reference-price suggestion — a tap-to-fill pill that borrows the
+   readback line while a leg is empty. Kept visually distinct from the .readback
+   echo (green "Fair" tag, interactive) so the "readback is never a quote"
+   contract still reads clearly: this pill IS the oracle reference, and only it. */
+.readback--fair { margin-top: 16px; }
+.readback__fair {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 8px;
+  border: 1px solid rgba(14, 124, 74, 0.22);
+  border-radius: 8px;
+  background: rgba(14, 124, 74, 0.07);
+  font: inherit;
+  cursor: pointer;
+  color: var(--text-1);
+  transition: background 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
+}
+.readback__fair:not(:disabled):hover {
+  background: rgba(14, 124, 74, 0.12);
+  border-color: rgba(14, 124, 74, 0.35);
+}
+.readback__fair:not(:disabled):active { transform: translateY(1px); }
+.readback__fair:disabled { cursor: default; opacity: 0.6; }
+.readback__fair-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.readback__fair-val { font-weight: 500; }
+
 /* swap well: a vertical seam between the legs, notched by the orb's white halo */
 .ticket--swap .ticket__swap {
   position: relative;

@@ -16,6 +16,7 @@ declare global {
     HORIZON_URL?: string;
     NETWORK_PASSPHRASE?: string;
     OTC_CONTRACT_ID?: string;
+    REFLECTOR_ORACLE_ID?: string;
   }
 }
 
@@ -29,5 +30,10 @@ export const HORIZON_URL = w.HORIZON_URL || 'https://horizon-testnet.stellar.org
 export const PASSPHRASE = w.NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015';
 export const OTC_CONTRACT_ID = (w.OTC_CONTRACT_ID || '').trim();
 export const settlementEnabled = /^C[A-Z2-7]{55}$/.test(OTC_CONTRACT_ID);
+
+// Reflector oracle for the ticket's reference fair-price suggestion. Empty/invalid
+// → the suggestion is silently off (never blocks the form). Not on any signed path.
+export const REFLECTOR_ORACLE_ID = (w.REFLECTOR_ORACLE_ID || '').trim();
+export const fairPriceEnabled = /^C[A-Z2-7]{55}$/.test(REFLECTOR_ORACLE_ID);
 
 export const EXPLORER = 'https://stellar.expert/explorer/testnet';

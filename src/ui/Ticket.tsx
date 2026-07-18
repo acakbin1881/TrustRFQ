@@ -24,11 +24,13 @@ import { ADDR_MSG, checkAddress, normalizeAddress } from '../core/address';
 import { canAfford, type BalanceMap } from '../core/balances';
 import { canonicalPayload } from '../core/canonical';
 import { amountTooLarge, composeBroadcastPayload } from '../core/negotiation';
+import { suggestedAmount } from '../core/oracle';
 import { orderPairKey, pairLabel } from '../core/pairs';
 import { TOKENS, tokenLabel, validAmount } from '../core/tokens';
 import { fanOut, insertBroadcast, updateBroadcastStatus } from '../data/broadcasts';
 import { fetchIntentAddresses } from '../data/intents';
 import { insertOrder } from '../data/orders';
+import { useFairPrice } from '../data/useFairPrice';
 import { useIntentCount } from '../data/useIntentCount';
 import { walletSign } from '../wallet/kit';
 import { AddressSeal } from './AddressSeal';
@@ -129,6 +131,24 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
       bChip: live ? `${fmtRate(a / b)} ${ta}` : '—',
     };
   }, [makerAmount, takerAmount, makerToken, takerToken]);
+
+  // Reflector reference rate for this pair (taker tokens per 1 maker token).
+  // null → no suggestion (unsupported token, stale/unreachable feed, or off).
+  const { rate: fairRate } = useFairPrice(makerToken, takerToken);
+
+  // A tap-to-fill suggestion for whichever leg is EMPTY, derived from the leg
+  // that has a value. It never overwrites a typed amount, and it is a reference
+  // aid only — the maker still edits and signs the field.
+  const fmtAmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 7 });
+  // Fill string: fixed notation (never exponent) with trailing zeros trimmed, so
+  // it always parses back through validAmount, even for tiny amounts.
+  const fillStr = (n: number) => n.toFixed(7).replace(/\.?0+$/, '');
+  const recvGuess = fairRate != null && validAmount(makerAmount) && takerAmount.trim() === ''
+    ? suggestedAmount(parseFloat(makerAmount), fairRate) : null;
+  const sendGuess = fairRate != null && validAmount(takerAmount) && makerAmount.trim() === ''
+    ? suggestedAmount(parseFloat(takerAmount), 1 / fairRate) : null;
+  const suggestReceive = recvGuess && recvGuess > 0 ? recvGuess : null;
+  const suggestSend = sendGuess && sendGuess > 0 ? sendGuess : null;
 
   // The field is one line that scrolls sideways: a "printed" layer underneath
   // renders the address with its head bolded and its last 8 characters on an ink
@@ -293,8 +313,17 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
                   <TokenSelect id="makerToken" label="Token you send" value={makerToken}
                     options={TOKENS} disabled={busy} onChange={setMakerToken} />
                 </div>
-                <p className={rates.live ? 'readback' : 'readback is-idle'} aria-live="polite">
-                  <span>{rates.aLabel}</span> <span className="readback__chip">{rates.aChip}</span>
+                <p className={suggestSend != null ? 'readback readback--fair' : rates.live ? 'readback' : 'readback is-idle'} aria-live="polite">
+                  {suggestSend != null ? (
+                    <button type="button" className="readback__fair" disabled={busy}
+                      onClick={() => setMakerAmount(fillStr(suggestSend))}
+                      title="Reference price from the Reflector oracle — tap to fill">
+                      <span className="readback__fair-tag">Fair</span>
+                      <span className="readback__fair-val">≈ {fmtAmt(suggestSend)} {tokenLabel(makerToken)}</span>
+                    </button>
+                  ) : (
+                    <><span>{rates.aLabel}</span> <span className="readback__chip">{rates.aChip}</span></>
+                  )}
                 </p>
               </div>
 
@@ -320,8 +349,17 @@ export function Ticket({ address, refreshBalances, onSent }: TicketProps) {
                     value={takerAmount} disabled={busy}
                     onChange={(e) => setTakerAmount(e.target.value)} />
                 </div>
-                <p className={rates.live ? 'readback' : 'readback is-idle'} aria-live="polite">
-                  <span>{rates.bLabel}</span> <span className="readback__chip">{rates.bChip}</span>
+                <p className={suggestReceive != null ? 'readback readback--fair' : rates.live ? 'readback' : 'readback is-idle'} aria-live="polite">
+                  {suggestReceive != null ? (
+                    <button type="button" className="readback__fair" disabled={busy}
+                      onClick={() => setTakerAmount(fillStr(suggestReceive))}
+                      title="Reference price from the Reflector oracle — tap to fill">
+                      <span className="readback__fair-tag">Fair</span>
+                      <span className="readback__fair-val">≈ {fmtAmt(suggestReceive)} {tokenLabel(takerToken)}</span>
+                    </button>
+                  ) : (
+                    <><span>{rates.bLabel}</span> <span className="readback__chip">{rates.bChip}</span></>
+                  )}
                 </p>
               </div>
             </div>
