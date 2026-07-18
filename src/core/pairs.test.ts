@@ -4,7 +4,7 @@ import { TOKENS } from './tokens';
 
 const USDC = TOKENS[1].value;
 // the exact worked example in the spec (§2) — pins the canonical form
-const SPEC_KEY = 'USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5|XLM';
+const SPEC_KEY = 'USDC:GBJH2XCGKRMFKCBYPFJHHGISZGLOYZ3TM3IMFQPQSK7NT2L7JUARLC26|XLM';
 
 // the CHECK constraint the DB enforces on intents.pair_key / broadcasts.pair_key
 // (docs/migrations/2026-07-10-intent-layer.sql) — client and DB must agree

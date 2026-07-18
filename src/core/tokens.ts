@@ -19,9 +19,21 @@ export interface TokenOption {
   label: string;
 }
 
+// TEMPORARY (demo only) — the USDC entry below is OUR OWN Testnet issuer, not
+// Circle's. It exists because the demo needs ~300k USDC and Circle's testnet
+// faucet cannot supply that; we mint our own instead (tools/mint-usdc.mjs).
+//
+// REVERT BEFORE ANY REAL USER TOUCHES THIS: the allow-list must go back to
+// Circle's official Testnet USDC issuer
+//   USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
+// (stellar.toml → centre.io, ~47k accounts). Every real wallet holds THAT
+// asset; with our issuer in the list their USDC is quarantined below and their
+// balance reads 0, so they can neither offer nor accept.
+// Reverting also means updating tokens.test.ts + pairs.test.ts, which pin the
+// issuer string.
 export const TOKENS: TokenOption[] = [
   { value: 'XLM', label: 'XLM' },
-  { value: 'USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', label: 'USDC' },
+  { value: 'USDC:GBJH2XCGKRMFKCBYPFJHHGISZGLOYZ3TM3IMFQPQSK7NT2L7JUARLC26', label: 'USDC' },
 ];
 
 export const tokenLabel = (v: string): string => (v || '').split(':')[0] || v;

@@ -25,7 +25,7 @@ describe('token allow-list (quarantine boundary)', () => {
   it('label/issuer split', () => {
     expect(tokenLabel(USDC)).toBe('USDC');
     expect(tokenLabel('XLM')).toBe('XLM');
-    expect(tokenIssuer(USDC)).toBe('GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
+    expect(tokenIssuer(USDC)).toBe('GBJH2XCGKRMFKCBYPFJHHGISZGLOYZ3TM3IMFQPQSK7NT2L7JUARLC26');
     expect(tokenIssuer('XLM')).toBeUndefined();
   });
 });

@@ -16,3 +16,6 @@ dist/
 
 # Claude Design exports (source lives in src/ui/Ticket.tsx + public/styles.css)
 *.zip
+
+# Testnet demo funding secrets — NEVER commit
+demo-keys.json

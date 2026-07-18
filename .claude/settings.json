@@ -130,7 +130,8 @@
       "Bash(node __TRACKED_VAR__/shot.mjs 390 860 __TRACKED_VAR__/sec-390.png)",
       "Bash(lsof -nP -iTCP -sTCP:LISTEN)",
       "Bash(awk 'NR==1 || $1!=\"\" {print}')",
-      "Bash(git --no-pager diff .claude/settings.json)"
+      "Bash(git --no-pager diff .claude/settings.json)",
+      "Bash(npx vercel *)"
     ],
     "additionalDirectories": [
       "/Users/acakbin1881/Projects/TrustRFQ/src/wallet",
