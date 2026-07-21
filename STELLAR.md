@@ -1,4 +1,4 @@
-# STELLAR.md — Stellar / Soroban Development Reference
+# STELLAR.md: Stellar / Soroban Development Reference
 
 Curated engineering reference for building on **Stellar** (classic) and **Soroban** (smart
 contracts). Distilled from the official docs at `developers.stellar.org/docs/build` (Introduction →
@@ -21,11 +21,11 @@ them.
 
 1. **Both maker and taker sign `Address`-credential auth entries** (never `SourceAccount`) over
    **identical, deterministic** `fill` args. The submit is permissionless, so neither party is the
-   tx source — their auth must be a real signature, not source-account-implied.
-2. **`fillCanonicalArgs` must be deterministic** — derive `expiration` from `order.expiration`,
+   tx source; their auth must be a real signature, not source-account-implied.
+2. **`fillCanonicalArgs` must be deterministic**: derive `expiration` from `order.expiration`,
    never `Date.now()`; never reorder args or change numeric encodings. The exact args are hashed
    into both signatures (§3.6); any drift invalidates them and `fill` reverts.
-3. **Real submit uses an enforcing-mode simulation with both signed entries pre-attached** — never
+3. **Real submit uses an enforcing-mode simulation with both signed entries pre-attached**: never
    mock-auth for a real submission. Pre-attached auth → correct footprint, and the host validates
    the signatures during simulation (tamper surfaces as a simulation error).
 4. **`require_auth()` over the full args** (not `require_auth_for_args` with a subset) is the
@@ -45,7 +45,7 @@ them.
 
 Rust contracts compiled to **WebAssembly** (`wasm32v1-none`), invoked on-chain via
 `InvokeHostFunctionOp`. Runs `no_std`: narrow Rust subset, no std lib, most third-party crates
-incompatible — use `soroban-sdk` for storage, crypto (hashing / sig verification), cross-contract
+incompatible; use `soroban-sdk` for storage, crypto (hashing / sig verification), cross-contract
 calls. Contracts **cannot** touch SDEX, claimable balances, or sponsorships and are exempt from
 base-reserve minimums; they **can** authenticate accounts, read source-account context, and move
 Stellar assets via the built-in **Stellar Asset Contract (SAC)**, which preserves issuer flags
@@ -59,14 +59,14 @@ for interop + performance.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && rustup update stable
 rustup target add wasm32v1-none          # MUST re-add after every `rustup update`
 
-# Stellar CLI (v27) — pick one
+# Stellar CLI (v27): pick one
 brew install stellar-cli
 cargo install --locked stellar-cli@27.0.0
 winget install --id Stellar.StellarCLI --version 27.0.0
 source <(stellar completion --shell zsh) # autocomplete
 ```
 
-**Trap:** the wasm target is **`wasm32v1-none`, NOT `wasm32-unknown-unknown`** — soroban-sdk 26
+**Trap:** the wasm target is **`wasm32v1-none`, NOT `wasm32-unknown-unknown`**: soroban-sdk 26
 hard-rejects the latter (reference-types / multi-value). Reinstall the target after any toolchain
 update.
 
@@ -99,7 +99,7 @@ mod test;
 
 The SDK auto-generates a `ContractClient` (name = `<Struct>Client`) for tests and TS bindings.
 
-**Cargo.toml (workspace root)** — the `[profile.release]` block is critical (64KB wasm cap):
+**Cargo.toml (workspace root)**: the `[profile.release]` block is critical (64KB wasm cap):
 
 ```toml
 [workspace]
@@ -164,12 +164,12 @@ All three share `set` / `get` / `has` / `remove` / `extend_ttl` / `get_ttl` off 
 
 | Tier | Accessor | Cost | On TTL expiry | Use for |
 |------|----------|------|---------------|---------|
-| **Instance** | `env.storage().instance()` | mid | archived (restorable); TTL tied to the contract instance, auto-loaded every call | small global config (admin, token pair) — keep tiny |
+| **Instance** | `env.storage().instance()` | mid | archived (restorable); TTL tied to the contract instance, auto-loaded every call | small global config (admin, token pair); keep tiny |
 | **Persistent** | `env.storage().persistent()` | most | **archived → restorable** via `RestoreFootprintOp` | balances, per-order/per-user data that must survive |
 | **Temporary** | `env.storage().temporary()` | cheapest | **deleted forever** (get → None), not restorable | replaceable data: oracle feeds, sessions, rate-limit epochs |
 
 **Rules:** keep instance storage small (every key is read on every invocation). **Never rely on a
-temporary entry expiring for security** — anyone can extend its TTL; encode time bounds in the data
+temporary entry expiring for security**: anyone can extend its TTL; encode time bounds in the data
 and check them. Keys are usually `Symbol` (≤32 chars, `[a-zA-Z0-9_]`); `symbol_short!` for ≤9-char
 constants, `Symbol::new(&env, "…")` at runtime. Namespace state with a `#[contracttype] enum
 DataKey { Counter(Address), Filled(u64) … }`. A contract can only touch its own storage; a
@@ -217,9 +217,9 @@ pub struct Transfer { #[topic] from: Address, #[topic] to: Address, amount: i128
 Transfer { from, to, amount }.publish(&env);       // struct name is default topic if `topics` omitted
 ```
 
-**Convention:** most of the ecosystem assumes functions **don't** return `Result` — prefer
+**Convention:** most of the ecosystem assumes functions **don't** return `Result`; prefer
 `panic_with_error!` unless callers need to branch on the code. Events are **discarded if the
-invocation panics/errors/exhausts budget** — only emitted on success. Legacy
+invocation panics/errors/exhausts budget**: only emitted on success. Legacy
 `env.events().publish((t1,t2), data)` still works.
 
 ### Logging
@@ -239,7 +239,7 @@ let n = client.add(&x, &y);                              // panics on callee err
 // fallible: client.try_add(&x, &y) -> Result<Result<T, ConvErr>, Result<Error, Status>>
 ```
 Callee must be **built first** (wasm imported at compile time); wrap `contractimport!` in a `mod` to
-avoid type collisions. Auth propagates through the chain — sub-invocation auth must be covered by
+avoid type collisions. Auth propagates through the chain: sub-invocation auth must be covered by
 the signed auth-entry tree (§3.3).
 
 ### Deployer / factory & upgrades
@@ -256,7 +256,7 @@ pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) {
     env.deployer().update_current_contract_wasm(new_wasm_hash);   // SYSTEM event old/new executable
 }
 ```
-Upgrades do **not** re-run `__constructor` or migrate storage — handle new keys/schema explicitly
+Upgrades do **not** re-run `__constructor` or migrate storage; handle new keys/schema explicitly
 (§ storage migration below).
 
 ### Storage migration across upgrades
@@ -273,7 +273,7 @@ pub fn read(e: Env, id: u32) -> Option<DataV2> {                  // lazy migrat
 pub fn write(e: Env, id: u32, d: DataV2) {                        // always write the current variant
     e.storage().persistent().set(&DataKey::Data(id), &Data::V2(d)); }
 ```
-Never delete a version branch while old entries may exist — they trap on access. Prefer lazy over
+Never delete a version branch while old entries may exist: they trap on access. Prefer lazy over
 eager migration (eager hits instruction/ledger limits).
 
 ### Type conversions (cheat-sheet)
@@ -311,13 +311,13 @@ args; a permissionless submitter carries the entries and cannot alter the deal.
 ### 3.1 The model
 
 `require_auth()` / `require_auth_for_args()` are called **inside the contract** on an `Address`.
-They don't verify anything themselves — they instruct the **host** to require a matching, valid
+They don't verify anything themselves; they instruct the **host** to require a matching, valid
 authorization before proceeding. The host is the enforcer.
 
-- `address.require_auth()` — authorizes the current call with **ALL** its args (contract + fn name +
+- `address.require_auth()`: authorizes the current call with **ALL** its args (contract + fn name +
   full args). **This is what `fill` uses** (`maker.require_auth()` + `taker.require_auth()`).
-- `address.require_auth_for_args(args.into_val(&env))` — authorizes an explicit/subset arg list.
-  Use only when you deliberately want to sign fewer values. **Don't use for `fill`** — we want the
+- `address.require_auth_for_args(args.into_val(&env))`: authorizes an explicit/subset arg list.
+  Use only when you deliberately want to sign fewer values. **Don't use for `fill`**: we want the
   signature to bind every amount.
 - Contract → sub-contract calls are **implicitly authorized by the calling contract**. But if a
   sub-call does `require_auth` for a *different* address (e.g. SAC `transfer` requiring the token
@@ -335,12 +335,12 @@ SorobanAuthorizationEntry {
 }
 ```
 
-**Credentials — the central distinction:**
+**Credentials (the central distinction):**
 - **`Address(SorobanAddressCredentials { address, nonce: i64, signature_expiration_ledger: u32,
-  signature: ScVal })`** — the general case; a real cryptographic signature. Off-chain AirSwap-style
+  signature: ScVal })`**: the general case; a real cryptographic signature. Off-chain AirSwap-style
   signing produces this. **Both maker and taker use Address credentials** (they aren't the tx source).
-- **`SourceAccount`** — an *optimization*: the authorizing address is the enclosing transaction's
-  source account, so its auth rides the ordinary tx envelope signature — **no separate Soroban
+- **`SourceAccount`**, an *optimization*: the authorizing address is the enclosing transaction's
+  source account, so its auth rides the ordinary tx envelope signature: **no separate Soroban
   signature, nonce, or expiration in the entry**. Use only for the party that also signs+submits.
   Our submit is permissionless → **do not use SourceAccount for maker/taker.**
 
@@ -351,12 +351,12 @@ is a **condensed subtree** containing only nodes where `require_auth` fires for 
 Matching is **path-based**: the host walks the real tree and matches shape + order. If `fill`
 internally calls SAC `transfer` (which does `from.require_auth()`), that `transfer` must appear as a
 **sub_invocation** with exact args, or be covered by a separate entry. Our design binds `require_auth`
-at the `fill` level, so the top-level args are the security surface — keep `fillCanonicalArgs`
+at the `fill` level, so the top-level args are the security surface: keep `fillCanonicalArgs`
 byte-identical between sign and submit. In tests, `env.auths()` returns what actually authorized.
 
 ### 3.4 Nonces / replay (host-managed)
 
-The host manages replay for Address credentials — **a contract does NOT manage its own auth nonces.**
+The host manages replay for Address credentials: **a contract does NOT manage its own auth nonces.**
 On verify, the host *"verifies and consumes the nonce"*; the nonce must be **unique among the
 address's non-expired signatures** (not sequential). It's bound into the signed payload, so a signed
 entry can't be altered or reused. Our app adds an independent `Filled(order_id)` storage guard
@@ -377,11 +377,11 @@ Any tamper (amount, token, nonce, network) changes the hash → signature invali
 a permissionless submitter can't alter the deal. The resulting 32-byte hash reaches `__check_auth` as
 `signature_payload`.
 
-### 3.7 `__check_auth` — custom / contract accounts (smart wallets)
+### 3.7 `__check_auth`: custom / contract accounts (smart wallets)
 
 Invoked **by the host** only when the authorizing `address` is a **contract account** (implements
 `CustomAccountInterface`), not a plain ed25519 account. **Cannot be called manually.** Handles
-**authentication + policy only** — nonce and expiration are still host-enforced; don't reimplement
+**authentication + policy only**: nonce and expiration are still host-enforced; don't reimplement
 them, and never call `require_auth` on the contract's own address inside it (infinite recursion). It
 *is* safe to mutate the account's own storage inside it.
 
@@ -415,13 +415,13 @@ spend limits (`day = timestamp / 86_400`, running total in storage); allow-lists
 AND sub-invocations** so nested calls can't bypass; temporary-storage session/policy signers.
 **Passkey/WebAuthn (secp256r1, Protocol 21+):** verify with `env.crypto().secp256r1_verify` over
 `authenticator_data ‖ sha256(client_data_json)`, confirming the WebAuthn challenge equals the
-base64url `signature_payload`. **BLS12-381:** `env.crypto().bls12_381()` — `hash_to_g2` + `pairing_check`
+base64url `signature_payload`. **BLS12-381:** `env.crypto().bls12_381()` provides `hash_to_g2` + `pairing_check`
 for aggregated/threshold sigs (constant-time N-of-N; ~31M CPU for 10 signers). All account examples
 are **API references, not audited production code.**
 
 ### 3.8 JS/TS mapping (`otc.html`)
 
-- **`Stellar.authorizeEntry(entry, signer, validUntilLedgerSeq, networkPassphrase)`** — takes an
+- **`Stellar.authorizeEntry(entry, signer, validUntilLedgerSeq, networkPassphrase)`**: takes an
   unsigned Address-credential entry, builds the `ENVELOPE_TYPE_SOROBAN_AUTHORIZATION` preimage, has
   `signer` sign the SHA-256 hash, returns the **signed** entry with `nonce` /
   `signature_expiration_ledger` (= `validUntilLedgerSeq`) / `signature` populated. `signer` = a
@@ -478,20 +478,20 @@ approve(from, spender, amount, expiration_ledger: u32)     allowance(from, spend
 balance(id) -> i128    burn(from, amount)   burn_from(spender, from, amount)
 decimals() -> u32      name() -> String     symbol() -> String
 ```
-`transfer` / `burn` / `approve` call `from.require_auth()` internally — this is why each `fill` leg
-needs that party's signed auth entry. **No on-chain `approve` in the AirSwap flow** — the signed auth
+`transfer` / `burn` / `approve` call `from.require_auth()` internally: this is why each `fill` leg
+needs that party's signed auth entry. **No on-chain `approve` in the AirSwap flow**: the signed auth
 entry authorizes the `transfer` sub-invocation directly.
 
 **CAP-46-6 admin** (defaults to the asset issuer): `mint`, `clawback`, `set_authorized`,
 `authorized(id) -> bool`, `set_admin(new)`, `admin()`. `set_admin` **does not validate** the new
-admin — a bad address bricks admin permanently.
+admin; a bad address bricks admin permanently.
 
 **Rust clients / tests:** `token::TokenClient` (SEP-41) vs `token::StellarAssetClient` (admin/mint);
 tests use `env.register_stellar_asset_contract_v2()` (mock SAC with issuer-flag control).
 
 **Gotchas:** amounts are `i128` base units (× 10^7); decimals ≤ 18 (custom tokens enforce at
 construction); **expired allowances silently return 0**; **Protocol 23 (Whisk)** changes `transfer`'s
-destination to `MuxedAddress` (`.address()` + `to_muxed_id` in the event) — `transfer_from` stays
+destination to `MuxedAddress` (`.address()` + `to_muxed_id` in the event); `transfer_from` stays
 plain `Address`. Confirm which signature the target SAC exposes before an SDK/protocol bump.
 
 **OpenZeppelin token stack** (batteries-included alternative): crates `stellar_tokens::fungible` /
@@ -503,7 +503,7 @@ Enumerable are **not** naively composable.
 
 ## 5. Example-contract patterns
 
-### Atomic swap — the model this project is built on
+### Atomic swap: the model this project is built on
 
 Two parties swap atomically without trusting each other or knowing the counterparty at signing time.
 Each signs **only its own leg**; a permissionless submitter carries both auths; amounts are bound
@@ -519,11 +519,11 @@ pub fn swap(env: Env, a: Address, b: Address, token_a: Address, token_b: Address
     move_token(&env, &token_a, &a, &b, amount_a, min_a_for_b);
     move_token(&env, &token_b, &b, &a, amount_b, min_b_for_a);
 }
-// move_token deposits max into current_contract_address(), pays counterparty, refunds remainder —
+// move_token deposits max into current_contract_address(), pays counterparty, refunds remainder,
 // decoupling each signature from the `to` address (sign without knowing your counterparty).
 ```
 If either auth fails, the whole tx reverts (atomic). **This repo's `fill` diverges**: direct
-`transfer` under `require_auth` (no contract-custody / no allowance hops) — simpler, same
+`transfer` under `require_auth` (no contract-custody / no allowance hops): simpler, same
 auth-binds-args principle. Other reference shapes: **single-offer-sale** (standing offer, integer
 price ratio + buyer `min` slippage guard), **timelock** (claimable balance gated by
 `env.ledger().timestamp()` predicate; single-use `Init` guard), **atomic-multi-swap** (a batcher that
@@ -532,21 +532,21 @@ forwards matched pairs to the single-swap contract via `try_swap`; holds no auth
 ### Others worth knowing
 
 - **Custom account contracts** (simple / complex-multisig / BLS) → §3.7.
-- **Liquidity pool** — same `token::Client::new(&e, &sac).transfer(&from, &to, &amt)` pattern under
+- **Liquidity pool**: same `token::Client::new(&e, &sac).transfer(&from, &to, &amt)` pattern under
   `from.require_auth()`; constant-product, 0.3% fee, requires `token_a < token_b` lexicographically.
-- **Mint-lock** — delegated, per-minter per-epoch capped minting;
+- **Mint-lock**: delegated, per-minter per-epoch capped minting;
   `minter.require_auth_for_args((&contract, &to, amount).into_val(&env))`; epoch =
   `ledger().sequence() / epoch_length`, accumulator in temporary storage.
-- **Upgradeable** — admin-gated `update_current_contract_wasm` (§2).
+- **Upgradeable**: admin-gated `update_current_contract_wasm` (§2).
 
 ---
 
 ## 6. Soroban transactions from JS (build → simulate → sign → submit)
 
-Two API tiers — don't mix arbitrarily. **Low-level** (`Contract`, `TransactionBuilder`, `rpc.Server`,
+Two API tiers; don't mix arbitrarily. **Low-level** (`Contract`, `TransactionBuilder`, `rpc.Server`,
 `assembleTransaction`, `authorizeEntry`) is required for the AirSwap-style signed-`fill` (two
 different parties sign off-chain, a third submits). **High-level** (`contract.Client` /
-`AssembledTransaction.signAndSend()`) assumes the invoker is the submitter — fine for simple dApps.
+`AssembledTransaction.signAndSend()`) assumes the invoker is the submitter, fine for simple dApps.
 
 ```javascript
 import * as StellarSDK from "@stellar/stellar-sdk";
@@ -566,19 +566,19 @@ const tx = new StellarSDK.TransactionBuilder(account, {
 // equivalently: Operation.invokeContractFunction({ contract, function: "fill", args, auth: [...] })
 ```
 
-### simulateTransaction — response shape
+### simulateTransaction: response shape
 
 ```javascript
 const sim = await server.simulateTransaction(tx);
 if (Api.isSimulationError(sim)) throw new Error(sim.error);
 ```
-- `transactionData` — `SorobanDataBuilder` with the **footprint** (read-only + read-write ledger
+- `transactionData`: `SorobanDataBuilder` with the **footprint** (read-only + read-write ledger
   keys), resource limits, `resourceFee`. Makes the tx submittable.
-- `minResourceFee` — string; add on top of the inclusion fee.
-- `result` — `{ auth: xdr.SorobanAuthorizationEntry[], retval: xdr.ScVal }`. `auth` = the required
+- `minResourceFee`: string; add on top of the inclusion fee.
+- `result`: `{ auth: xdr.SorobanAuthorizationEntry[], retval: xdr.ScVal }`. `auth` = the required
   authorizations the host recorded; `retval` = return value (`scValToNative`).
 - `events`, `cost` (`{ cpuInsns, memBytes }`), `latestLedger`.
-- `restorePreamble` — present only when archived entries must be restored first
+- `restorePreamble`: present only when archived entries must be restored first
   (`Api.isSimulationRestore(sim)`; see restore flow below).
 
 ### Assemble / prepare
@@ -589,7 +589,7 @@ const readyTx = assembleTransaction(tx, sim).build();   // merges footprint + bu
 const readyTx = await server.prepareTransaction(tx);
 ```
 Critical: `assembleTransaction` copies `sim.result.auth` onto the op **only when the op had no auth
-attached** — which is what enables the enforcing-mode pattern.
+attached**, which is what enables the enforcing-mode pattern.
 
 ### Enforcing-mode signed-`fill` (tamper-proof submit)
 
@@ -633,7 +633,7 @@ switch (final.status) {                                            // SUCCESS | 
   default: throw final;
 }
 ```
-**No synchronous confirmation on Soroban** — RPC only queues; you must poll (unlike Horizon's classic
+**No synchronous confirmation on Soroban**: RPC only queues; you must poll (unlike Horizon's classic
 submit). Simulation is **mandatory** before submitting a contract invocation.
 
 ### Upload / deploy from JS (redeploy after Testnet resets)
@@ -669,12 +669,12 @@ tx.setSorobanData(new SorobanDataBuilder().setReadOnly(persistentEntryKey).build
 
 ### Design & custody
 
-Four custody models (ascending user control): **non-custodial** (user holds key, signs — this repo's
+Four custody models (ascending user control): **non-custodial** (user holds key, signs; this repo's
 model: connected wallet = identity), **custodial** (provider holds keys; often one pooled account +
 muxed `M…` addresses), **hybrid/multisig** (self-custody + multisig recovery), **third-party key mgmt**
 (Ledger/Trezor/StellarGuard). Budget **~2 XLM per new user account** (1 min balance + 1 for
 trustlines/fees). All traffic over strong TLS. Never leak signing secrets to frontend; keep funder/
-JWT keys server-side. **Guard any fee-paying relay endpoint** — a public POST that forwards arbitrary
+JWT keys server-side. **Guard any fee-paying relay endpoint**: a public POST that forwards arbitrary
 XDR lets attackers spend your credits.
 
 ### Bindings → invoke → sign → submit (high-level)
@@ -690,10 +690,10 @@ const { result } = await c.read_message({ message_id: 1 });       // read-only: 
 const at = await c.write_message({ author, title, text });        // → AssembledTransaction (already simulated)
 await at.signAndSend({ signTransaction });                        // signTransaction from your wallet
 ```
-**Rule:** don't pass an authenticated principal the contract reads from its own storage — the contract
+**Rule:** don't pass an authenticated principal the contract reads from its own storage: the contract
 should pull it internally and `require_auth()` (mirrors this repo's signed-entry design).
 
-### Freighter (`@stellar/freighter-api` v2+, object returns — always check `.error`; HTTPS required)
+### Freighter (`@stellar/freighter-api` v2+, object returns, always check `.error`; HTTPS required)
 
 ```javascript
 import { isConnected, requestAccess, getAddress, getNetwork, signTransaction, signAuthEntry } from "@stellar/freighter-api";
@@ -718,7 +718,7 @@ smart-wallet contract; `account.sign(built, { keyId })`. Keep JWTs server-side; 
 - **esm.sh `?bundle-deps` is mandatory** for `stellar-wallets-kit` + `stellar-sdk` (default builds
   leave a CJS dep with broken named-export interop that throws on import and kills the module). Keep
   the `globalThis.Buffer = Buffer` shim. (Vite analog: `optimizeDeps.include`.)
-- `getLedgerEntries()` returns **max 200 entries per call** — paginate.
+- `getLedgerEntries()` returns **max 200 entries per call**: paginate.
 - Decode return values explicitly (`xdr.ScVal.fromXDR(b64, "base64")`); guard array vs scalar.
 
 ---
@@ -730,7 +730,7 @@ Every tx: `TransactionBuilder(source, { fee, networkPassphrase }).addOperation(.
 Operation amounts are decimal **strings** (`"10"`), not numbers.
 
 - **Reserves:** min balance **1 XLM** per account; **+0.5 XLM per subentry** (trustline, offer,
-  signer, data entry, claimable balance). **Can't pay a non-existent account** — use
+  signer, data entry, claimable balance). **Can't pay a non-existent account**: use
   `Operation.createAccount({ destination, startingBalance })`.
 - **Trustlines:** native XLM needs none; **every non-native asset (USDC) needs a receiver trustline**
   before receipt, else `op_no_trust`. `Operation.changeTrust({ asset: new Asset("USDC", ISSUER),
@@ -774,7 +774,7 @@ const res = await rpc.getEvents({
   limit: 100 });
 // decode: scValToNative(xdr.ScVal.fromXDR(b64, "base64"))
 ```
-**Retention: RPC keeps events ~7 days only** — ingest into your own DB, poll often enough to never
+**Retention: RPC keeps events ~7 days only**: ingest into your own DB, poll often enough to never
 open a >7-day gap, enforce idempotency on `(ledger, tx, event_index)`. Cold-start:
 `startLedger ≈ currentLedger − (7 days / ~6s per ledger)`.
 
@@ -788,7 +788,7 @@ Go **Ingest SDK** (parses `LedgerCloseMeta`); Horizon/RPC for simple REST lookup
 
 ## 10. Testing Soroban contracts
 
-Tests run the **same host `Env`** as on-chain — real auth/storage/budget, not a simulation. Pattern:
+Tests run the **same host `Env`** as on-chain: real auth/storage/budget, not a simulation. Pattern:
 create env → register → client → invoke + assert. Run with `cargo test`.
 
 ```rust
@@ -800,16 +800,16 @@ let user = Address::generate(&env);                        // use soroban_sdk::t
 
 ### Auth testing (primary security surface)
 
-- **`env.mock_all_auths()`** — every `require_auth` auto-succeeds (also
-  `mock_all_auths_allowing_non_root_auth()` for deep trees). **Skips `__check_auth`** — custom
+- **`env.mock_all_auths()`**: every `require_auth` auto-succeeds (also
+  `mock_all_auths_allowing_non_root_auth()` for deep trees). **Skips `__check_auth`**: custom
   accounts need direct coverage via `env.try_invoke_contract_check_auth::<E>(&addr, &payload, sig, &ctx)`.
 - **`env.auths()`** → `Vec<(Address, AuthorizedInvocation)>`: exactly who authorized what (fn + args +
   sub-invocations) in the last top-level call. Assert it to prove `fill` demands **both** maker+taker
   auth over the **exact** args.
 - **`env.mock_auths(&[MockAuth { address, invoke: &MockAuthInvoke { contract, fn_name, args,
-  sub_invokes } }])`** — selective: only listed pairs authorized; **anything else panics** → this is
+  sub_invokes } }])`** (selective): only listed pairs authorized; **anything else panics** → this is
   how you assert a tampered-amount `fill` reverts.
-- **`env.set_auths(&[SorobanAuthorizationEntry{…}])`** — raw signed entries; closest to the real
+- **`env.set_auths(&[SorobanAuthorizationEntry{…}])`**: raw signed entries; closest to the real
   signed-`fill` path.
 - Drive time/ledger with `env.ledger().with_mut(|li| { li.sequence_number = …; li.max_entry_ttl = … })`
   to exercise `expiration` / TTL.
@@ -826,16 +826,16 @@ assert_eq!(env.auths(), std::vec![(user.clone(), AuthorizedInvocation {
 ### Test snapshots (auto differential regression)
 
 `cargo test` **auto-writes** a JSON snapshot per test to `test_snapshots/<module>/<test>.<n>.json`
-capturing **events + final ledger storage**. **Commit `test_snapshots/` to git** — future changes
+capturing **events + final ledger storage**. **Commit `test_snapshots/` to git**: future changes
 that alter events/storage for unrelated tests show up as unexpected diffs (a free regression
-tripwire). *(This repo's untracked `contracts/otc_swap/test_snapshots/` is exactly this — add it to
-version control.)*
+tripwire). *(This repo already tracks `contracts/otc_swap/test_snapshots/`: 6 snapshot files,
+committed since `49345a0`.)*
 
 ### Other test types
 
 Integration (`contractimport!` / `stellar contract fetch`), events (`env.events().all()`), fuzzing
 (`cargo-fuzz` + `#[derive(Arbitrary)]`, `fuzz_target!`; `budget().reset_unlimited()`; needs
-`crate-type=["cdylib","rlib"]`), mutation (`cargo-mutants` — `MISSED` = code runs but nothing asserts
+`crate-type=["cdylib","rlib"]`), mutation (`cargo-mutants`: `MISSED` = code runs but nothing asserts
 it; high-value for auth/amount checks), fork (`Env::from_ledger_snapshot_file` + `stellar snapshot
 create`), differential, coverage (`cargo-llvm-cov`). Best practice: assert **all** observable
 outcomes including events, not just return values.
@@ -846,24 +846,25 @@ outcomes including events, not just return values.
 
 ### Web-app security checklist (wallet-signing dApp)
 
-- **HTTPS everywhere + HSTS** (`Strict-Transport-Security`) — MITM / DNS-hijack (cf. MyEtherWallet DNS
+- **HTTPS everywhere + HSTS** (`Strict-Transport-Security`): MITM / DNS-hijack (cf. MyEtherWallet DNS
   hack). Verify no mixed-content `http://` calls to RPC/Horizon.
-- **CSP** — the single most important control: an injected script can rewrite a transaction before the
-  wallet prompt. Allow-list `script-src`/`connect-src` (esm.sh, `*.supabase.co` REST+WSS, RPC/Horizon,
-  wallet-kit); avoid `'unsafe-inline'`. **This app is one large inline ES module** — a naive CSP
-  breaks it; use a nonce/hash or move it to an external file. (cf. Blackwallet injection hack.)
+- **CSP**, the single most important control: an injected script can rewrite a transaction before the
+  wallet prompt. Allow-list `script-src`/`connect-src` (`*.supabase.co` REST+WSS, RPC/Horizon);
+  avoid `'unsafe-inline'`. **This app's JS is bundled and external** (zero inline scripts in
+  `dist/`); keep it that way. (cf. Blackwallet injection hack.)
 - **Clickjacking:** `X-Frame-Options: DENY` / CSP `frame-ancestors 'none'`.
-- **Supply chain (high-relevance — CDN imports):** every `esm.sh` import runs with full DOM + wallet
+- **Supply chain (high relevance):** every third-party script runs with full DOM + wallet
   access; a swapped artifact can tamper with the signed tx. **Pin exact versions** (done), add **SRI**
-  hashes where supported, constrain via CSP, scan deps (Snyk). Keep libraries patched.
+  hashes where supported, constrain via CSP, scan deps (Snyk). Keep libraries patched. (esm.sh
+  survives only in the dev-only capture tool; the deployed bundle has no CDN scripts.)
 - **Transaction-tampering (the marquee threat):** the user must cryptographically bind to the exact
-  terms — this app's signed auth entries over full `fill` args already do this; the web-layer job is
+  terms: this app's signed auth entries over full `fill` args already do this; the web-layer job is
   to keep the arg-building UI un-hijackable and ensure displayed amounts == signed amounts.
 - **Phishing:** never ask for secret keys; prompt users to verify the domain.
-- **Secrets/keys:** the private key never leaves the wallet (correct posture — no server custody). If
+- **Secrets/keys:** the private key never leaves the wallet (correct posture, no server custody). If
   you ever store secrets, use AES-256-GCM, keys offline/in-memory, never roll your own crypto.
 - **Backend:** Supabase PostgREST parameterizes queries; the real exposure is **public reads with the
-  anon key** — an *Information Disclosure* item to track (accepted for a Testnet MVP), not injection.
+  anon key**: an *Information Disclosure* item to track (accepted for a Testnet MVP), not injection.
 - Run the deployed site through **Mozilla Observatory**; wire error reporting (Sentry); rate-limit /
   WAF (Cloudflare) for DoS.
 
@@ -873,12 +874,12 @@ A living document; **the SDF Audit Bank now requires a threat model as an audit 
 questions: (1) What are we building? (2) What can go wrong? (3) What do we do about it? (4) Did we do
 a good job?
 
-1. **Define the system** — verbal use-case + a **data-flow diagram** with element types: external
+1. **Define the system**: verbal use-case + a **data-flow diagram** with element types: external
    entities (wallets, Stellar network, esm.sh), processes (frontend module, `fill` contract), data
    flows (RFQ over Supabase realtime, auth entries, the on-chain tx), data storage (Supabase Postgres,
-   Soroban storage), and **trust boundaries** (anon backend ↔ signed on-chain settlement) — give
+   Soroban storage), and **trust boundaries** (anon backend ↔ signed on-chain settlement); give
    boundaries + sensitive data the most scrutiny.
-2. **Identify threats** — walk each element against STRIDE, logging ≥1 per category (`Spoof.1`, …):
+2. **Identify threats**: walk each element against STRIDE, logging ≥1 per category (`Spoof.1`, …):
 
    | STRIDE | Violates | dApp example |
    |---|---|---|
@@ -889,9 +890,9 @@ a good job?
    | **Denial of Service** | Availability | flood RPC/backend; single point of failure |
    | **Elevation of Privilege** | Authorization | reach an admin/settlement path without rights |
 
-3. **Mitigate** — a treatment per issue keyed `[ThreatCode].R.[n]` (e.g. `Tamper.1.R.1`) with the
+3. **Mitigate**: a treatment per issue keyed `[ThreatCode].R.[n]` (e.g. `Tamper.1.R.1`) with the
    concrete code/architecture change.
-4. **Evaluate** — is the DFD detailed enough to reference? did STRIDE surface new threats across all
+4. **Evaluate**: is the DFD detailed enough to reference? did STRIDE surface new threats across all
    categories (esp. at boundaries)? mitigations adequate? still finding issues? model kept updated?
 
 Template = DFD + three tables (Threat Identification → Mitigation → Validation checklist); the DFD
@@ -904,8 +905,8 @@ rate-limits, server-side admin checks).
 Testnet/Futurenet reset to genesis **~quarterly**, wiping all accounts, trustlines, offers, and
 **contract data**. Keep contract WASM + deploy params locally; script an idempotent setup (keygen →
 Friendbot fund → trustlines/assets → deploy) and a retry-enabled submit helper. For this repo: re-run
-`stellar contract deploy`, update `OTC_CONTRACT_ID` in `otc-config.js`, re-apply the Phase-2 SQL
-migration each quarter.
+`stellar contract deploy` and update `OTC_CONTRACT_ID` + `REFLECTOR_ORACLE_ID` in
+`otc-config.js` each quarter (the Supabase data is off-chain and survives the reset).
 
 ---
 
@@ -917,16 +918,16 @@ canonical anchor reference.
 
 | SEP | Purpose | SDK entry |
 |-----|---------|-----------|
-| **SEP-1** | `stellar.toml` metadata | — |
+| **SEP-1** | `stellar.toml` metadata | - |
 | **SEP-7** | `web+stellar:` URI scheme (delegated signing / deep links) | `Sep7Tx` / `Sep7Pay` |
 | **SEP-9** | KYC field vocabulary | pre-fills SEP-6/24 |
 | **SEP-10** | Wallet↔anchor auth → JWT | `anchor.sep10().authenticate({ accountKp })` |
-| **SEP-12** | KYC submission | — |
+| **SEP-12** | KYC submission | - |
 | **SEP-24** | **Interactive** hosted deposit/withdraw (anchor UI) | `anchor.sep24().deposit()/.withdraw()` |
 | **SEP-6** | **Programmatic** deposit/withdraw (you own the UI) | `anchor.sep6().deposit()/.withdraw()` |
 | **SEP-38** | Anchor **quotes/RFQ pricing** (indicative or firm) | `sep38.price()/.requestQuote()` |
 | **SEP-30** | Account recovery via recovery-signer servers | `createRecoverableWallet()` |
-| **SEP-31** | Cross-border payments | — |
+| **SEP-31** | Cross-border payments | - |
 | **SEP-41** | Token interface (SACs implement it) | §4 |
 | **SEP-43** | Wallet signing interface (`signTransaction`, `signAuthEntry`) | stellar-wallets-kit / Freighter |
 
@@ -935,7 +936,7 @@ offline/distributed signing, submitWithFeeIncrease). Reference payment app = **B
 
 ---
 
-## Appendix — canonical doc URLs
+## Appendix: canonical doc URLs
 
 - Build home / getting started: `developers.stellar.org/docs/build/smart-contracts/getting-started/{setup,hello-world,storing-data,deploy-to-testnet}`
 - Authorization: `.../docs/build/guides/auth/{contract-authorization,check-auth-tutorials}` · contract accounts `.../guides/contract-accounts/{smart-wallets,advanced-patterns,examples}`

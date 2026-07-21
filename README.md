@@ -161,7 +161,7 @@ TrustRFQ/
 ### Installation
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/acakbin1881/TrustRFQ.git
 cd TrustRFQ
 npm install
 ```
@@ -172,8 +172,8 @@ Runtime config lives in plain `window.*` scripts (deliberately un-bundled, so a 
 one-file edit). Point them at your own Supabase project and contract id, or leave the checked-in
 Testnet values.
 
-- `public/otc-config.js` — RPC/Horizon URLs, network passphrase, `OTC_CONTRACT_ID`, `REFLECTOR_ORACLE_ID`
-- `public/supabase-config.js` — Supabase URL + anon key
+- `public/otc-config.js`: RPC/Horizon URLs, network passphrase, `OTC_CONTRACT_ID`, `REFLECTOR_ORACLE_ID`
+- `public/supabase-config.js`: Supabase URL + anon key
 
 For a fresh Supabase project, run the schema in the SQL Editor (the anon key cannot run DDL): the
 base `orders` table and settlement columns, then
@@ -252,7 +252,7 @@ Use two funded Testnet wallets in two browsers. Start with an XLM↔XLM order to
 
 ## License
 
-Built as a demonstration project on Stellar / Soroban.
+[MIT](LICENSE). Built as a demonstration project on Stellar / Soroban; no warranty.
 
 <p align="center">
   <sub>Built with React, Rust, and Soroban on Stellar</sub>

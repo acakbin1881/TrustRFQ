@@ -1,4 +1,4 @@
-// Shared per-thread negotiation view (taker now, maker in a later task):
+// Shared per-thread negotiation view (both sides render through it):
 // header (pair / counterparty / expiry / status), current terms from MY
 // perspective, round timeline, and the accept / decline / counter actions —
 // gated by currentTerms.awaiting (only the non-proposer may act). Once a

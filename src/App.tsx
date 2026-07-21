@@ -13,7 +13,8 @@
 // through its own module-scope lock. A second instance here would be invisible
 // to that lock and could race a ThreadView settle: two wallet prompts, two
 // submits, two competing settlement_status writes. Invariant to keep:
-//   grep -rn "useSettlement" src/   →   exactly 2 hits (its definition, ThreadView).
+//   the useSettlement invariant grep in CLAUDE.md (Gotchas) → exactly 3 lines
+//   (the definition, ThreadView's import, ThreadView's one call).
 
 import { useCallback, useState, type ReactNode } from 'react';
 import { isExpired, trunc } from './core/tokens';
