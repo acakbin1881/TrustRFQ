@@ -19,3 +19,6 @@ dist/
 
 # Testnet demo funding secrets — NEVER commit
 demo-keys.json
+
+# Local guidance for Claude Code sessions (do not commit)
+CLAUDE.md
