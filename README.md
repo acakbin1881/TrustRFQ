@@ -49,6 +49,7 @@ transaction cannot alter the deal, and both legs move at once or neither does. N
 and no intermediary is trusted.
 
 Demo video: https://drive.google.com/file/d/1vho_-MLwHPmhuG_rzhkRNgtZAbzydyuG/view?usp=sharing
+
 website: https://trustrfq.vercel.app
 
 **Status:** working end-to-end on Testnet. A real cross-asset trade (10 XLM ↔ 1 USDC, exercising
