@@ -17,6 +17,7 @@ declare global {
     NETWORK_PASSPHRASE?: string;
     OTC_CONTRACT_ID?: string;
     REFLECTOR_ORACLE_ID?: string;
+    RFQ_SWAP_CONTRACT_ID?: string;
   }
 }
 
@@ -35,5 +36,11 @@ export const settlementEnabled = /^C[A-Z2-7]{55}$/.test(OTC_CONTRACT_ID);
 // → the suggestion is silently off (never blocks the form). Not on any signed path.
 export const REFLECTOR_ORACLE_ID = (w.REFLECTOR_ORACLE_ID || '').trim();
 export const fairPriceEnabled = /^C[A-Z2-7]{55}$/.test(REFLECTOR_ORACLE_ID);
+
+// RFQ settlement contract. Deployed and proven on Testnet, but nothing in the
+// desk calls it yet: the RFQ taker path is a later phase. Exported now so the id
+// has one home and one Testnet-reset checklist entry.
+export const RFQ_SWAP_CONTRACT_ID = (w.RFQ_SWAP_CONTRACT_ID || '').trim();
+export const rfqEnabled = /^C[A-Z2-7]{55}$/.test(RFQ_SWAP_CONTRACT_ID);
 
 export const EXPLORER = 'https://stellar.expert/explorer/testnet';
