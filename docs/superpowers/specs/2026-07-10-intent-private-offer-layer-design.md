@@ -1,7 +1,14 @@
 # Intent / Private-Offer Layer — Design Spec
 
-**Date:** 2026-07-10 · **Status:** Approved design, implementation not yet scheduled
+**Date:** 2026-07-10 · **Status:** Shipped (schema applied 2026-07-11; live as the interim fan-out mode)
 **Feature:** TrustRFQ Feature 1, Phase 2 ("intent layer" in the CLAUDE.md roadmap)
+
+> **Superseded in direction (2026-08-17).** The RFQ roadmap item this spec deferred (its §6) is
+> now designed in
+> [2026-08-17-rfq-protocol-architecture-design.md](2026-08-17-rfq-protocol-architecture-design.md)
+> (peer-to-peer quoting via maker quote servers, `rfq_swap` + `rfq_registry`). The layer this spec
+> describes shipped and REMAINS LIVE as the interim fan-out mode; it is removed only when the RFQ
+> protocol ships. This document stays as the historical record of the shipped design.
 
 ---
 
@@ -183,7 +190,7 @@ Stated honestly, consistent with the existing threat model:
   over-balance deal simply fails at on-chain `fill` (SAC `transfer` reverts). The gate exists
   to stop honest mistakes and lazy spam.
 - Settlement security is untouched: both parties still sign Address-credential auth entries
-  over exact `fill` args (STELLAR.md §0 invariants all still hold).
+  over exact `fill` args (the OTC settlement invariants all still hold).
 
 ## 6. Out of scope (this phase)
 

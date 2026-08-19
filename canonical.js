@@ -16,7 +16,7 @@
 // mirrors AirSwap, which keeps order canonicalization in @airswap/utils rather
 // than in airswap-web, so the app cannot drift the signed payload.
 //
-// STELLAR.md invariant #2: `fillCanonicalArgs` must be deterministic — derive
+// Settlement invariant: `fillCanonicalArgs` must be deterministic; derive
 // `expiration` from `order.expiration`, never `Date.now()`; never reorder args or
 // change numeric encodings.
 //

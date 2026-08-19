@@ -125,7 +125,7 @@ fn fill_rejects_zero_amount() {
 // rejected. Each party's auth entry is rooted at `fill(100, 250, ...)` with
 // that party's own `transfer` sub-call.
 //
-// Coverage boundary (STELLAR.md §0.5): these tests use mocked auth, which
+// Coverage boundary: these tests use mocked auth, which
 // bypasses the host's signature machinery. Two of the four replay/staleness
 // layers are therefore *not* exercisable here and are host-enforced by design —
 // the per-signature **nonce** and **signature_expiration_ledger** (see the
@@ -166,7 +166,7 @@ fn fill_with_scoped_auth_succeeds() {
         &s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &exp, &id,
     );
 
-    // Defense-in-depth (STELLAR.md §10): assert env.auths() to prove BOTH parties
+    // Defense-in-depth: assert env.auths() to prove BOTH parties
     // authorized the *exact* `fill` root invocation (all args, amounts included),
     // each carrying only their own `transfer` leg as a sub-invocation. This is the
     // on-ledger equivalent of the two off-chain-signed auth entries `fill` carries.

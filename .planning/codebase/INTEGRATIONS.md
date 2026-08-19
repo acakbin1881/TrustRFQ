@@ -91,7 +91,7 @@
 
 **Stellar Soroban Contracts (Testnet):**
 
-**OTC Swap Contract (AirSwap-style atomic swap):**
+**OTC Swap Contract (two-signature symmetric atomic swap; NOT AirSwap's model, see CLAUDE.md):**
 - **Contract ID:** `CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ`
 - **Deployed:** 2026-06-30
 - **Wasm hash:** `83f60b85…` (byte-matches source `contracts/otc_swap/src/lib.rs`)

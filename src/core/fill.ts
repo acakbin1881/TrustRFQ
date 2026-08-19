@@ -9,7 +9,7 @@
 //   2. No Supabase, no toasts: DB writes and user feedback live in the caller
 //      (useSettlement). This module talks to the chain and nothing else.
 //
-// The security model (STELLAR.md §0/§3): both parties sign Address-credential
+// The security model: both parties sign Address-credential
 // auth entries over the exact fillCanonicalArgs; the submit is permissionless
 // and uses an enforcing-mode simulation with both signed entries pre-attached,
 // so tampered terms surface as a simulation error, never a signed tx.

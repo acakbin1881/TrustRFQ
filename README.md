@@ -42,11 +42,21 @@ contracts. It gives block trades a home: two parties negotiate a swap privately 
 transaction. There is no order book, so **no slippage and no leaked intent**, the price is exactly
 what the two sides agreed.
 
-The settlement model follows [AirSwap](https://www.airswap.io): each party signs an off-chain
-Soroban authorization entry over the exact terms, and a single `fill` transaction carries both
-signatures. Because every amount is hashed into both signatures, the party who submits the
+The settlement model takes [AirSwap](https://www.airswap.io)'s shape (agree off-chain, settle
+on-chain, no order book) with one deliberate difference. In the directed lane **both** parties sign
+an off-chain Soroban authorization entry over the exact terms, and a single `fill` transaction
+carries both signatures. Because every amount is bound into both signatures, whoever submits the
 transaction cannot alter the deal, and both legs move at once or neither does. No side moves first,
-and no intermediary is trusted.
+and no intermediary is trusted. AirSwap itself signs only once, since one side is always the maker
+server holding the quote; the directed lane has no such server, so it is symmetric instead. The RFQ
+lane below follows AirSwap exactly.
+
+The adopted next phase extends this model into a full peer-to-peer RFQ protocol, again
+following AirSwap: each maker runs an always-on quote server as its own trading endpoint, takers
+request quotes from makers directly with no intermediary, discovery is on-chain (`rfq_registry`),
+and settlement is a maker-signed one-transaction `rfq_swap`. See the
+[architecture spec](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md) and
+the [Roadmap](#roadmap).
 
 **Status:** working end-to-end on Testnet. A real cross-asset trade (10 XLM ↔ 1 USDC, exercising
 the USDC trustline path) was negotiated and settled through two Freighter wallets on 2026-07-14
@@ -58,7 +68,7 @@ ledger 3604560).
 | For Traders | Description |
 |-------------|-------------|
 | Directed offers | Send a signed offer to one specific `G…` wallet address |
-| Broadcast offers | Fan an offer out to every taker subscribed to a token pair (one signature) |
+| Broadcast offers | Fan an offer out to every taker subscribed to a token pair (one signature). Interim mode: the planned [RFQ protocol](#roadmap) supersedes this direction |
 | Negotiation threads | Every offer is a thread: Accept, Decline, or Counter on the amounts |
 | Atomic swaps | Settle accepted terms in a single on-chain `fill` transaction |
 | Fair-price hint | Optional advisory reference price from the [Reflector](https://reflector.network) oracle |
@@ -106,13 +116,21 @@ A trade goes from private negotiation to one atomic on-chain settlement:
 1. **Connect.** A maker connects a Stellar wallet (Freighter). The connected address is the
    identity; there is no sign-in.
 2. **Compose.** The maker fills the ticket: amounts, tokens, expiry, and either a counterparty
-   address (directed) or none (broadcast). Signing the offer sends it.
+   address (directed) or none (broadcast). Signing the offer sends it. Broadcast is the interim
+   fan-out mode; the planned RFQ protocol (see [Roadmap](#roadmap)) will replace it with maker
+   quote servers.
 3. **Negotiate.** The taker sees the thread live and can Accept, Decline, or Counter. Only amounts
    are negotiable; counters bounce back and forth until one side accepts.
 4. **Authorize.** After acceptance, each party signs an off-chain Soroban authorization entry over
    the exact final terms (in any order).
 5. **Settle.** Either party submits one `fill` transaction carrying both signatures. Both token
    legs move atomically, and the thread flips to Settled with a link to the explorer.
+
+The flow above is the live OTC lane, where **both** parties sign authorization entries precisely
+because either one may submit the settlement. The adopted RFQ protocol
+([Phase 5](#roadmap)) uses a different signing model: only the maker signs an authorization
+entry, and the taker authorizes by being the transaction source, so a taker never signs a
+separate entry.
 
 ## Architecture
 
@@ -121,7 +139,7 @@ TrustRFQ/
 ├── otc.html                  # The single Vite entry (head + config + #root)
 ├── src/
 │   ├── App.tsx               # Shell: topbar, wallet gate, three sections
-│   ├── core/                 # Pure logic (no wallet/network/window)
+│   ├── core/                 # Domain logic; fill.ts alone talks to the chain
 │   │   ├── canonical.ts      # The signature boundary (pinned by golden vectors)
 │   │   ├── fill.ts           # Chain ops: signFillAuth, submitFill, trustlines
 │   │   └── tokens.ts         # Token allow-list + validation
@@ -129,8 +147,9 @@ TrustRFQ/
 │   ├── ui/                   # Ticket, thread view, counter form, settlement strip
 │   └── wallet/               # Wallets Kit singleton + signature normalizer
 ├── public/                   # Landing page, stylesheets, runtime config (window.*)
-├── contracts/otc_swap/       # Soroban settlement contract (fill) + tests
+├── contracts/                # Cargo workspace: otc_swap (fill) + rfq_swap (RFQ swap) + tests
 ├── fixtures/                 # Golden vectors pinning canonical bytes
+├── docs/                     # SQL migrations + dated design specs
 └── vercel.json               # Build config + strict CSP / security headers
 ```
 
@@ -143,7 +162,8 @@ TrustRFQ/
 
 ### Technology Stack
 
-- **Frontend**: React 19 + TypeScript on Vite, a client-only SPA (no server runtime)
+- **Frontend**: React 19 + TypeScript on Vite, a client-only SPA (no server runtime in this
+  repo; the planned RFQ maker quote server is a separate deployable in a separate repository)
 - **Backend**: Supabase (Postgres + Realtime) with the anon key, as a coordination layer only
 - **Chain**: Stellar Testnet; settlement via a Soroban (Rust) contract
 - **Wallet**: Freighter, via [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit)
@@ -175,10 +195,11 @@ Testnet values.
 - `public/otc-config.js`: RPC/Horizon URLs, network passphrase, `OTC_CONTRACT_ID`, `REFLECTOR_ORACLE_ID`
 - `public/supabase-config.js`: Supabase URL + anon key
 
-For a fresh Supabase project, run the schema in the SQL Editor (the anon key cannot run DDL): the
-base `orders` table and settlement columns, then
+For a fresh Supabase project, run the schema in the SQL Editor (the anon key cannot run DDL):
+first [`docs/migrations/00-base-schema.sql`](docs/migrations/00-base-schema.sql) (the `orders`
+table, settlement columns, and anon-grant hardening), then
 [`docs/migrations/2026-07-10-intent-layer.sql`](docs/migrations/2026-07-10-intent-layer.sql) in
-full. See `CLAUDE.md` for the complete SQL.
+full.
 
 ### Running
 
@@ -192,8 +213,23 @@ Contract:
 
 ```bash
 rustup target add wasm32v1-none
-cargo test --manifest-path contracts/otc_swap/Cargo.toml   # 6 tests
-cd contracts/otc_swap && stellar contract build            # → otc_swap.wasm
+cargo test --manifest-path contracts/Cargo.toml   # 23 tests (otc_swap 6 + rfq_swap 17)
+cd contracts && stellar contract build            # → target/wasm32v1-none/release/*.wasm
+
+# OTC settlement contract
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/otc_swap.wasm \
+  --source-account <your-identity> --network testnet
+# paste the printed C… id into public/otc-config.js (OTC_CONTRACT_ID)
+
+# RFQ settlement contract (constructor args are required)
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/rfq_swap.wasm \
+  --source-account <your-identity> --network testnet \
+  -- --admin <G…> --fee-bps 10 --fee-collector <G…>
+# paste the printed C… id into public/otc-config.js (RFQ_SWAP_CONTRACT_ID)
+
+node ../tools/rfq-live-swap.mjs   # optional: settle a real RFQ swap on Testnet
 ```
 
 ### Try it (two wallets)
@@ -214,12 +250,13 @@ Use two funded Testnet wallets in two browsers. Start with an XLM↔XLM order to
 
 ### Phase 2: On-chain Settlement ✅
 - [x] Soroban `fill` contract with dual authorization
-- [x] AirSwap-style off-chain signed auth entries
+- [x] Off-chain signed auth entries (two-signature symmetric swap)
 - [x] Atomic cross-asset swaps (XLM ↔ USDC)
 - [x] Two-wallet end-to-end on Testnet
 
 ### Phase 3: Enhancements ✅
-- [x] Intent / private-offer layer (broadcasts, rounds, pair subscriptions)
+- [x] Intent / private-offer layer (broadcasts, rounds, pair subscriptions). Interim fan-out
+      mode: superseded in direction by the Phase 5 RFQ protocol, stays live until it ships
 - [x] Reflector fair-price suggestion (advisory)
 - [x] Light desk theme + glass landing page
 
@@ -228,8 +265,24 @@ Use two funded Testnet wallets in two browsers. Start with an XLM↔XLM order to
 - [ ] Sign-In-With-Stellar sessions and per-wallet RLS
 - [ ] Server-side verification of off-chain RFQ signatures
 
-### Phase 5: Production
-- [ ] Institutional RFQ protocol (peer-to-server quoting)
+### Phase 5: RFQ Protocol (Adopted)
+
+Peer-to-peer quoting, an [AirSwap](https://www.airswap.io) RFQ port to Soroban: takers request
+quotes directly from makers (each maker runs an always-on quote server as its own endpoint), the
+maker signs the exact terms, and the taker settles on-chain in one transaction. Architecture
+adopted 2026-08-17; see the
+[design spec](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md).
+
+- [x] `rfq_swap` settlement contract (maker-signed auth entry over all economic terms; taker
+      submits as the transaction source). Deployed on Testnet 2026-08-18 and settled a real swap:
+      the maker's detached signature and the taker's ordinary transaction signature authorize one
+      transaction together, and the taker signs no auth entry at all
+- [ ] `rfq_registry` on-chain maker discovery (makers publish server URLs and supported pairs)
+- [ ] Maker reference quote server (JSON-RPC 2.0 patterned on AirSwap, maker/taker naming; separate repo)
+- [ ] Taker integration in the desk (request quotes, rank, settle)
+- [ ] Optional indexer for fills and maker analytics
+
+### Phase 6: Production
 - [ ] Fee relayer / sponsorship for submitters
 - [ ] Security audit and Mainnet deployment
 
@@ -239,7 +292,8 @@ Use two funded Testnet wallets in two browsers. Start with an XLM↔XLM order to
   signatures, not RLS. The real boundary is the two Soroban authorization entries the host verifies
   inside `fill`.
 - **Frozen terms.** A column-scoped anon grant means an order's addresses, tokens, expiration, and
-  nonce cannot be rewritten after insert.
+  nonce cannot be rewritten after insert. Amounts stay writable while a thread is open (that is
+  the negotiation surface); the signed auth entries are what freeze them at settlement.
 - **Tamper-proof settlement.** `fill` requires both parties' auth over the full arguments; a
   changed amount has no valid signature, so the transaction reverts.
 - **Token quarantine.** Only allow-listed assets can be rendered or signed; a look-alike asset with

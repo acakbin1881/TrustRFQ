@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-15
 **Branch target:** feature branch off `main`
-**Status:** design approved (pending user spec review)
+**Status:** shipped 2026-07-18 (`b051d2b`)
 
 ## Goal
 

@@ -2,8 +2,17 @@
 
 **Date:** 2026-07-10
 **Status:** implemented (same day) — full port + verification battery green; adversarial
-multi-agent review run post-implementation. Remaining gate to go-live: the two-wallet E2E.
+multi-agent review run post-implementation. The two-wallet E2E gate cleared 2026-07-14 (banner below).
 **Branch:** `frontend/react-ts-migration`
+
+> **Historical record (banner added 2026-08-17).** Everything below describes the codebase as it
+> stood on 2026-07-10 and stays as the migration's record. Since then: the two-wallet browser E2E
+> PASSED 2026-07-14; the risk this spec flags around `kit.signAuthEntry` turned out to be a real
+> upstream double-encoding bug, found in that E2E and normalised in `src/wallet/authSignature.ts`
+> (see the CLAUDE.md gotcha); `otc.js` shrank to 641 lines when `canonical.js` was extracted, so
+> line numbers cited below no longer align; and the roadmap item this spec calls the
+> "institutional RFQ protocol" was adopted 2026-08-17 as the peer-to-peer RFQ protocol, see
+> [2026-08-17-rfq-protocol-architecture-design.md](2026-08-17-rfq-protocol-architecture-design.md).
 
 ## Context
 
@@ -22,7 +31,7 @@ on a stack that can host the roadmap. No new capability lands with the migration
 ## The hazard this design is built around
 
 `fillCanonicalArgs` (`otc.js:424-437`) derives the eight `ScVal` arguments that **both parties'
-Soroban auth entries are signed over**. Per STELLAR.md invariant #2 it must be deterministic. It
+Soroban auth entries are signed over**. As a settlement invariant it must be deterministic. It
 depends on `globalThis.Buffer`, assigned from esm.sh's `buffer@6` at `otc.js:12-13`, and on
 `toStroops` / `sacIdFor` / `sha256Bytes`.
 
@@ -52,7 +61,7 @@ Buffer, so they would hit our exact Buffer trap.
 
 **Next.js is rejected.** Its App Router static export emits inline hydration scripts
 (`self.__next_f.push(...)`), forcing `'unsafe-inline'` into `script-src` — the directive that
-STELLAR.md §11 identifies as the control against transaction tampering, the marquee threat for a
+the Stellar security guidance identifies as the control against transaction tampering, the marquee threat for a
 wallet-signing dApp. Nonces would fix it but require middleware, i.e. a server runtime that this
 app has never had and that the reference implementation of this protocol has never needed.
 
@@ -111,7 +120,7 @@ eight `ScVal`s serialize to the base64 XDR recorded in `fixtures/canonical-args.
 instead of a real fill.
 
 This mirrors AirSwap's Mocha suite over `@airswap/utils`, and the `test_snapshots/` tripwire
-STELLAR.md §10 already recommends for the contract.
+the Soroban testing guidance already recommends for the contract.
 
 ### CSP after the migration
 

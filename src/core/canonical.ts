@@ -11,7 +11,7 @@
 // network passphrase as an argument rather than reading a global, which is what
 // lets `canonical.test.ts` pin its output against fixtures/canonical-args.json.
 //
-// STELLAR.md invariant #2: `fillCanonicalArgs` must be deterministic — derive
+// Settlement invariant: `fillCanonicalArgs` must be deterministic; derive
 // `expiration` from `order.expiration`, never `Date.now()`; never reorder args or
 // change numeric encodings.
 //

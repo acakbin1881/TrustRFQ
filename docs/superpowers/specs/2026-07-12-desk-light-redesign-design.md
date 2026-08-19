@@ -1,8 +1,16 @@
 # TrustRFQ desk redesign — "milky swap" light theme + section sheet
 
 **Date:** 2026-07-12
-**Status:** approved (plan session, user-approved via AskUserQuestion round + plan approval)
+**Status:** shipped (implemented on the `design` branch; merged to `main` in `e75cf6f`, 2026-07-15)
 **Branch:** `design`
+
+> **Historical record (banner added 2026-08-17).** This design shipped. Two things changed after
+> it was written, so do not implement from this document: `intent.html` was folded into the
+> single-entry desk on 2026-07-13 (`5ed288d`), so every `intent.html` / `src/intent/` reference
+> below maps to `otc.html` / `src/ui/` today; and the notched-card mask is gone, which INVERTED
+> the shadow rule: `.ticket__card-shadow` now must carry `box-shadow`, never
+> `filter: drop-shadow` (a filtered ancestor breaks the hero's `backdrop-filter`; see the
+> CLAUDE.md gotchas).
 
 ## Context
 

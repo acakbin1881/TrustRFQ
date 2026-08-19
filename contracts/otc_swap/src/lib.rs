@@ -1,13 +1,21 @@
 #![no_std]
-//! OTC settlement contract — AirSwap-style signed `fill` on Soroban.
+//! OTC settlement contract: a two-signature symmetric swap on Soroban.
 //!
 //! Both parties agree off-chain. Each then independently signs an off-chain
 //! Soroban authorization entry over the *exact* order terms (counterparty,
 //! tokens, **amounts**, expiration, order id). `fill` carries both signatures
-//! and moves the two legs with `transfer` — each leg authorized by its owner's
+//! and moves the two legs with `transfer`, each leg authorized by its owner's
 //! signature. Anyone may assemble and submit the transaction: the two
 //! signatures pin every term, so the submitter cannot alter amounts, tokens or
 //! recipients. There is no separate `approve`/allowance step.
+//!
+//! NOT "AirSwap-style", despite what this comment used to claim. AirSwap signs
+//! ONCE: its `Order` carries a single ECDSA `(v, r, s)`, `Swap._check`
+//! validates only the signer's signature, and the sender is authorized purely
+//! by `msg.sender` matching `order.sender.wallet`. Symmetry here is a
+//! deliberate TrustRFQ deviation: the directed OTC lane has no always-on quote
+//! server, so neither party is the natural signer and either must be able to
+//! submit. The sibling `rfq_swap` is the faithful AirSwap port.
 
 use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, BytesN, Env};
 
@@ -72,10 +80,10 @@ impl OtcSwap {
         // covered by the same per-party auth tree, so a single signature per
         // party authorizes both this contract call and moving their own funds.
         //
-        // Replay / staleness is layered (STELLAR.md §0.5). Two layers are
+        // Replay / staleness is layered. Two layers are
         // enforced by the *host* before these calls even return and are therefore
-        // intentionally NOT re-checked here (re-implementing them would be a bug —
-        // §3.4/§3.7): the per-signature **nonce** (consumed on verify, blocks
+        // intentionally NOT re-checked here (re-implementing host guarantees
+        // would be a bug): the per-signature **nonce** (consumed on verify, blocks
         // replay of a signed entry) and **signature_expiration_ledger** (the
         // signed entry's on-ledger lifetime, set client-side in `signOrderAuth`).
         // The contract adds the two application layers: `Filled(order_id)` above
