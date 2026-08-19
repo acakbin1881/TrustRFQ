@@ -20,5 +20,11 @@ dist/
 # Testnet demo funding secrets — NEVER commit
 demo-keys.json
 
+# Click-census E2E keypairs (tools/e2e/) — NEVER commit
+e2e-keys.json
+
+# Click-census run artifacts (console logs, reports, failure screenshots)
+tools/e2e/out/
+
 # Local guidance for Claude Code sessions (do not commit)
 CLAUDE.md
