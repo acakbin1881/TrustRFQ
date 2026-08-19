@@ -1,0 +1,21 @@
+{
+  "source_path": "/Users/acakbin1881/Projects/TrustRFQ/docs/superpowers/specs/2026-07-15-reflector-fair-price-suggestion-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Reflector fair-price suggestion on the compose ticket",
+  "summary": "Technical design for an advisory Reflector-oracle fair-price chip on the compose ticket, read via SEP-40 simulation, never touching the signature boundary.",
+  "scope": [
+    "Reflector oracle (SEP-40)",
+    "compose ticket (src/ui/Ticket.tsx)",
+    "src/core/oracle.ts pure math (symbol map, cross rate, staleness, suggested amount)",
+    "src/data/oracle.ts lastprice simulation read",
+    "src/data/useFairPrice.ts hook",
+    "REFLECTOR_ORACLE_ID runtime config (public/otc-config.js, src/config.ts)",
+    "suggestion chip CSS in public/styles.css"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": "Status: shipped 2026-07-18 (b051d2b), so a historical record. Contains a 'Decisions (locked)' section, but manifest type SPEC is authoritative; those decisions are technical constraints, not ADR-locked. References repo source files only, no other planning docs; the excluded intent-layer spec is not referenced. Filename hash suffix omitted: no shell available to compute SHA-256; the dated slug is unique within this ingest set."
+}

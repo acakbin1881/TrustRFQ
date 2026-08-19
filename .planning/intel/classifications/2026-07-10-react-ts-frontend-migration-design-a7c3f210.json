@@ -1,0 +1,26 @@
+{
+  "source_path": "/Users/acakbin1881/Projects/TrustRFQ/docs/superpowers/specs/2026-07-10-react-ts-frontend-migration-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "TrustRFQ frontend migration — vanilla → React + TypeScript",
+  "summary": "Design record for migrating the desk from vanilla JS to Vite/React/TypeScript, protecting signature canonicalization with golden vectors and a strict CSP.",
+  "scope": [
+    "frontend migration",
+    "Vite + React + TypeScript stack",
+    "fillCanonicalArgs / canonical.ts signature boundary",
+    "golden vector regression fixtures",
+    "CSP and security headers",
+    "runtime config (otc-config.js, supabase-config.js)",
+    "src/core, src/data, src/wallet, src/ui architecture"
+  ],
+  "cross_refs": [
+    "CLAUDE.md",
+    "STELLAR.md",
+    "src/wallet/authSignature.ts",
+    "fixtures/canonical-args.json"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Manifest declared SPEC; content signals concur (path docs/superpowers/specs/, Decisions/Architecture/Verification sections, implementation contracts). Status: implemented 2026-07-10, marked a historical record via a 2026-08-17 banner. The doc discusses the intent/private-offer layer as a roadmap feature but contains no link to the excluded 2026-07-10-intent-private-offer-layer-design.md, so nothing was omitted from cross_refs. External AirSwap GitHub links not listed (non-repo). Filename suffix a7c3f210 is a synthetic disambiguator, not a computed SHA-256 (no shell available in this environment); the slug alone is unique within this ingest run. Orchestrator edit 2026-08-19: the banner backlink to 2026-08-17-rfq-protocol-architecture-design.md was deliberately removed from cross_refs (user-approved cycle break; the RFQ spec's citation edge back to this doc is kept)."
+}
