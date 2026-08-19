@@ -1,12 +1,19 @@
 ---
-gsd_state_version: '1.0'
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+current_phase: 1
+current_phase_name: On-Chain Maker Discovery
 status: planning
+stopped_at: Phase 1 context gathered
+last_updated: "2026-08-19T16:31:30.112Z"
+last_activity: 2026-08-19
+last_activity_desc: Project initialized from docs ingest (PROJECT.md, REQUIREMENTS.md,
 progress:
-  total_phases: 4
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -32,6 +39,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: -
 - Total execution time: 0 hours
@@ -62,8 +70,10 @@ None yet.
 - Phase 3 external dependency: the maker quote server + taker SDK repo (separate repo per spec
   §11) does not exist yet. Phases 1-2 are unblocked (Phase 2 verifies against a local stub maker
   in tools/e2e/); Phase 3 cannot complete until at least one real maker endpoint is live.
+
 - IDX-01 (events indexer) is an open question in the source spec (§10); revisit before or at
   milestone close.
+
 - Standing repo guard: otc_swap wasm hash 83f60b85... must not move; CSP script-src never gains
   'unsafe-inline'; golden vectors are the signature-boundary tripwire.
 
@@ -78,6 +88,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-08-19
-Stopped at: Roadmap created; Phase 1 ready to plan (/gsd-plan-phase 1)
-Resume file: None
+Last session: 2026-08-19T16:31:30.101Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-on-chain-maker-discovery/01-CONTEXT.md
