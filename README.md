@@ -160,6 +160,7 @@ TrustRFQ/
 ├── public/                   # Landing page, stylesheets, runtime config (window.*)
 ├── contracts/                # Cargo workspace: otc_swap (fill) + rfq_swap (RFQ swap) + tests
 ├── fixtures/                 # Golden vectors pinning canonical bytes
+├── tools/                    # Testnet proofs, demo funding, two-browser E2E census
 ├── docs/                     # SQL migrations + dated design specs
 └── vercel.json               # Build config + strict CSP / security headers
 ```
@@ -256,6 +257,19 @@ Use two funded Testnet wallets in two browsers. Start with an XLM↔XLM order to
 2. **Wallet B** sees the thread live in Incoming and Accepts (or Counters).
 3. Both press **Sign order**, then either presses **Settle now**. One `fill` transaction moves both
    balances atomically.
+
+The same walkthrough runs headless. `npm run e2e:census` drives two browsers through a mock
+Freighter, counts every click and wallet prompt, and settles for real on Testnet:
+
+```bash
+node tools/e2e/prepare-keys.mjs    # funds two Testnet actors into e2e-keys.json (gitignored)
+npm run preview -- --port 4173     # in one terminal
+npm run e2e:census                 # in another; reports land in tools/e2e/out/
+```
+
+One finding worth knowing before a cross-asset trade: the taker cannot sign until the maker's
+trustline is on-chain, because the `fill` simulation fails without it. The signing order is
+therefore forced, maker first.
 
 ## Roadmap
 
