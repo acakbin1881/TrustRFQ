@@ -49,7 +49,8 @@ carries both signatures. Because every amount is bound into both signatures, who
 transaction cannot alter the deal, and both legs move at once or neither does. No side moves first,
 and no intermediary is trusted. AirSwap itself signs only once, since one side is always the maker
 server holding the quote; the directed lane has no such server, so it is symmetric instead. The RFQ
-lane below follows AirSwap exactly.
+lane below follows AirSwap exactly. That symmetry is a property of the lane, not of the contract,
+so it survives the consolidation described next as one mode of the RFQ settlement contract.
 
 The adopted next phase extends this model into a full peer-to-peer RFQ protocol, again
 following AirSwap: each maker runs an always-on quote server as its own trading endpoint, takers
@@ -57,6 +58,12 @@ request quotes from makers directly with no intermediary, discovery is on-chain 
 and settlement is a maker-signed one-transaction `rfq_swap`. See the
 [architecture spec](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md) and
 the [Roadmap](#roadmap).
+
+Decided 2026-08-19 and part of that same phase: **one settlement contract, not two.** `rfq_swap`
+settles both lanes and `otc_swap` retires, the way AirSwap runs OTC and RFQ over a single Swap
+contract. Settlement then charges a protocol fee of 10 basis points, paid by the maker on both
+lanes and capped at 30 bps in the contract. Until the desk cuts over, the directed lane keeps
+settling on the deployed `otc_swap` described above, with no fee.
 
 **Status:** working end-to-end on Testnet. A real cross-asset trade (10 XLM ↔ 1 USDC, exercising
 the USDC trustline path) was negotiated and settled through two Freighter wallets on 2026-07-14
@@ -126,11 +133,13 @@ A trade goes from private negotiation to one atomic on-chain settlement:
 5. **Settle.** Either party submits one `fill` transaction carrying both signatures. Both token
    legs move atomically, and the thread flips to Settled with a link to the explorer.
 
-The flow above is the live OTC lane, where **both** parties sign authorization entries precisely
-because either one may submit the settlement. The adopted RFQ protocol
-([Phase 5](#roadmap)) uses a different signing model: only the maker signs an authorization
-entry, and the taker authorizes by being the transaction source, so a taker never signs a
-separate entry.
+The flow above is the live OTC lane, settled by the `otc_swap` contract, where **both** parties
+sign authorization entries precisely because either one may submit the settlement. The adopted RFQ
+milestone ([Phase 5](#roadmap)) folds both lanes into a single contract, `rfq_swap`, and there the
+signing form follows the lane rather than the contract. On the RFQ lane only the maker signs an
+authorization entry: the taker authorizes by being the transaction source, so the taker signs one
+ordinary transaction and no separate entry. On the directed lane the taker keeps supplying a
+detached entry as it does today, which is what keeps settlement permissionless.
 
 ## Architecture
 
@@ -270,13 +279,20 @@ Use two funded Testnet wallets in two browsers. Start with an XLM↔XLM order to
 Peer-to-peer quoting, an [AirSwap](https://www.airswap.io) RFQ port to Soroban: takers request
 quotes directly from makers (each maker runs an always-on quote server as its own endpoint), the
 maker signs the exact terms, and the taker settles on-chain in one transaction. Architecture
-adopted 2026-08-17; see the
-[design spec](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md).
+adopted 2026-08-17, single-contract consolidation decided 2026-08-19; see the
+[design spec](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md) and the
+amendment at the top of it.
 
 - [x] `rfq_swap` settlement contract (maker-signed auth entry over all economic terms; taker
       submits as the transaction source). Deployed on Testnet 2026-08-18 and settled a real swap:
       the maker's detached signature and the taker's ordinary transaction signature authorize one
       transaction together, and the taker signs no auth entry at all
+- [ ] Single-contract consolidation: a signed `require_fill_guard` flag on the order, so one
+      contract can serve both long-lived directed offers (persistent double-fill key) and
+      short-lived quotes (host nonce only, no storage rent). The order struct changes, so this
+      produces a new wasm and a new contract id
+- [ ] Move the directed lane onto `rfq_swap`, with the taker supplying a detached entry, and
+      retire `otc_swap`
 - [ ] `rfq_registry` on-chain maker discovery (makers publish server URLs and supported pairs)
 - [ ] Maker reference quote server (JSON-RPC 2.0 patterned on AirSwap, maker/taker naming; separate repo)
 - [ ] Taker integration in the desk (request quotes, rank, settle)
