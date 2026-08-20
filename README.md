@@ -99,7 +99,9 @@ passphrase. Amounts are 7-decimal base units.
 
 > **Note:** the demo build temporarily points USDC at a self-issued Testnet asset so it can be
 > minted freely (a 570000 USDC block trade exceeds Circle's faucet). Revert `src/core/tokens.ts`
-> (and its two pinned tests) to Circle's issuer before any real use. See `CLAUDE.md` for details.
+> (and its two pinned tests) to Circle's issuer before any real use. Both issuer ids and the full
+> reasoning sit in the comment above the allow-list in
+> [`src/core/tokens.ts`](src/core/tokens.ts).
 
 ## How It Works
 
@@ -167,7 +169,11 @@ TrustRFQ/
 | Contract | Address |
 |----------|---------|
 | OTC settlement (`fill`) | `CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ` |
+| RFQ settlement (`swap`) | `CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT` |
 | Reflector oracle (fair-price) | `CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63` |
+
+The desk does not call the RFQ contract yet, and its id changes when the
+single-contract consolidation ([Phase 5](#roadmap)) rebuilds the order struct.
 
 ### Technology Stack
 
@@ -201,7 +207,8 @@ Runtime config lives in plain `window.*` scripts (deliberately un-bundled, so a 
 one-file edit). Point them at your own Supabase project and contract id, or leave the checked-in
 Testnet values.
 
-- `public/otc-config.js`: RPC/Horizon URLs, network passphrase, `OTC_CONTRACT_ID`, `REFLECTOR_ORACLE_ID`
+- `public/otc-config.js`: RPC/Horizon URLs, network passphrase, `OTC_CONTRACT_ID`,
+  `RFQ_SWAP_CONTRACT_ID`, `REFLECTOR_ORACLE_ID`
 - `public/supabase-config.js`: Supabase URL + anon key
 
 For a fresh Supabase project, run the schema in the SQL Editor (the anon key cannot run DDL):
