@@ -42,7 +42,13 @@ client can discover them with read-only calls
   5. Unit tests pass (re-init guard, auth on every mutating call, bounded-list rejection, events
      on state transitions) and a live Testnet check exercises register -> discover -> eject,
      including TTL-bump-on-write behavior
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Tracer: one maker registers, is discovered, and is refunded on live Testnet
+- [ ] 01-02-PLAN.md — Token and protocol lists: stake-priced, doubly bounded, discoverable by token
+- [ ] 01-03-PLAN.md — Admin-tunable spam pricing plus the auth, re-init, event and TTL test surface
+- [ ] 01-04-PLAN.md — Redeploy, full live Testnet proof, and RFQ_REGISTRY_ID runtime config wiring
 
 ### Phase 2: Desk RFQ Taker Path
 **Goal**: A taker in the desk can select a curated pair, see live firm quotes from registered
@@ -110,7 +116,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. On-Chain Maker Discovery | 0/TBD | Not started | - |
+| 1. On-Chain Maker Discovery | 0/4 | Planned | - |
 | 2. Desk RFQ Taker Path | 0/TBD | Not started | - |
 | 3. Live Full RFQ Loop | 0/TBD | Not started | - |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
