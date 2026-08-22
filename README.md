@@ -58,6 +58,10 @@ and settlement is a maker-signed one-transaction `rfq_swap`. See the
 [architecture spec](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md) and
 the [Roadmap](#roadmap).
 
+Demo video: https://drive.google.com/file/d/1vho_-MLwHPmhuG_rzhkRNgtZAbzydyuG/view?usp=sharing
+
+website: https://trustrfq.vercel.app
+
 **Status:** working end-to-end on Testnet. A real cross-asset trade (10 XLM ↔ 1 USDC, exercising
 the USDC trustline path) was negotiated and settled through two Freighter wallets on 2026-07-14
 ([tx](https://stellar.expert/explorer/testnet/tx/af0392ff49ac9478a95fd8059bc64f62fd715d1de84d16d4acd912c5268a63aa),
