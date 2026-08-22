@@ -24,3 +24,12 @@ window.OTC_CONTRACT_ID = 'CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTK
 // ticket. Never signed, never on the settlement path. Empty = the suggestion
 // silently turns off. Update on a Testnet reset, same as OTC_CONTRACT_ID.
 window.REFLECTOR_ORACLE_ID = 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63';
+
+// RFQ settlement contract (rfq_swap). Deployed 2026-08-18; the desk does not
+// call it yet, the id lives here so there is one place to look for it and so it
+// joins the Testnet-reset checklist alongside the two ids above.
+//   cd contracts && stellar contract build
+//   stellar contract deploy --wasm target/wasm32v1-none/release/rfq_swap.wasm \
+//     --source-account <key> --network testnet \
+//     -- --admin <G...> --fee-bps 10 --fee-collector <G...>
+window.RFQ_SWAP_CONTRACT_ID = 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT';

@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["otc_swap", "rfq_swap"]
+
+[workspace.dependencies]
+soroban-sdk = "26"
+
+# The release profile is load-bearing for wasm size (64KB cap) and MUST live here at the
+# workspace root: cargo silently IGNORES `[profile.*]` blocks in member crates. Moving or
+# dropping any of these changes the emitted bytecode, which would break the invariant that
+# the deployed OTC_CONTRACT_ID byte-matches otc_swap/src/lib.rs (see CLAUDE.md).
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true
