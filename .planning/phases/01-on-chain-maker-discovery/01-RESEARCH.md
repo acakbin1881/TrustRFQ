@@ -1,4 +1,4 @@
-# Phase 1: On-Chain Maker Discovery - Research
+kimle# Phase 1: On-Chain Maker Discovery - Research
 
 **Researched:** 2026-08-20
 **Domain:** Soroban smart contracts (Rust), stake-gated on-chain registry, Stellar Testnet deployment/verification tooling
