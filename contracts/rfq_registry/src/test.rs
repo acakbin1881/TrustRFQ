@@ -91,6 +91,49 @@ fn setup<'a>() -> Setup<'a> {
     }
 }
 
+/// Like `setup`, but with a caller-chosen `max_makers_per_token`, so the
+/// per-token cap can be exercised without registering 100 makers. The maker
+/// is minted enough to cover `MAX_TOKENS_PER_MAKER` (32) token registrations
+/// plus `base_cost`, so per-maker-cap boundary tests never fail on funds.
+fn setup_with_cap<'a>(cap: u32) -> Setup<'a> {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let maker = Address::generate(&env);
+    let (stake_token, st, st_admin) = make_token(&env, &admin);
+
+    let contract_id = env.register(RfqRegistry, ());
+    let client = RfqRegistryClient::new(&env, &contract_id);
+    client.initialize(&admin, &stake_token, &BASE_COST, &PER_TOKEN_COST, &cap);
+
+    st_admin.mint(&maker, &(BASE_COST + PER_TOKEN_COST * 40));
+
+    Setup {
+        env,
+        client,
+        contract_id,
+        admin,
+        stake_token,
+        st,
+        maker,
+    }
+}
+
+/// Registers `n` distinct, funded makers and adds `token` to each one's list,
+/// in order. Used to fill a `Token(t)` list to an exact size cheaply. Every
+/// actor is funded (fund-every-actor rule) so a rejection at the boundary is
+/// never a false pass caused by an unfunded interloper.
+fn fill_token_list<'a>(s: &Setup<'a>, token: &Address, n: u32) -> std::vec::Vec<Address> {
+    let mut makers = std::vec::Vec::new();
+    for i in 0..n {
+        let m = register_new_maker(s, 1, &std::format!("https://fill{}.example/quote", i));
+        s.client.add_tokens(&m, &soroban_sdk::vec![&s.env, token.clone()]);
+        makers.push(m);
+    }
+    makers
+}
+
 // --- initialize / re-init guard --------------------------------------------
 
 #[test]
@@ -690,4 +733,178 @@ fn get_urls_for_token_resolves_twenty_makers_in_insertion_order() {
     for (i, m) in makers.iter().enumerate() {
         assert_eq!(urls.get(i as u32).unwrap(), s.client.get_maker(m).url);
     }
+}
+
+// --- both caps at their exact boundary, and proven independent ------------
+//
+// The two bounds are separate checks in separate places inside `add_tokens`
+// (RESEARCH.md Pitfall 2): `MAX_TOKENS_PER_MAKER` is a fixed code constant
+// compared against the CALLING maker's own `cfg.tokens.len() + tokens.len()`;
+// `max_makers_per_token` is a live, admin-tunable instance-storage value
+// compared against each individual `Token(t)` list's `len()`. A suite that
+// only exercises one and calls "bounded-list rejection" covered would leave
+// the other free to be deleted without a red test — see the mutation results
+// recorded in the plan SUMMARY for proof both checks have teeth.
+
+#[test]
+fn per_token_cap_rejects_at_exact_boundary() {
+    let s = setup_with_cap(3);
+    let t = token_addr(&s.env);
+    fill_token_list(&s, &t, 3);
+
+    let fourth = register_new_maker(&s, 1, "https://fourth.example/quote");
+    let fourth_balance_before = s.st.balance(&fourth);
+
+    let r = s
+        .client
+        .try_add_tokens(&fourth, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(r, Err(Ok(Error::TokenListFull)));
+    // The failed call debited nothing.
+    assert_eq!(s.st.balance(&fourth), fourth_balance_before);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 3);
+}
+
+#[test]
+fn per_token_cap_accepts_exactly_one_more_at_cap_minus_one() {
+    let s = setup_with_cap(3);
+    let t = token_addr(&s.env);
+    fill_token_list(&s, &t, 2);
+
+    let third = register_new_maker(&s, 1, "https://third.example/quote");
+    s.client.add_tokens(&third, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 3);
+}
+
+#[test]
+fn per_maker_cap_rejects_the_33rd_token_and_accepts_the_32nd() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+
+    let mut tokens = std::vec::Vec::new();
+    for _ in 0..31 {
+        tokens.push(token_addr(&s.env));
+    }
+    for t in tokens.iter() {
+        s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
+    }
+    assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 31);
+
+    // 31 -> 32nd succeeds.
+    let t32 = token_addr(&s.env);
+    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t32.clone()]);
+    assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 32);
+
+    // 32 -> 33rd rejected.
+    let t33 = token_addr(&s.env);
+    let r = s
+        .client
+        .try_add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t33.clone()]);
+    assert_eq!(r, Err(Ok(Error::TooManyTokens)));
+    assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 32);
+}
+
+#[test]
+fn per_maker_cap_rejects_a_batch_that_would_cross_the_boundary() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+
+    for _ in 0..30 {
+        let t = token_addr(&s.env);
+        s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t]);
+    }
+    assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 30);
+
+    // A single call of 3 new tokens would take 30 -> 33: rejected in full,
+    // the up-front check counts the whole batch, not one element at a time.
+    let batch = soroban_sdk::vec![
+        &s.env,
+        token_addr(&s.env),
+        token_addr(&s.env),
+        token_addr(&s.env),
+    ];
+    let r = s.client.try_add_tokens(&s.maker, &batch);
+    assert_eq!(r, Err(Ok(Error::TooManyTokens)));
+    assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 30);
+}
+
+#[test]
+fn caps_are_independent_full_token_list_vs_full_maker_list() {
+    // A maker well under its own 32-token cap is still rejected by a full
+    // Token(t) list.
+    let s = setup_with_cap(1);
+    let t = token_addr(&s.env);
+    fill_token_list(&s, &t, 1);
+
+    let one_token_maker = register_new_maker(&s, 1, "https://onetoken.example/quote");
+    let r = s
+        .client
+        .try_add_tokens(&one_token_maker, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(r, Err(Ok(Error::TokenListFull)));
+}
+
+#[test]
+fn caps_are_independent_maker_at_own_cap_rejected_even_with_empty_token_lists() {
+    // A maker at its own 32-token cap is rejected even when every target
+    // Token(t) list is completely empty (a generous, unfilled cap).
+    let s = setup_with_cap(100);
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    for _ in 0..32 {
+        let t = token_addr(&s.env);
+        s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t]);
+    }
+    assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 32);
+
+    let brand_new_token = token_addr(&s.env);
+    assert_eq!(s.client.get_urls_for_token(&brand_new_token).len(), 0);
+    let r = s
+        .client
+        .try_add_tokens(&s.maker, &soroban_sdk::vec![&s.env, brand_new_token]);
+    assert_eq!(r, Err(Ok(Error::TooManyTokens)));
+}
+
+#[test]
+fn lowering_cap_does_not_evict_existing_makers_but_blocks_new_additions() {
+    // D-04: lowering `max_makers_per_token` never evicts; it only blocks NEW
+    // additions once a token's list is at/above the (now-lower) cap. The
+    // eviction half of this rule needs `set_max_makers_per_token`, which
+    // lands in Plan 01-03 — this test proves the shape against the cap
+    // passed to `initialize`, which is all that is available in this plan.
+    //
+    // TODO(01-03): once `set_max_makers_per_token` lands, extend this test to
+    // lower the cap on a LIVE instance after three makers are registered
+    // (rather than only at `initialize` time), and assert: all three survive,
+    // `get_urls_for_token` still returns three urls, and a fourth maker's
+    // `add_tokens` is rejected with `Err(Error::TokenListFull)`.
+    let s = setup_with_cap(3);
+    let t = token_addr(&s.env);
+    fill_token_list(&s, &t, 3);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 3);
+
+    let fourth = register_new_maker(&s, 1, "https://fourth.example/quote");
+    let r = s
+        .client
+        .try_add_tokens(&fourth, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(r, Err(Ok(Error::TokenListFull)));
+    // The three existing entrants are untouched by the rejected 4th call.
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 3);
+}
+
+#[test]
+fn maker_at_or_above_lowered_cap_can_still_remove_and_eject() {
+    // Even a maker whose token registrations happened under a cap that has
+    // since been exceeded (conceptually — this plan cannot lower the cap on
+    // a live instance yet, see the TODO above) must still be able to
+    // `remove_tokens`/`eject` normally: those paths never check
+    // `max_makers_per_token` at all.
+    let s = setup_with_cap(3);
+    let t = token_addr(&s.env);
+    let makers = fill_token_list(&s, &t, 3);
+    let m1 = makers.first().unwrap();
+
+    s.client.remove_tokens(m1, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 2);
+
+    let m2 = makers.get(1).unwrap();
+    s.client.eject(m2);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 1);
 }
