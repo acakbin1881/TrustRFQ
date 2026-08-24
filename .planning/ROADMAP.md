@@ -49,12 +49,12 @@ client can discover them with read-only calls
   5. Unit tests pass (re-init guard, auth on every mutating call, bounded-list rejection, events
      on state transitions) and a live Testnet check exercises register -> discover -> eject,
      including TTL-bump-on-write behavior
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Tracer: one maker registers, is discovered, and is refunded on live Testnet
+- [x] 01-01-PLAN.md — Tracer: one maker registers, is discovered, and is refunded on live Testnet
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -149,7 +149,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. On-Chain Maker Discovery | 0/4 | Planned | - |
+| 1. On-Chain Maker Discovery | 1/4 | In Progress|  |
 | 2. Desk RFQ Taker Path | 0/TBD | Not started | - |
 | 3. Live Full RFQ Loop | 0/TBD | Not started | - |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
