@@ -157,6 +157,40 @@ pub struct MakerEjected {
     pub refunded: i128,
 }
 
+/// A maker priced and staked one or more tokens it now quotes.
+#[contractevent(topics = ["tok_add"], data_format = "vec")]
+pub struct TokensAdded {
+    #[topic]
+    pub maker: Address,
+    pub tokens: Vec<Address>,
+    pub cost: i128,
+}
+
+/// A maker withdrew one or more tokens it no longer quotes, refunded in full.
+#[contractevent(topics = ["tok_rm"], data_format = "vec")]
+pub struct TokensRemoved {
+    #[topic]
+    pub maker: Address,
+    pub tokens: Vec<Address>,
+    pub refund: i128,
+}
+
+/// A maker declared one or more protocol versions it speaks. Stake-free.
+#[contractevent(topics = ["prot_add"], data_format = "vec")]
+pub struct ProtocolsAdded {
+    #[topic]
+    pub maker: Address,
+    pub protocols: Vec<u32>,
+}
+
+/// A maker retracted one or more protocol versions it no longer speaks.
+#[contractevent(topics = ["prot_rm"], data_format = "vec")]
+pub struct ProtocolsRemoved {
+    #[topic]
+    pub maker: Address,
+    pub protocols: Vec<u32>,
+}
+
 #[contract]
 pub struct RfqRegistry;
 
@@ -241,6 +275,140 @@ impl RfqRegistry {
         Ok(())
     }
 
+    /// A registered maker prices and stakes the tokens it now quotes.
+    ///
+    /// D-05 strict duplicate semantics: a token already in `MakerConfig.tokens`
+    /// (including a repeat within this same input `Vec`, since the growing
+    /// `cfg.tokens` is what is checked) is a hard error, moving no funds. D-07:
+    /// only a registered maker (one that has called `set_url`) may call this.
+    /// The two bounds below are independent (RESEARCH.md Pitfall 2): a fixed
+    /// code-constant cap on the maker's OWN token list (`MAX_TOKENS_PER_MAKER`,
+    /// D-10), and a live-read, admin-tunable cap on how many makers may list
+    /// the SAME token (`max_makers_per_token`, D-02/D-04) — re-read from
+    /// instance storage on every call, never cached, so lowering the cap later
+    /// blocks new additions without evicting anyone already on a list
+    /// (RESEARCH.md Pitfall 3). A single pass with early `Err` returns is
+    /// sufficient for all-or-nothing behavior: Soroban rolls back every
+    /// storage write and every token transfer made in this invocation the
+    /// moment it errors (RESEARCH.md Pattern 4), so no manual unwind code is
+    /// needed for D-05's "no state change, no funds move on error."
+    pub fn add_tokens(env: Env, maker: Address, tokens: Vec<Address>) -> Result<(), Error> {
+        maker.require_auth();
+        if tokens.is_empty() {
+            return Err(Error::EmptyInput);
+        }
+
+        let key = DataKey::Maker(maker.clone());
+        let mut cfg: MakerConfig = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(Error::NotRegistered)?;
+
+        if cfg.tokens.len() + tokens.len() > MAX_TOKENS_PER_MAKER {
+            return Err(Error::TooManyTokens);
+        }
+
+        let cap = max_makers_per_token(&env);
+        for token in tokens.iter() {
+            if cfg.tokens.contains(&token) {
+                return Err(Error::TokenAlreadyAdded);
+            }
+            let token_key = DataKey::Token(token.clone());
+            let mut list: Vec<Address> = env
+                .storage()
+                .persistent()
+                .get(&token_key)
+                .unwrap_or_else(|| Vec::new(&env));
+            if list.len() >= cap {
+                return Err(Error::TokenListFull);
+            }
+            list.push_back(maker.clone());
+            env.storage().persistent().set(&token_key, &list);
+            bump_maker(&env, &token_key);
+            cfg.tokens.push_back(token);
+        }
+
+        let cost = checked_mul_count(per_token_cost(&env), tokens.len())?;
+        let contract_addr = env.current_contract_address();
+        // `maker.require_auth()` above covers this sub-invocation, same as
+        // `set_url`'s first-registration stake leg.
+        token::Client::new(&env, &stake_token(&env)).transfer(&maker, &contract_addr, &cost);
+        cfg.staked = cfg.staked.checked_add(cost).ok_or(Error::MathOverflow)?;
+        env.storage().persistent().set(&key, &cfg);
+        bump_maker(&env, &key);
+
+        TokensAdded {
+            maker,
+            tokens,
+            cost,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
+    /// A registered maker withdraws tokens it no longer quotes, refunded in
+    /// full at the rate recorded in `MakerConfig.staked` (D-05: a token not in
+    /// the maker's list is a hard error, refunding nothing). Removal is
+    /// index-based (`Vec::remove`), never swap-remove, so the surviving
+    /// entries in both the maker's own list and `Token(t)`'s list keep their
+    /// relative order — an observable of `get_urls_for_token`. An abandoned
+    /// `Token(t)` list (emptied by this call) is deleted outright rather than
+    /// stored empty, so it stops paying rent.
+    pub fn remove_tokens(env: Env, maker: Address, tokens: Vec<Address>) -> Result<(), Error> {
+        maker.require_auth();
+        if tokens.is_empty() {
+            return Err(Error::EmptyInput);
+        }
+
+        let key = DataKey::Maker(maker.clone());
+        let mut cfg: MakerConfig = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(Error::NotRegistered)?;
+
+        for token in tokens.iter() {
+            let idx = cfg
+                .tokens
+                .first_index_of(&token)
+                .ok_or(Error::TokenNotFound)?;
+            cfg.tokens.remove(idx);
+
+            let token_key = DataKey::Token(token.clone());
+            let mut list: Vec<Address> = env
+                .storage()
+                .persistent()
+                .get(&token_key)
+                .unwrap_or_else(|| Vec::new(&env));
+            if let Some(midx) = list.first_index_of(&maker) {
+                list.remove(midx);
+            }
+            if list.is_empty() {
+                env.storage().persistent().remove(&token_key);
+            } else {
+                env.storage().persistent().set(&token_key, &list);
+                bump_maker(&env, &token_key);
+            }
+        }
+
+        let refund = checked_mul_count(per_token_cost(&env), tokens.len())?;
+        cfg.staked = cfg.staked.checked_sub(refund).ok_or(Error::MathOverflow)?;
+        env.storage().persistent().set(&key, &cfg);
+        bump_maker(&env, &key);
+
+        let contract_addr = env.current_contract_address();
+        token::Client::new(&env, &stake_token(&env)).transfer(&contract_addr, &maker, &refund);
+
+        TokensRemoved {
+            maker,
+            tokens,
+            refund,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
     /// Free, unauthenticated read. Errors `NotRegistered` rather than
     /// returning an empty/default config, so callers cannot mistake "never
     /// registered" for "registered with no data."
@@ -249,6 +417,99 @@ impl RfqRegistry {
             .persistent()
             .get(&DataKey::Maker(maker))
             .ok_or(Error::NotRegistered)
+    }
+
+    /// Free, unauthenticated, read-only discovery call: no auth, no writes, no
+    /// TTL bump. Returns urls in the `Token(t)` list's own insertion order. An
+    /// unregistered token returns an empty `Vec`, never an error — this is the
+    /// call Phase 2's desk issues per pair via RPC simulation. Defensively
+    /// skips any listed address whose `Maker` entry is missing (the lists are
+    /// kept in sync by `add_tokens`/`remove_tokens`/`eject`, but a read-only
+    /// discovery call must never panic for a client).
+    pub fn get_urls_for_token(env: Env, token: Address) -> Vec<String> {
+        let list: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Token(token))
+            .unwrap_or_else(|| Vec::new(&env));
+
+        let mut urls = Vec::new(&env);
+        for addr in list.iter() {
+            let cfg: Option<MakerConfig> = env.storage().persistent().get(&DataKey::Maker(addr));
+            if let Some(cfg) = cfg {
+                urls.push_back(cfg.url);
+            }
+        }
+        urls
+    }
+
+    /// A registered maker declares protocol versions it speaks. Stake-free —
+    /// the distinguishing property versus `add_tokens` (asserted in tests, not
+    /// only in this comment). Reuses the token functions' preamble
+    /// (`require_auth`, empty-input, `NotRegistered`) and D-05's strict
+    /// duplicate semantics; D-05 itself names only the token functions, so
+    /// applying identical hard-error semantics here (D-08) is a planner
+    /// decision made for one validation code path and one mental model, not a
+    /// user-locked requirement — cheap to soften later since no storage shape
+    /// changes are involved.
+    pub fn add_protocols(env: Env, maker: Address, protocols: Vec<u32>) -> Result<(), Error> {
+        maker.require_auth();
+        if protocols.is_empty() {
+            return Err(Error::EmptyInput);
+        }
+
+        let key = DataKey::Maker(maker.clone());
+        let mut cfg: MakerConfig = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(Error::NotRegistered)?;
+
+        if cfg.protocols.len() + protocols.len() > MAX_PROTOCOLS_PER_MAKER {
+            return Err(Error::TooManyProtocols);
+        }
+
+        for protocol in protocols.iter() {
+            if cfg.protocols.contains(&protocol) {
+                return Err(Error::ProtocolAlreadyAdded);
+            }
+            cfg.protocols.push_back(protocol);
+        }
+
+        env.storage().persistent().set(&key, &cfg);
+        bump_maker(&env, &key);
+        ProtocolsAdded { maker, protocols }.publish(&env);
+        Ok(())
+    }
+
+    /// A registered maker retracts protocol versions it no longer speaks.
+    /// Stake-free; ordering-stable index-based removal, mirroring
+    /// `remove_tokens`. D-08.
+    pub fn remove_protocols(env: Env, maker: Address, protocols: Vec<u32>) -> Result<(), Error> {
+        maker.require_auth();
+        if protocols.is_empty() {
+            return Err(Error::EmptyInput);
+        }
+
+        let key = DataKey::Maker(maker.clone());
+        let mut cfg: MakerConfig = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(Error::NotRegistered)?;
+
+        for protocol in protocols.iter() {
+            let idx = cfg
+                .protocols
+                .first_index_of(&protocol)
+                .ok_or(Error::ProtocolNotFound)?;
+            cfg.protocols.remove(idx);
+        }
+
+        env.storage().persistent().set(&key, &cfg);
+        bump_maker(&env, &key);
+        ProtocolsRemoved { maker, protocols }.publish(&env);
+        Ok(())
     }
 
     /// Everything a discovery client needs before registering or querying.
@@ -277,6 +538,28 @@ impl RfqRegistry {
             .persistent()
             .get(&key)
             .ok_or(Error::NotRegistered)?;
+
+        // Delist from every token list the maker appears in BEFORE deleting
+        // `Maker(maker)`, so no dangling address is left for
+        // `get_urls_for_token` to resolve (it would defensively skip one, but
+        // an abandoned `Token(t)` list should also stop paying rent when it's
+        // the last entry removed).
+        for token in cfg.tokens.iter() {
+            let token_key = DataKey::Token(token);
+            let list: Option<Vec<Address>> = env.storage().persistent().get(&token_key);
+            if let Some(mut list) = list {
+                if let Some(idx) = list.first_index_of(&maker) {
+                    list.remove(idx);
+                }
+                if list.is_empty() {
+                    env.storage().persistent().remove(&token_key);
+                } else {
+                    env.storage().persistent().set(&token_key, &list);
+                    bump_maker(&env, &token_key);
+                }
+            }
+        }
+
         env.storage().persistent().remove(&key);
 
         let contract_addr = env.current_contract_address();
@@ -336,6 +619,13 @@ fn bump_maker(env: &Env, key: &DataKey) {
     env.storage()
         .persistent()
         .extend_ttl(key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_EXTEND_TO);
+}
+
+/// `per_token_cost * count` with checked math: overflow surfaces as
+/// `Error::MathOverflow` rather than a silent wrap, mirroring `rfq_swap`'s
+/// `mul_bps` helper.
+fn checked_mul_count(amount: i128, count: u32) -> Result<i128, Error> {
+    amount.checked_mul(count as i128).ok_or(Error::MathOverflow)
 }
 
 #[cfg(test)]
