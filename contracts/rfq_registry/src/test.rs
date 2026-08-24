@@ -4,7 +4,10 @@
 // scope for `"a".repeat(...)` in the oversize-url test below.
 extern crate std;
 
-use crate::{CostsSet, Error, MaxMakersSet, RfqRegistry, RfqRegistryClient};
+use crate::{
+    CostsSet, Error, MakerEjected, MakerRegistered, MaxMakersSet, ProtocolsAdded,
+    ProtocolsRemoved, RfqRegistry, RfqRegistryClient, TokensAdded, TokensRemoved, UrlUpdated,
+};
 use soroban_sdk::{
     testutils::{Address as _, Events as _, MockAuth, MockAuthInvoke},
     token, Address, Env, Event as _, IntoVal, String,
@@ -974,41 +977,52 @@ fn set_max_makers_per_token_rejects_zero_and_changes_nothing() {
 }
 
 #[test]
-fn set_costs_and_set_max_makers_per_token_reject_non_admin() {
+fn admin_functions_reject_non_admin() {
+    // Table-driven, mirroring rfq_swap's admin_functions_reject_non_admin
+    // shape (contracts/rfq_swap/src/test.rs). The attacker needs no funding
+    // here: neither setter moves any token, so an unfunded caller cannot
+    // explain a pass -- the rejection can only come from `require_admin`.
     let s = setup();
     let attacker = Address::generate(&s.env);
 
-    let cost_invoke = MockAuthInvoke {
-        contract: &s.contract_id,
-        fn_name: "set_costs",
-        args: (2_000_000_000i128, 200_000_000i128).into_val(&s.env),
-        sub_invokes: &[],
-    };
-    let cost_auths = [MockAuth {
-        address: &attacker,
-        invoke: &cost_invoke,
-    }];
-    let r = s
-        .client
-        .mock_auths(&cost_auths)
-        .try_set_costs(&2_000_000_000, &200_000_000);
-    assert!(r.is_err(), "set_costs must reject a non-admin caller");
+    let calls: [(&str, soroban_sdk::Vec<soroban_sdk::Val>); 2] = [
+        (
+            "set_costs",
+            (2_000_000_000i128, 200_000_000i128).into_val(&s.env),
+        ),
+        ("set_max_makers_per_token", (5u32,).into_val(&s.env)),
+    ];
 
-    let cap_invoke = MockAuthInvoke {
-        contract: &s.contract_id,
-        fn_name: "set_max_makers_per_token",
-        args: (5u32,).into_val(&s.env),
-        sub_invokes: &[],
-    };
-    let cap_auths = [MockAuth {
-        address: &attacker,
-        invoke: &cap_invoke,
-    }];
-    let r2 = s.client.mock_auths(&cap_auths).try_set_max_makers_per_token(&5);
-    assert!(
-        r2.is_err(),
-        "set_max_makers_per_token must reject a non-admin caller"
-    );
+    for (fn_name, args) in calls.iter() {
+        let invoke = MockAuthInvoke {
+            contract: &s.contract_id,
+            fn_name,
+            args: args.clone(),
+            sub_invokes: &[],
+        };
+        let auths = [MockAuth {
+            address: &attacker,
+            invoke: &invoke,
+        }];
+        // Only the attacker's authorization is present, so the contract's
+        // `admin.require_auth()` (inside `require_admin`) finds nothing that
+        // matches the real admin.
+        let r: Result<(), ()> = match *fn_name {
+            "set_costs" => s
+                .client
+                .mock_auths(&auths)
+                .try_set_costs(&2_000_000_000, &200_000_000)
+                .map(|_| ())
+                .map_err(|_| ()),
+            _ => s
+                .client
+                .mock_auths(&auths)
+                .try_set_max_makers_per_token(&5)
+                .map(|_| ())
+                .map_err(|_| ()),
+        };
+        assert!(r.is_err(), "{} must reject a non-admin caller", fn_name);
+    }
 
     let cfg = s.client.get_config();
     assert_eq!(cfg.base_cost, BASE_COST);
@@ -1084,4 +1098,316 @@ fn lowering_live_cap_does_not_evict_but_blocks_new_additions() {
     s.client.remove_tokens(&m2, &soroban_sdk::vec![&s.env, t.clone()]);
     assert_eq!(s.st.balance(&m2), m2_before + PER_TOKEN_COST);
     assert_eq!(s.client.get_urls_for_token(&t).len(), 0);
+}
+
+// --- REG-03 security surface: auth rejection tables, events, no-auth reads
+
+#[test]
+fn maker_facing_mutations_reject_non_maker_auth() {
+    // Table-driven, mirroring rfq_swap's admin_functions_reject_non_admin
+    // shape. The attacker is funded generously (CLAUDE.md's fund-every-actor
+    // rule): a rejection here must come from `maker.require_auth()` finding
+    // no matching signer, never from an empty balance.
+    let s = setup();
+    let attacker = Address::generate(&s.env);
+    let st_admin = token::StellarAssetClient::new(&s.env, &s.stake_token);
+    st_admin.mint(&attacker, &(BASE_COST * 10));
+    assert!(s.st.balance(&attacker) >= s.st.balance(&s.maker));
+
+    // Register real state behind every call: an unregistered maker would
+    // fail every one of these with NotRegistered regardless of who signs,
+    // which would prove nothing about the auth check.
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let t = token_addr(&s.env);
+    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
+
+    let url2 = url_str(&s.env, "https://maker.example/quote-v2");
+    let tokens_vec = soroban_sdk::vec![&s.env, t.clone()];
+    let protocols_vec = soroban_sdk::vec![&s.env, 1u32];
+
+    let calls: [(&str, soroban_sdk::Vec<soroban_sdk::Val>); 6] = [
+        ("set_url", (s.maker.clone(), url2.clone()).into_val(&s.env)),
+        (
+            "add_tokens",
+            (s.maker.clone(), tokens_vec.clone()).into_val(&s.env),
+        ),
+        (
+            "remove_tokens",
+            (s.maker.clone(), tokens_vec.clone()).into_val(&s.env),
+        ),
+        (
+            "add_protocols",
+            (s.maker.clone(), protocols_vec.clone()).into_val(&s.env),
+        ),
+        (
+            "remove_protocols",
+            (s.maker.clone(), protocols_vec.clone()).into_val(&s.env),
+        ),
+        ("eject", (s.maker.clone(),).into_val(&s.env)),
+    ];
+
+    for (fn_name, args) in calls.iter() {
+        let invoke = MockAuthInvoke {
+            contract: &s.contract_id,
+            fn_name,
+            args: args.clone(),
+            sub_invokes: &[],
+        };
+        let auths = [MockAuth {
+            address: &attacker,
+            invoke: &invoke,
+        }];
+        // Only the attacker's authorization is present; `maker.require_auth()`
+        // finds nothing that matches `s.maker` and the call must fail.
+        let r: Result<(), ()> = match *fn_name {
+            "set_url" => s
+                .client
+                .mock_auths(&auths)
+                .try_set_url(&s.maker, &url2)
+                .map(|_| ())
+                .map_err(|_| ()),
+            "add_tokens" => s
+                .client
+                .mock_auths(&auths)
+                .try_add_tokens(&s.maker, &tokens_vec)
+                .map(|_| ())
+                .map_err(|_| ()),
+            "remove_tokens" => s
+                .client
+                .mock_auths(&auths)
+                .try_remove_tokens(&s.maker, &tokens_vec)
+                .map(|_| ())
+                .map_err(|_| ()),
+            "add_protocols" => s
+                .client
+                .mock_auths(&auths)
+                .try_add_protocols(&s.maker, &protocols_vec)
+                .map(|_| ())
+                .map_err(|_| ()),
+            "remove_protocols" => s
+                .client
+                .mock_auths(&auths)
+                .try_remove_protocols(&s.maker, &protocols_vec)
+                .map(|_| ())
+                .map_err(|_| ()),
+            _ => s
+                .client
+                .mock_auths(&auths)
+                .try_eject(&s.maker)
+                .map(|_| ())
+                .map_err(|_| ()),
+        };
+        assert!(r.is_err(), "{} must reject a non-maker auth", fn_name);
+    }
+
+    // Every one of the six rejected calls left the victim's state untouched.
+    let cfg = s.client.get_maker(&s.maker);
+    assert_eq!(cfg.url, url_str(&s.env, "https://maker.example/quote"));
+    assert_eq!(cfg.tokens.len(), 1);
+    assert_eq!(cfg.protocols.len(), 1);
+}
+
+#[test]
+fn read_only_calls_succeed_with_no_auth_mocked_and_emit_no_events() {
+    // "Succeeds with no auth mocked" is taken literally: this Env never
+    // calls `mock_all_auths()`. Every call that DOES need auth (mint,
+    // set_url) is scoped to exactly that one invocation via `mock_auths`, so
+    // the three read-only calls at the end run with zero auths present. If
+    // any of them secretly called `require_auth`, they would fail here.
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let maker = Address::generate(&env);
+    let (stake_token, _st, st_admin) = make_token(&env, &admin);
+
+    let contract_id = env.register(RfqRegistry, ());
+    let client = RfqRegistryClient::new(&env, &contract_id);
+
+    // `initialize` calls no `require_auth` at all -- whoever calls it first
+    // becomes admin -- so it needs no mocked auth whatsoever.
+    client.initialize(
+        &admin,
+        &stake_token,
+        &BASE_COST,
+        &PER_TOKEN_COST,
+        &MAX_MAKERS_PER_TOKEN,
+    );
+
+    let mint_amount = BASE_COST + PER_TOKEN_COST;
+    let mint_invoke = MockAuthInvoke {
+        contract: &stake_token,
+        fn_name: "mint",
+        args: (maker.clone(), mint_amount).into_val(&env),
+        sub_invokes: &[],
+    };
+    st_admin
+        .mock_auths(&[MockAuth {
+            address: &admin,
+            invoke: &mint_invoke,
+        }])
+        .mint(&maker, &mint_amount);
+
+    let url = url_str(&env, "https://maker.example/quote");
+    let transfer_sub = [MockAuthInvoke {
+        contract: &stake_token,
+        fn_name: "transfer",
+        args: (maker.clone(), contract_id.clone(), BASE_COST).into_val(&env),
+        sub_invokes: &[],
+    }];
+    let set_url_invoke = MockAuthInvoke {
+        contract: &contract_id,
+        fn_name: "set_url",
+        args: (maker.clone(), url.clone()).into_val(&env),
+        sub_invokes: &transfer_sub,
+    };
+    client
+        .mock_auths(&[MockAuth {
+            address: &maker,
+            invoke: &set_url_invoke,
+        }])
+        .set_url(&maker, &url);
+
+    // The three read-only calls: no `mock_auths` call at all on this Env.
+    let cfg = client.get_config();
+    assert_eq!(cfg.admin, admin);
+
+    let m = client.get_maker(&maker);
+    assert_eq!(m.url, url);
+
+    let urls = client.get_urls_for_token(&Address::generate(&env));
+    assert_eq!(urls.len(), 0);
+
+    // None of the three reads produced a contract event of their own. (The
+    // window only covers the LAST invocation -- get_urls_for_token -- but
+    // that is exactly the point: even the last of the three emits nothing.)
+    let events = env.events().all();
+    assert_eq!(events.events().len(), 0);
+}
+
+// --- event-per-state-transition (one test per emitted event type) --------
+
+#[test]
+fn set_url_first_call_emits_maker_registered() {
+    let s = setup();
+    let url = url_str(&s.env, "https://maker.example/quote");
+    s.client.set_url(&s.maker, &url);
+
+    let expected = MakerRegistered {
+        maker: s.maker.clone(),
+        url: url.clone(),
+        staked: BASE_COST,
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+}
+
+#[test]
+fn set_url_second_call_emits_url_updated() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+
+    let url2 = url_str(&s.env, "https://maker.example/quote-v2");
+    s.client.set_url(&s.maker, &url2);
+
+    let expected = UrlUpdated {
+        maker: s.maker.clone(),
+        url: url2,
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+}
+
+#[test]
+fn add_tokens_emits_tokens_added() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let t = token_addr(&s.env);
+    let tokens = soroban_sdk::vec![&s.env, t.clone()];
+    s.client.add_tokens(&s.maker, &tokens);
+
+    let expected = TokensAdded {
+        maker: s.maker.clone(),
+        tokens: tokens.clone(),
+        cost: PER_TOKEN_COST,
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+}
+
+#[test]
+fn remove_tokens_emits_tokens_removed() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let t = token_addr(&s.env);
+    let tokens = soroban_sdk::vec![&s.env, t.clone()];
+    s.client.add_tokens(&s.maker, &tokens);
+
+    s.client.remove_tokens(&s.maker, &tokens);
+
+    let expected = TokensRemoved {
+        maker: s.maker.clone(),
+        tokens: tokens.clone(),
+        refund: PER_TOKEN_COST,
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+}
+
+#[test]
+fn add_protocols_emits_protocols_added() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let protocols = soroban_sdk::vec![&s.env, 1u32];
+    s.client.add_protocols(&s.maker, &protocols);
+
+    let expected = ProtocolsAdded {
+        maker: s.maker.clone(),
+        protocols: protocols.clone(),
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+}
+
+#[test]
+fn remove_protocols_emits_protocols_removed() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let protocols = soroban_sdk::vec![&s.env, 1u32];
+    s.client.add_protocols(&s.maker, &protocols);
+
+    s.client.remove_protocols(&s.maker, &protocols);
+
+    let expected = ProtocolsRemoved {
+        maker: s.maker.clone(),
+        protocols: protocols.clone(),
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+}
+
+#[test]
+fn eject_emits_maker_ejected() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client.eject(&s.maker);
+
+    let expected = MakerEjected {
+        maker: s.maker.clone(),
+        refunded: BASE_COST,
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
 }
