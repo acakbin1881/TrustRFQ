@@ -191,6 +191,23 @@ pub struct ProtocolsRemoved {
     pub protocols: Vec<u32>,
 }
 
+/// Admin retuned the spam-price knobs. Applies to future stake movements
+/// only; `MakerConfig.staked` is the frozen source of refund truth for
+/// everyone already registered (D-04, T-01-22).
+#[contractevent(topics = ["set_cost"], data_format = "vec")]
+pub struct CostsSet {
+    pub base_cost: i128,
+    pub per_token_cost: i128,
+}
+
+/// Admin retuned the per-token maker-list ceiling. Never evicts an existing
+/// entry (D-04, T-01-21) -- `add_tokens` re-reads this value fresh on every
+/// call and only blocks NEW additions.
+#[contractevent(topics = ["set_max"], data_format = "vec")]
+pub struct MaxMakersSet {
+    pub max_makers_per_token: u32,
+}
+
 #[contract]
 pub struct RfqRegistry;
 
@@ -523,6 +540,58 @@ impl RfqRegistry {
         }
     }
 
+    // --- admin (spam-price tuning only; no path to escrowed stake) ---------
+    //
+    // These are the ONLY two admin entry points this contract has. No
+    // `withdraw`/`sweep`/`drain`/`upgrade`: the contract's SAC balance is
+    // maker stake held in escrow, and any of those would be a standing route
+    // for the admin to spend funds that are not the admin's (T-01-20, header
+    // comment above).
+
+    /// Retunes the spam price for FUTURE stake movements only. Existing
+    /// registrations are unaffected: `MakerConfig.staked` records what was
+    /// actually paid at the time it was paid, and every refund path
+    /// (`remove_tokens`, `eject`) reads that field, never a recomputation
+    /// from the current cost values (D-04, T-01-22).
+    pub fn set_costs(env: Env, base_cost: i128, per_token_cost: i128) -> Result<(), Error> {
+        require_admin(&env);
+        if base_cost <= 0 || per_token_cost <= 0 {
+            return Err(Error::InvalidCost);
+        }
+        let s = env.storage().instance();
+        s.set(&DataKey::BaseCost, &base_cost);
+        s.set(&DataKey::PerTokenCost, &per_token_cost);
+        bump_instance(&env);
+        CostsSet {
+            base_cost,
+            per_token_cost,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
+    /// Retunes how many makers may list the same token. D-04's no-eviction
+    /// rule lives at the `add_tokens` check site, which re-reads this value
+    /// fresh on every call (never a cached snapshot): lowering the cap below
+    /// a populated `Token(t)` list's length blocks only NEW additions, and
+    /// every already-registered maker on that list keeps working and keeps
+    /// its refund rights (T-01-21).
+    pub fn set_max_makers_per_token(env: Env, max_makers_per_token: u32) -> Result<(), Error> {
+        require_admin(&env);
+        if max_makers_per_token == 0 {
+            return Err(Error::InvalidCap);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::MaxMakersPerToken, &max_makers_per_token);
+        bump_instance(&env);
+        MaxMakersSet {
+            max_makers_per_token,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
     /// Full refund of `MakerConfig.staked` — never a slashed, rounded-down,
     /// or fee-deducted remainder (phase prohibition: stake is a spam price,
     /// not a bond). `maker` must authorize; the refund leg needs no
@@ -582,6 +651,10 @@ impl RfqRegistry {
 
 fn admin(env: &Env) -> Address {
     env.storage().instance().get(&DataKey::Admin).unwrap()
+}
+
+fn require_admin(env: &Env) {
+    admin(env).require_auth();
 }
 
 fn stake_token(env: &Env) -> Address {

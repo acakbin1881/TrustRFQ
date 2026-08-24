@@ -4,10 +4,10 @@
 // scope for `"a".repeat(...)` in the oversize-url test below.
 extern crate std;
 
-use crate::{Error, RfqRegistry, RfqRegistryClient};
+use crate::{CostsSet, Error, MaxMakersSet, RfqRegistry, RfqRegistryClient};
 use soroban_sdk::{
-    testutils::{Address as _, MockAuth, MockAuthInvoke},
-    token, Address, Env, IntoVal, String,
+    testutils::{Address as _, Events as _, MockAuth, MockAuthInvoke},
+    token, Address, Env, Event as _, IntoVal, String,
 };
 
 // --- coverage boundary (read before adding "missing" tests) ---------------
@@ -865,16 +865,11 @@ fn caps_are_independent_maker_at_own_cap_rejected_even_with_empty_token_lists() 
 #[test]
 fn lowering_cap_does_not_evict_existing_makers_but_blocks_new_additions() {
     // D-04: lowering `max_makers_per_token` never evicts; it only blocks NEW
-    // additions once a token's list is at/above the (now-lower) cap. The
-    // eviction half of this rule needs `set_max_makers_per_token`, which
-    // lands in Plan 01-03 — this test proves the shape against the cap
-    // passed to `initialize`, which is all that is available in this plan.
-    //
-    // TODO(01-03): once `set_max_makers_per_token` lands, extend this test to
-    // lower the cap on a LIVE instance after three makers are registered
-    // (rather than only at `initialize` time), and assert: all three survive,
-    // `get_urls_for_token` still returns three urls, and a fourth maker's
-    // `add_tokens` is rejected with `Err(Error::TokenListFull)`.
+    // additions once a token's list is at/above the (now-lower) cap. This is
+    // the `initialize`-time-cap half of the shape; the live-cap half (lower
+    // the cap on an already-populated list via `set_max_makers_per_token`) is
+    // proven by `lowering_live_cap_does_not_evict_but_blocks_new_additions`
+    // below.
     let s = setup_with_cap(3);
     let t = token_addr(&s.env);
     fill_token_list(&s, &t, 3);
@@ -907,4 +902,186 @@ fn maker_at_or_above_lowered_cap_can_still_remove_and_eject() {
     let m2 = makers.get(1).unwrap();
     s.client.eject(m2);
     assert_eq!(s.client.get_urls_for_token(&t).len(), 1);
+}
+
+// --- set_costs / set_max_makers_per_token (admin spam-price tuning) -------
+
+#[test]
+fn set_costs_updates_config_and_emits_event() {
+    let s = setup();
+    s.client.set_costs(&2_000_000_000, &200_000_000);
+
+    // `env.events().all()` only returns events from the LAST contract
+    // invocation, so capture it before any further call (e.g. get_config)
+    // resets the window.
+    let expected = CostsSet {
+        base_cost: 2_000_000_000,
+        per_token_cost: 200_000_000,
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+
+    let cfg = s.client.get_config();
+    assert_eq!(cfg.base_cost, 2_000_000_000);
+    assert_eq!(cfg.per_token_cost, 200_000_000);
+}
+
+#[test]
+fn set_max_makers_per_token_updates_config_and_emits_event() {
+    let s = setup();
+    s.client.set_max_makers_per_token(&5);
+
+    // See the comment in set_costs_updates_config_and_emits_event: capture
+    // events before any further contract call resets the window.
+    let expected = MaxMakersSet {
+        max_makers_per_token: 5,
+    }
+    .to_xdr(&s.env, &s.contract_id);
+    let events = s.env.events().all();
+    assert_eq!(events.events().last().unwrap(), &expected);
+
+    assert_eq!(s.client.get_config().max_makers_per_token, 5);
+}
+
+#[test]
+fn set_costs_rejects_non_positive_values_and_changes_nothing() {
+    let s = setup();
+    let before = s.client.get_config();
+
+    assert_eq!(
+        s.client.try_set_costs(&0, &PER_TOKEN_COST),
+        Err(Ok(Error::InvalidCost))
+    );
+    assert_eq!(
+        s.client.try_set_costs(&BASE_COST, &-1),
+        Err(Ok(Error::InvalidCost))
+    );
+
+    let after = s.client.get_config();
+    assert_eq!(after.base_cost, before.base_cost);
+    assert_eq!(after.per_token_cost, before.per_token_cost);
+}
+
+#[test]
+fn set_max_makers_per_token_rejects_zero_and_changes_nothing() {
+    let s = setup();
+    assert_eq!(
+        s.client.try_set_max_makers_per_token(&0),
+        Err(Ok(Error::InvalidCap))
+    );
+    assert_eq!(s.client.get_config().max_makers_per_token, MAX_MAKERS_PER_TOKEN);
+}
+
+#[test]
+fn set_costs_and_set_max_makers_per_token_reject_non_admin() {
+    let s = setup();
+    let attacker = Address::generate(&s.env);
+
+    let cost_invoke = MockAuthInvoke {
+        contract: &s.contract_id,
+        fn_name: "set_costs",
+        args: (2_000_000_000i128, 200_000_000i128).into_val(&s.env),
+        sub_invokes: &[],
+    };
+    let cost_auths = [MockAuth {
+        address: &attacker,
+        invoke: &cost_invoke,
+    }];
+    let r = s
+        .client
+        .mock_auths(&cost_auths)
+        .try_set_costs(&2_000_000_000, &200_000_000);
+    assert!(r.is_err(), "set_costs must reject a non-admin caller");
+
+    let cap_invoke = MockAuthInvoke {
+        contract: &s.contract_id,
+        fn_name: "set_max_makers_per_token",
+        args: (5u32,).into_val(&s.env),
+        sub_invokes: &[],
+    };
+    let cap_auths = [MockAuth {
+        address: &attacker,
+        invoke: &cap_invoke,
+    }];
+    let r2 = s.client.mock_auths(&cap_auths).try_set_max_makers_per_token(&5);
+    assert!(
+        r2.is_err(),
+        "set_max_makers_per_token must reject a non-admin caller"
+    );
+
+    let cfg = s.client.get_config();
+    assert_eq!(cfg.base_cost, BASE_COST);
+    assert_eq!(cfg.per_token_cost, PER_TOKEN_COST);
+    assert_eq!(cfg.max_makers_per_token, MAX_MAKERS_PER_TOKEN);
+}
+
+#[test]
+fn raising_base_cost_does_not_change_an_existing_makers_refund() {
+    // T-01-22: a cost retune must never change what an already-registered
+    // maker is refunded. `eject`/`remove_tokens` read `MakerConfig.staked`,
+    // never a recomputation from the current cost, so the ORIGINAL amount
+    // paid comes back even after the admin doubles the price.
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let maker_before_retune = s.st.balance(&s.maker);
+
+    s.client.set_costs(&(BASE_COST * 2), &PER_TOKEN_COST);
+    assert_eq!(s.client.get_config().base_cost, BASE_COST * 2);
+
+    s.client.eject(&s.maker);
+
+    // Refunded exactly the ORIGINAL base_cost, not the new, higher one.
+    assert_eq!(s.st.balance(&s.maker), maker_before_retune + BASE_COST);
+}
+
+#[test]
+fn lowering_live_cap_does_not_evict_but_blocks_new_additions() {
+    // D-04's no-eviction rule, proven against a cap lowered on a LIVE
+    // instance (not just the cap passed to `initialize`): three makers
+    // register under a cap of 3, the admin lowers the cap to 2, and all
+    // three survive with full discovery + refund rights; only a fourth
+    // maker's growth is blocked.
+    let s = setup_with_cap(3);
+    let t = token_addr(&s.env);
+    let makers = fill_token_list(&s, &t, 3);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 3);
+
+    s.client.set_max_makers_per_token(&2);
+    assert_eq!(s.client.get_config().max_makers_per_token, 2);
+
+    // All three still resolve, in the same order.
+    let urls = s.client.get_urls_for_token(&t);
+    assert_eq!(urls.len(), 3);
+
+    // A fourth maker's growth is now rejected, funds untouched.
+    let fourth = register_new_maker(&s, 1, "https://fourth.example/quote");
+    let fourth_balance_before = s.st.balance(&fourth);
+    let r = s
+        .client
+        .try_add_tokens(&fourth, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(r, Err(Ok(Error::TokenListFull)));
+    assert_eq!(s.st.balance(&fourth), fourth_balance_before);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 3);
+
+    // Every one of the three original entrants still works normally:
+    // remove_tokens and eject both succeed with correct refunds.
+    let m0 = makers.first().unwrap();
+    let m0_before = s.st.balance(m0);
+    s.client.remove_tokens(m0, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(s.st.balance(m0), m0_before + PER_TOKEN_COST);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 2);
+
+    let m1 = makers.get(1).unwrap();
+    let m1_before = s.st.balance(&m1);
+    let m1_staked = s.client.get_maker(&m1).staked;
+    s.client.eject(&m1);
+    assert_eq!(s.st.balance(&m1), m1_before + m1_staked);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 1);
+
+    let m2 = makers.get(2).unwrap();
+    let m2_before = s.st.balance(&m2);
+    s.client.remove_tokens(&m2, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(s.st.balance(&m2), m2_before + PER_TOKEN_COST);
+    assert_eq!(s.client.get_urls_for_token(&t).len(), 0);
 }
