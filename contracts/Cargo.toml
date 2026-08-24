@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["otc_swap", "rfq_swap"]
+members = ["otc_swap", "rfq_swap", "rfq_registry"]
 
 [workspace.dependencies]
 soroban-sdk = "26"

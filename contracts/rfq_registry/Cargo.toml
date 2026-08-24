@@ -1,0 +1,19 @@
+[package]
+name = "rfq_registry"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+
+# NOTE: `[profile.release]` intentionally lives in the workspace root manifest
+# (../Cargo.toml). Cargo ignores profile blocks in member crates, so a copy here
+# would be silently dead and the wasm would build unoptimized.
