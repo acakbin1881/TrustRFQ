@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_phase_name: On-Chain Maker Discovery
+current_phase: 01
+current_phase_name: on-chain-maker-discovery
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-08-20T17:17:13.294Z"
-last_activity: 2026-08-19
-last_activity_desc: Project initialized from docs ingest (PROJECT.md, REQUIREMENTS.md,
+stopped_at: Completed 01-01-PLAN.md (rfq_registry tracer slice deployed and proven on Testnet)
+last_updated: "2026-08-24T12:43:18.754Z"
+last_activity: 2026-08-24
+last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
@@ -24,14 +24,14 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Two parties settle exactly the terms that were signed: atomic on-chain settlement
 where a signature over the full economic terms is the integrity boundary.
-**Current focus:** Phase 1: On-Chain Maker Discovery (rfq_registry)
+**Current focus:** Phase 01 — on-chain-maker-discovery
 
 ## Current Position
 
-Phase: 1 of 4 (On-Chain Maker Discovery)
-Plan: 0 of TBD in current phase
+Phase: 01 (on-chain-maker-discovery) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-08-19 - Project initialized from docs ingest (PROJECT.md, REQUIREMENTS.md,
+Last activity: 2026-08-24 — Phase 01 execution started
 ROADMAP.md created; 14 v1 requirements mapped across 4 phases)
 
 Progress: [░░░░░░░░░░] 0%
@@ -49,6 +49,11 @@ Progress: [░░░░░░░░░░] 0%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | - | - | - | - |
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 86 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -60,6 +65,8 @@ Recent decisions affecting current work:
 - RFQ-D1+D2: auth-entry-native settlement, taker as tx source (proven on Testnet 2026-08-18)
 - RFQ-D7: registry stakes native XLM, admin-tunable costs, bounded per-token lists (Phase 1 scope)
 - RFQ-D10: broadcast/intent layer stays live until the RFQ protocol ships (Phase 4 gate)
+- [Phase ?]: rfq_registry deployed on Testnet at CCJDJKXBZRVYOB2QD4A6UYNJRGNC27I6TZLC22DXNYHQXWXDIO6FYYM6 (wasm 822722d2...); otc_swap wasm hash 83f60b85... unmoved after third workspace member
+- [Phase ?]: Finding: Testnet's STATE_ARCHIVAL minPersistentTTL (120,960 ledgers) already exceeds rfq_registry's PERSISTENT_TTL_THRESHOLD (17,280) on entry creation, so bump_maker's extend_ttl is a correct no-op on first write, not a bug
 
 ### Pending Todos
 
@@ -88,6 +95,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-08-19T16:31:30.101Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-on-chain-maker-discovery/01-CONTEXT.md
+Last session: 2026-08-24T12:43:18.745Z
+Stopped at: Completed 01-01-PLAN.md (rfq_registry tracer slice deployed and proven on Testnet)
+Resume file: None
