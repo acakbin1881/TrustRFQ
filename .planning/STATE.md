@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: on-chain-maker-discovery
 status: executing
-stopped_at: Completed 01-01-PLAN.md (rfq_registry tracer slice deployed and proven on Testnet)
-last_updated: "2026-08-24T12:43:18.754Z"
+stopped_at: Completed 01-02-PLAN.md (token/protocol discovery on rfq_registry, both caps mutation-verified)
+last_updated: "2026-08-24T12:56:52.472Z"
 last_activity: 2026-08-24
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 2
 ---
 
 # Project State
@@ -29,12 +29,12 @@ where a signature over the full economic terms is the integrity boundary.
 ## Current Position
 
 Phase: 01 (on-chain-maker-discovery) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-24 — Phase 01 execution started
 ROADMAP.md created; 14 v1 requirements mapped across 4 phases)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 86 min | 2 tasks | 5 files |
+| Phase 01 P02 | 1 session | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,7 @@ Recent decisions affecting current work:
 - RFQ-D10: broadcast/intent layer stays live until the RFQ protocol ships (Phase 4 gate)
 - [Phase ?]: rfq_registry deployed on Testnet at CCJDJKXBZRVYOB2QD4A6UYNJRGNC27I6TZLC22DXNYHQXWXDIO6FYYM6 (wasm 822722d2...); otc_swap wasm hash 83f60b85... unmoved after third workspace member
 - [Phase ?]: Finding: Testnet's STATE_ARCHIVAL minPersistentTTL (120,960 ledgers) already exceeds rfq_registry's PERSISTENT_TTL_THRESHOLD (17,280) on entry creation, so bump_maker's extend_ttl is a correct no-op on first write, not a bug
+- [Phase ?]: rfq_registry: both list-bound caps (fixed per-maker constant, admin-tunable per-token ceiling) proven independent by mutation testing
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-08-24T12:43:18.745Z
-Stopped at: Completed 01-01-PLAN.md (rfq_registry tracer slice deployed and proven on Testnet)
+Last session: 2026-08-24T12:56:52.462Z
+Stopped at: Completed 01-02-PLAN.md (token/protocol discovery on rfq_registry, both caps mutation-verified)
 Resume file: None

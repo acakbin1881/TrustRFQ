@@ -18,16 +18,18 @@ Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` 
 
 ### Registry (rfq_registry contract)
 
-- [ ] **REG-01**: A maker can register and manage itself in the stake-gated `rfq_registry` phone
+- [x] **REG-01**: A maker can register and manage itself in the stake-gated `rfq_registry` phone
   book: `initialize(admin, stake_token, base_cost, per_token_cost, max_makers_per_token)`,
   `set_url` (stakes `base_cost` on first call), `add_tokens`/`remove_tokens` (`per_token_cost`
   stake/refund), `add_protocols`, `eject` (full unwind + refund), `get_urls_for_token`,
   `get_maker` (spec §5)
-- [ ] **REG-02**: Registry storage follows the spec's bounded, persistent layout: stake asset is
+
+- [x] **REG-02**: Registry storage follows the spec's bounded, persistent layout: stake asset is
   native XLM via its SAC; costs admin-tunable; `Token(Address) -> Vec<Address>` capped at
   `max_makers_per_token` plus `Maker(Address) -> MakerConfig`, both persistent, TTL bumped on
   every write; all lists explicitly bounded; no contract-side extend function; pair intersection
   stays client-side
+
 - [ ] **REG-03**: `rfq_registry` is deployed on Testnet with unit tests (un-mocked auth trees
   where meaningful, security checklist from spec §7.6: re-init guard, events on state
   transitions) and a live Testnet integration check that exercises registration, discovery, and
@@ -46,20 +48,25 @@ Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` 
 - [ ] **TAKER-01**: The desk discovers maker URLs for the selected pair via two
   `get_urls_for_token` read-only simulations and client-side intersection (registry reads use the
   already-allowed RPC origin)
+
 - [ ] **TAKER-02**: The desk fans out `getMakerSideOrder` (Stellar RFQ v1: JSON-RPC 2.0, AirSwap
   wire shapes and error codes) to discovered makers in parallel with a 2-3s timeout, dropping
   malformed responses
+
 - [ ] **TAKER-03**: The desk validates and selects quotes locally before any wallet interaction:
   economics match the request, `feeBps` equals the on-chain `get_config` value, sane
   expiry/`signatureExpirationLedger`, and the decoded `authEntry` invocation tree matches the
   order terms
+
 - [ ] **TAKER-04**: Accepting a quote settles via one ordinary Freighter `signTransaction`: the
   taker's G-account is tx source with the maker's `authEntry` attached, enforcing simulate +
   `assembleTransaction`, submit + poll, confirmation via `getTransaction` plus the swap event; no
   wallet `signAuthEntry` on the taker path
+
 - [ ] **TAKER-05**: Trustline pre-flight with an "add trustline" prompt before settlement; an
   expired-entry failure auto-refreshes the quote and retries once; tokens resolve only from the
   curated allow-list (`src/core/tokens.ts`), never raw user-pasted addresses
+
 - [ ] **TAKER-06**: The RFQ canonical order encoding is deterministic and pinned with golden
   vectors (same discipline as `fillCanonicalArgs`), under `src/` so vitest covers it
 
@@ -74,6 +81,7 @@ Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` 
 - [ ] **E2E-01**: `tools/e2e/` is extended with a local stub maker (a quote server signing real
   auth entries) and a taker driver covering the full RFQ quote flow through the mock Freighter,
   settling for real on Testnet (intermediate verification while the real maker server is absent)
+
 - [ ] **E2E-02**: LIVE FULL LOOP (milestone gate): the desk taker discovers a registered maker via
   `rfq_registry`, receives a live quote from the maker's own server (separate repo), and settles
   it on Testnet end-to-end, with the run recorded (maker address, registry entry, tx hash)
@@ -125,8 +133,8 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REG-01 | Phase 1 | Pending |
-| REG-02 | Phase 1 | Pending |
+| REG-01 | Phase 1 | Complete |
+| REG-02 | Phase 1 | Complete |
 | REG-03 | Phase 1 | Pending |
 | CFG-01 | Phase 1 | Pending |
 | TAKER-01 | Phase 2 | Pending |
@@ -142,6 +150,7 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | SWAP-01 | (none: pre-satisfied) | Complete (2026-08-18) |
 
 **Coverage:**
+
 - v1 schedulable requirements: 14 total
 - Mapped to phases: 14
 - Unmapped: 0 ✓
