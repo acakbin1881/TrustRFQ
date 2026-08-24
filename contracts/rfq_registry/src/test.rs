@@ -548,6 +548,132 @@ fn failing_multi_token_add_tokens_leaves_state_untouched() {
     assert_eq!(s.client.get_urls_for_token(&t_new).len(), 0);
 }
 
+// --- add_protocols / remove_protocols --------------------------------------
+//
+// Stake-free mirror of the token functions (D-08). Note (RESEARCH.md Open
+// Question 2): D-05 itself only names the token functions; applying the same
+// strict duplicate semantics here is a planner decision, recorded in the doc
+// comment above `add_protocols` in lib.rs, not a user-locked requirement.
+
+#[test]
+fn add_protocols_and_remove_protocols_move_no_stake() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+
+    let maker_before = s.st.balance(&s.maker);
+    let contract_before = s.st.balance(&s.contract_id);
+    let staked_before = s.client.get_maker(&s.maker).staked;
+
+    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32, 2u32]);
+    let cfg = s.client.get_maker(&s.maker);
+    assert_eq!(cfg.protocols.len(), 2);
+    assert_eq!(cfg.staked, staked_before);
+    assert_eq!(s.st.balance(&s.maker), maker_before);
+    assert_eq!(s.st.balance(&s.contract_id), contract_before);
+
+    s.client.remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
+    let cfg = s.client.get_maker(&s.maker);
+    assert_eq!(cfg.protocols.len(), 1);
+    assert_eq!(cfg.protocols.get(0).unwrap(), 2u32);
+    // Byte-identical staked/balances across a matched add+remove pair.
+    assert_eq!(cfg.staked, staked_before);
+    assert_eq!(s.st.balance(&s.maker), maker_before);
+    assert_eq!(s.st.balance(&s.contract_id), contract_before);
+}
+
+#[test]
+fn add_protocols_rejects_duplicate_and_intra_call_duplicate() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
+
+    let r = s
+        .client
+        .try_add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
+    assert_eq!(r, Err(Ok(Error::ProtocolAlreadyAdded)));
+
+    let r2 = s
+        .client
+        .try_add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 2u32, 2u32]);
+    assert_eq!(r2, Err(Ok(Error::ProtocolAlreadyAdded)));
+
+    let cfg = s.client.get_maker(&s.maker);
+    assert_eq!(cfg.protocols.len(), 1);
+}
+
+#[test]
+fn remove_protocols_rejects_not_present() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let r = s
+        .client
+        .try_remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 9u32]);
+    assert_eq!(r, Err(Ok(Error::ProtocolNotFound)));
+}
+
+#[test]
+fn protocols_reject_empty_input_and_unregistered() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let empty: soroban_sdk::Vec<u32> = soroban_sdk::vec![&s.env];
+    assert_eq!(
+        s.client.try_add_protocols(&s.maker, &empty),
+        Err(Ok(Error::EmptyInput))
+    );
+    assert_eq!(
+        s.client.try_remove_protocols(&s.maker, &empty),
+        Err(Ok(Error::EmptyInput))
+    );
+
+    let stranger = Address::generate(&s.env);
+    assert_eq!(
+        s.client
+            .try_add_protocols(&stranger, &soroban_sdk::vec![&s.env, 1u32]),
+        Err(Ok(Error::NotRegistered))
+    );
+    assert_eq!(
+        s.client
+            .try_remove_protocols(&stranger, &soroban_sdk::vec![&s.env, 1u32]),
+        Err(Ok(Error::NotRegistered))
+    );
+}
+
+#[test]
+fn add_protocols_caps_at_eight_per_maker() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let seven: soroban_sdk::Vec<u32> =
+        soroban_sdk::vec![&s.env, 1, 2, 3, 4, 5, 6, 7];
+    s.client.add_protocols(&s.maker, &seven);
+    assert_eq!(s.client.get_maker(&s.maker).protocols.len(), 7);
+
+    // 7 -> 8 succeeds.
+    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 8u32]);
+    assert_eq!(s.client.get_maker(&s.maker).protocols.len(), 8);
+
+    // 8 -> 9th rejected.
+    let r = s
+        .client
+        .try_add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 9u32]);
+    assert_eq!(r, Err(Ok(Error::TooManyProtocols)));
+    assert_eq!(s.client.get_maker(&s.maker).protocols.len(), 8);
+}
+
+#[test]
+fn remove_protocols_preserves_order_of_survivors() {
+    let s = setup();
+    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32, 2u32, 3u32]);
+
+    s.client.remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 2u32]);
+
+    let cfg = s.client.get_maker(&s.maker);
+    assert_eq!(cfg.protocols.len(), 2);
+    assert_eq!(cfg.protocols.get(0).unwrap(), 1u32);
+    assert_eq!(cfg.protocols.get(1).unwrap(), 3u32);
+}
+
 #[test]
 fn get_urls_for_token_resolves_twenty_makers_in_insertion_order() {
     let s = setup();
