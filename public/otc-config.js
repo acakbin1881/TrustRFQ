@@ -48,4 +48,16 @@ window.RFQ_SWAP_CONTRACT_ID = 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6
 //     initialize --admin GB3WSGXR5GBMJ7HSBWTBWSWGI3A5AJGD4Y254XBI2P6AKS5N2VIXV7HI \
 //     --stake-token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC \
 //     --base-cost 1000000000 --per-token-cost 100000000 --max-makers-per-token 100
+//
+// CR-01 (code review, 2026-08-26 fix): `initialize` now calls
+// `admin.require_auth()`, so the two-step gap above is no longer a "whoever
+// calls first becomes admin" race -- but it is still a race an attacker
+// could try to WIN by naming and signing for THEMSELVES between `deploy` and
+// your own `initialize` call (the re-init guard would then make that
+// permanent). Before pasting a freshly deployed id into this file:
+//   stellar contract invoke --id <NEW ID> --source-account deployer --network testnet -- \
+//     get_config
+// and confirm `admin` reads back as the intended deployer address BEFORE
+// publishing the id here. If it doesn't match, the instance is compromised
+// and unrecoverable (no `upgrade` entry point by design) -- redeploy fresh.
 window.RFQ_REGISTRY_ID = 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';

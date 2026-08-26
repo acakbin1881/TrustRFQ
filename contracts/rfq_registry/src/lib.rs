@@ -226,6 +226,16 @@ impl RfqRegistry {
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(Error::AlreadyInitialized);
         }
+        // CR-01: close the "front-run the initializer" window. The caller
+        // must be able to sign for the account it names as admin, so an
+        // outsider cannot install the INTENDED admin's own address while
+        // impersonating them -- they would need that address's signature,
+        // which they don't have. This does not fully close front-running
+        // (an attacker can still race `initialize` naming and signing for
+        // ITSELF), but it removes the specific, unrecoverable "victim's own
+        // address becomes permanently locked out" attack, since the re-init
+        // guard above makes any successful `initialize` irreversible.
+        admin.require_auth();
         if base_cost <= 0 || per_token_cost <= 0 {
             return Err(Error::InvalidCost);
         }

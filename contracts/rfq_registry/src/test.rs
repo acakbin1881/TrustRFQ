@@ -228,6 +228,83 @@ fn initialize_rejects_zero_cap() {
     );
 }
 
+#[test]
+fn initialize_rejects_caller_who_cannot_sign_for_the_named_admin() {
+    // CR-01: a front-runner must not be able to install the INTENDED admin's
+    // own address while impersonating them. Only the attacker's own
+    // authorization is present -- `admin.require_auth()` finds nothing that
+    // matches `intended_admin`, so the call must fail and the instance must
+    // stay uninitialized (a later, properly authorized call still succeeds).
+    let env = Env::default();
+    let intended_admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let stake_token = Address::generate(&env);
+    let contract_id = env.register(RfqRegistry, ());
+    let client = RfqRegistryClient::new(&env, &contract_id);
+
+    let invoke = MockAuthInvoke {
+        contract: &contract_id,
+        fn_name: "initialize",
+        args: (
+            intended_admin.clone(),
+            stake_token.clone(),
+            BASE_COST,
+            PER_TOKEN_COST,
+            MAX_MAKERS_PER_TOKEN,
+        )
+            .into_val(&env),
+        sub_invokes: &[],
+    };
+    let auths = [MockAuth {
+        address: &attacker,
+        invoke: &invoke,
+    }];
+    let r: Result<(), ()> = client
+        .mock_auths(&auths)
+        .try_initialize(
+            &intended_admin,
+            &stake_token,
+            &BASE_COST,
+            &PER_TOKEN_COST,
+            &MAX_MAKERS_PER_TOKEN,
+        )
+        .map(|_| ())
+        .map_err(|_| ());
+    assert!(
+        r.is_err(),
+        "initialize must reject a caller who cannot sign for the named admin"
+    );
+
+    // Still uninitialized: the intended admin's own, properly authorized
+    // call now succeeds.
+    let invoke2 = MockAuthInvoke {
+        contract: &contract_id,
+        fn_name: "initialize",
+        args: (
+            intended_admin.clone(),
+            stake_token.clone(),
+            BASE_COST,
+            PER_TOKEN_COST,
+            MAX_MAKERS_PER_TOKEN,
+        )
+            .into_val(&env),
+        sub_invokes: &[],
+    };
+    client
+        .mock_auths(&[MockAuth {
+            address: &intended_admin,
+            invoke: &invoke2,
+        }])
+        .initialize(
+            &intended_admin,
+            &stake_token,
+            &BASE_COST,
+            &PER_TOKEN_COST,
+            &MAX_MAKERS_PER_TOKEN,
+        );
+    assert_eq!(client.get_config().admin, intended_admin);
+}
+
 // --- set_url / registration lifecycle --------------------------------------
 
 #[test]
@@ -1239,15 +1316,34 @@ fn read_only_calls_succeed_with_no_auth_mocked_and_emit_no_events() {
     let contract_id = env.register(RfqRegistry, ());
     let client = RfqRegistryClient::new(&env, &contract_id);
 
-    // `initialize` calls no `require_auth` at all -- whoever calls it first
-    // becomes admin -- so it needs no mocked auth whatsoever.
-    client.initialize(
-        &admin,
-        &stake_token,
-        &BASE_COST,
-        &PER_TOKEN_COST,
-        &MAX_MAKERS_PER_TOKEN,
-    );
+    // CR-01: `initialize` now requires `admin.require_auth()`, so this call
+    // needs a mocked auth for `admin` even though nothing else in this Env
+    // has called `mock_all_auths()`.
+    let init_invoke = MockAuthInvoke {
+        contract: &contract_id,
+        fn_name: "initialize",
+        args: (
+            admin.clone(),
+            stake_token.clone(),
+            BASE_COST,
+            PER_TOKEN_COST,
+            MAX_MAKERS_PER_TOKEN,
+        )
+            .into_val(&env),
+        sub_invokes: &[],
+    };
+    client
+        .mock_auths(&[MockAuth {
+            address: &admin,
+            invoke: &init_invoke,
+        }])
+        .initialize(
+            &admin,
+            &stake_token,
+            &BASE_COST,
+            &PER_TOKEN_COST,
+            &MAX_MAKERS_PER_TOKEN,
+        );
 
     let mint_amount = BASE_COST + PER_TOKEN_COST;
     let mint_invoke = MockAuthInvoke {
