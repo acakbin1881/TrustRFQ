@@ -274,6 +274,17 @@ impl RfqRegistry {
             None => {
                 let cost = base_cost(&env);
                 let contract_addr = env.current_contract_address();
+                // WR-01: checks-effects-interactions, matching
+                // `remove_tokens`/`eject` — write the new `MakerConfig`
+                // BEFORE the external token transfer, not after.
+                let cfg = MakerConfig {
+                    url: url.clone(),
+                    protocols: Vec::new(&env),
+                    tokens: Vec::new(&env),
+                    staked: cost,
+                };
+                env.storage().persistent().set(&key, &cfg);
+                bump_maker(&env, &key);
                 // `maker.require_auth()` above authorizes this sub-invocation:
                 // one `require_auth()` per address per top-level call covers
                 // every sub-invocation that address makes, including the
@@ -283,14 +294,6 @@ impl RfqRegistry {
                     &contract_addr,
                     &cost,
                 );
-                let cfg = MakerConfig {
-                    url: url.clone(),
-                    protocols: Vec::new(&env),
-                    tokens: Vec::new(&env),
-                    staked: cost,
-                };
-                env.storage().persistent().set(&key, &cfg);
-                bump_maker(&env, &key);
                 MakerRegistered {
                     maker,
                     url,
@@ -357,13 +360,17 @@ impl RfqRegistry {
         }
 
         let cost = checked_mul_count(per_token_cost(&env), tokens.len())?;
+        // WR-01: checks-effects-interactions, matching `remove_tokens`/
+        // `eject` — write the maker's own updated `MakerConfig` BEFORE the
+        // external token transfer, not after.
+        cfg.staked = cfg.staked.checked_add(cost).ok_or(Error::MathOverflow)?;
+        env.storage().persistent().set(&key, &cfg);
+        bump_maker(&env, &key);
+
         let contract_addr = env.current_contract_address();
         // `maker.require_auth()` above covers this sub-invocation, same as
         // `set_url`'s first-registration stake leg.
         token::Client::new(&env, &stake_token(&env)).transfer(&maker, &contract_addr, &cost);
-        cfg.staked = cfg.staked.checked_add(cost).ok_or(Error::MathOverflow)?;
-        env.storage().persistent().set(&key, &cfg);
-        bump_maker(&env, &key);
 
         TokensAdded {
             maker,
