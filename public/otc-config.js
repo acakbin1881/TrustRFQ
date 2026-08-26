@@ -33,3 +33,19 @@ window.REFLECTOR_ORACLE_ID = 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKO
 //     --source-account <key> --network testnet \
 //     -- --admin <G...> --fee-bps 10 --fee-collector <G...>
 window.RFQ_SWAP_CONTRACT_ID = 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT';
+
+// RFQ maker/discovery registry (rfq_registry). Deployed and initialized
+// 2026-08-26; no UI reads it yet (the desk's taker path is Phase 2). Joins
+// the Testnet-reset checklist alongside the three ids above.
+//
+// IMPORTANT: this contract has no constructor, so a reset is a TWO-STEP
+// deploy -- `initialize` must be invoked separately after `deploy`, or the
+// instance is unusable (the re-init guard then permanently blocks recovery):
+//   cd contracts && stellar contract build
+//   stellar contract deploy --wasm target/wasm32v1-none/release/rfq_registry.wasm \
+//     --source-account deployer --network testnet
+//   stellar contract invoke --id <NEW ID> --source-account deployer --network testnet -- \
+//     initialize --admin GB3WSGXR5GBMJ7HSBWTBWSWGI3A5AJGD4Y254XBI2P6AKS5N2VIXV7HI \
+//     --stake-token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC \
+//     --base-cost 1000000000 --per-token-cost 100000000 --max-makers-per-token 100
+window.RFQ_REGISTRY_ID = 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';

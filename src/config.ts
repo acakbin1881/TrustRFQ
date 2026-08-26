@@ -18,6 +18,7 @@ declare global {
     OTC_CONTRACT_ID?: string;
     REFLECTOR_ORACLE_ID?: string;
     RFQ_SWAP_CONTRACT_ID?: string;
+    RFQ_REGISTRY_ID?: string;
   }
 }
 
@@ -42,5 +43,12 @@ export const fairPriceEnabled = /^C[A-Z2-7]{55}$/.test(REFLECTOR_ORACLE_ID);
 // has one home and one Testnet-reset checklist entry.
 export const RFQ_SWAP_CONTRACT_ID = (w.RFQ_SWAP_CONTRACT_ID || '').trim();
 export const rfqEnabled = /^C[A-Z2-7]{55}$/.test(RFQ_SWAP_CONTRACT_ID);
+
+// RFQ maker/discovery registry. Deployed and proven on Testnet, but nothing
+// in the desk calls it yet: Phase 2's taker path is what reads it (discover
+// a maker's quote-server url by token). Exported now so the id has one home
+// and one Testnet-reset checklist entry, same as RFQ_SWAP_CONTRACT_ID above.
+export const RFQ_REGISTRY_ID = (w.RFQ_REGISTRY_ID || '').trim();
+export const registryEnabled = /^C[A-Z2-7]{55}$/.test(RFQ_REGISTRY_ID);
 
 export const EXPLORER = 'https://stellar.expert/explorer/testnet';
