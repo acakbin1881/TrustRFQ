@@ -30,7 +30,7 @@ Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` 
   every write; all lists explicitly bounded; no contract-side extend function; pair intersection
   stays client-side
 
-- [ ] **REG-03**: `rfq_registry` is deployed on Testnet with unit tests (un-mocked auth trees
+- [x] **REG-03**: `rfq_registry` is deployed on Testnet with unit tests (un-mocked auth trees
   where meaningful, security checklist from spec §7.6: re-init guard, events on state
   transitions) and a live Testnet integration check that exercises registration, discovery, and
   archival/restore (TTL) behavior
@@ -135,7 +135,7 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 |-------------|-------|--------|
 | REG-01 | Phase 1 | Complete |
 | REG-02 | Phase 1 | Complete |
-| REG-03 | Phase 1 | Pending |
+| REG-03 | Phase 1 | Complete |
 | CFG-01 | Phase 1 | Pending |
 | TAKER-01 | Phase 2 | Pending |
 | TAKER-02 | Phase 2 | Pending |
