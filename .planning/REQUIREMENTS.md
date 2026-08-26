@@ -37,7 +37,7 @@ Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` 
 
 ### Runtime Config
 
-- [ ] **CFG-01**: `RFQ_REGISTRY_ID` joins `public/otc-config.js` and `src/config.ts` following
+- [x] **CFG-01**: `RFQ_REGISTRY_ID` joins `public/otc-config.js` and `src/config.ts` following
   the `OTC_CONTRACT_ID` pattern (`window.*` un-bundled script, typed reader), and joins the
   quarterly Testnet-reset checklist; a reset stays a one-file edit, not a rebuild.
   (Verified 2026-08-19: `RFQ_SWAP_CONTRACT_ID` wiring already landed; this requirement covers
@@ -136,7 +136,7 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | REG-01 | Phase 1 | Complete |
 | REG-02 | Phase 1 | Complete |
 | REG-03 | Phase 1 | Complete |
-| CFG-01 | Phase 1 | Pending |
+| CFG-01 | Phase 1 | Complete |
 | TAKER-01 | Phase 2 | Pending |
 | TAKER-02 | Phase 2 | Pending |
 | TAKER-03 | Phase 2 | Pending |

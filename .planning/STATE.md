@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: on-chain-maker-discovery
 status: executing
-stopped_at: Completed 01-02-PLAN.md (token/protocol discovery on rfq_registry, both caps mutation-verified)
-last_updated: "2026-08-24T12:56:52.472Z"
+stopped_at: Completed 01-04-PLAN.md (rfq_registry redeployed with full surface, live-proven, RFQ_REGISTRY_ID wired; Phase 1 complete)
+last_updated: "2026-08-26T13:12:44.604Z"
 last_activity: 2026-08-24
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 4
 ---
 
 # Project State
@@ -29,12 +29,12 @@ where a signature over the full economic terms is the integrity boundary.
 ## Current Position
 
 Phase: 01 (on-chain-maker-discovery) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-24 — Phase 01 execution started
 ROADMAP.md created; 14 v1 requirements mapped across 4 phases)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [█████░░░░░] 50%
 |------|----------|-------|-------|
 | Phase 01 P01 | 86 min | 2 tasks | 5 files |
 | Phase 01 P02 | 1 session | 3 tasks | 2 files |
+| Phase 01 P04 | 1 session | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ Recent decisions affecting current work:
 - [Phase ?]: rfq_registry deployed on Testnet at CCJDJKXBZRVYOB2QD4A6UYNJRGNC27I6TZLC22DXNYHQXWXDIO6FYYM6 (wasm 822722d2...); otc_swap wasm hash 83f60b85... unmoved after third workspace member
 - [Phase ?]: Finding: Testnet's STATE_ARCHIVAL minPersistentTTL (120,960 ledgers) already exceeds rfq_registry's PERSISTENT_TTL_THRESHOLD (17,280) on entry creation, so bump_maker's extend_ttl is a correct no-op on first write, not a bug
 - [Phase ?]: rfq_registry: both list-bound caps (fixed per-maker constant, admin-tunable per-token ceiling) proven independent by mutation testing
+- [Phase ?]: rfq_registry redeployed with full surface: CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G (wasm 3450546a...), superseding the 01-01 tracer instance
+- [Phase ?]: D-12 corrected: live TTL-bump-on-write cannot show a strict increase across two close-together writes on Testnet (creation-time floor already exceeds the bump threshold); the threshold-crossing branch is Plan 01-03's unit-test-only proof
+- [Phase ?]: max_makers_per_token stays at 100 (human-confirmed): get_urls_for_token extrapolates to ~2.6% of Testnet's txMaxInstructions budget at the full cap
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-08-24T12:56:52.462Z
-Stopped at: Completed 01-02-PLAN.md (token/protocol discovery on rfq_registry, both caps mutation-verified)
+Last session: 2026-08-26T13:12:44.595Z
+Stopped at: Completed 01-04-PLAN.md (rfq_registry redeployed with full surface, live-proven, RFQ_REGISTRY_ID wired; Phase 1 complete)
 Resume file: None
