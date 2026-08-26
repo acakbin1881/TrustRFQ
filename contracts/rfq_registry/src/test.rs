@@ -5,11 +5,14 @@
 extern crate std;
 
 use crate::{
-    CostsSet, Error, MakerEjected, MakerRegistered, MaxMakersSet, ProtocolsAdded,
+    CostsSet, DataKey, Error, MakerEjected, MakerRegistered, MaxMakersSet, ProtocolsAdded,
     ProtocolsRemoved, RfqRegistry, RfqRegistryClient, TokensAdded, TokensRemoved, UrlUpdated,
 };
 use soroban_sdk::{
-    testutils::{Address as _, Events as _, MockAuth, MockAuthInvoke},
+    testutils::{
+        storage::Instance as _, storage::Persistent as _, Address as _, Events as _, Ledger as _,
+        MockAuth, MockAuthInvoke,
+    },
     token, Address, Env, Event as _, IntoVal, String,
 };
 
@@ -19,10 +22,23 @@ use soroban_sdk::{
 // `MockAuth` tree for the one rejection test that needs it), which bypasses
 // the host's real signature machinery entirely. That is enough to prove the
 // argument-binding/auth-gating surface, the stake/refund arithmetic, and the
-// D-06 zero-restake path — but it CANNOT prove that a persistent entry's TTL
-// actually bumps against a real host, or that the on-chain SAC balance moves
-// exactly against real network fees. Those are proven by
-// `tools/rfq-registry-live.mjs` against a deployed Testnet instance.
+// D-06 zero-restake path. The TTL-bump-on-write tests below (`ttl_bumps_on_*`)
+// DO prove that a write raises `get_ttl()`, but only against the SDK's
+// simulated test-Env ledger clock -- they cannot prove the on-chain SAC
+// balance moves exactly against real network fees, or exercise the live
+// network's actual `minPersistentTTL` enforcement. Those live-network
+// properties are proven by `tools/rfq-registry-live.mjs` against a deployed
+// Testnet instance (D-12).
+//
+// Archival finding (Task 3, RESEARCH.md Open Question 1): a throwaway probe
+// advanced a written `Maker` entry's ledger sequence past its own `get_ttl()`
+// and then read it back through the client with no explicit testutils
+// restore call. On the pinned `soroban-sdk` 26.x test `Env` the read
+// succeeded and returned the correct data -- the test host auto-restores an
+// archived persistent entry the instant it appears in a later call's
+// footprint; no explicit restore API exists or is needed here. Pinned by
+// `archived_persistent_entry_auto_restores_on_read` below. This is a
+// test-Env-only guarantee, not a live-network claim.
 //
 // Per the project's fund-every-actor rule (CLAUDE.md Gotchas — `rfq_swap`
 // shipped a false-green rejection test because an interloper had no
@@ -1410,4 +1426,136 @@ fn eject_emits_maker_ejected() {
     .to_xdr(&s.env, &s.contract_id);
     let events = s.env.events().all();
     assert_eq!(events.events().last().unwrap(), &expected);
+}
+
+// --- TTL bump-on-write (REG-02) and archival behavior (D-12, RESEARCH.md
+// Open Question 1) ------------------------------------------------------
+//
+// A throwaway probe (deleted once its answer was recorded) advanced a fresh
+// `Maker` entry's ledger sequence past its own `get_ttl()` and then read it
+// back through the client with no explicit testutils restore call. FINDING:
+// on the pinned `soroban-sdk` 26.x test `Env`, the read succeeded and
+// returned the correct `MakerConfig` -- the test host auto-restores an
+// archived persistent entry the instant it appears in a later call's
+// footprint, with no explicit restore API needed. `archived_persistent_entry_auto_restores_on_read`
+// below pins that exact behavior as a permanent assertion, not a doc
+// comment. This is a test-Env-only guarantee; the live network additionally
+// enforces `minPersistentTTL` and a real `RestoreFootprintOp` for entries
+// that actually crossed into archival, which `tools/rfq-registry-live.mjs`
+// is the sole owner of proving (D-12: the write-bumps-TTL half is proven
+// there against the real host; this file proves it here against the test
+// host, and proves the auto-restore finding that Open Question 1 asked for).
+
+#[test]
+fn archived_persistent_entry_auto_restores_on_read() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let key = DataKey::Maker(s.maker.clone());
+
+    let ttl_before = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+
+    // Push the ledger sequence past the entry's live-until point.
+    s.env.ledger().with_mut(|li| {
+        li.sequence_number += ttl_before + 1;
+    });
+
+    // A normal, unmocked read succeeds and returns the untouched data: no
+    // panic, no explicit restore call required on this pinned SDK.
+    let cfg = s.client.get_maker(&s.maker);
+    assert_eq!(cfg.url, url_str(&s.env, "https://maker.example/quote"));
+    assert_eq!(cfg.staked, BASE_COST);
+}
+
+#[test]
+fn ttl_bumps_on_maker_write_after_ledger_advance() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let key = DataKey::Maker(s.maker.clone());
+
+    let ttl_after_first_write = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+    assert_eq!(ttl_after_first_write, crate::PERSISTENT_TTL_EXTEND_TO);
+
+    // Advance until only a sliver of TTL remains -- well under the bump
+    // threshold, but not expired, so the assertion below is meaningful
+    // rather than trivially true of a freshly-written entry.
+    s.env.ledger().with_mut(|li| {
+        li.sequence_number += ttl_after_first_write - 100;
+    });
+    let ttl_before_second_write = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+    assert!(ttl_before_second_write < crate::PERSISTENT_TTL_THRESHOLD);
+
+    // A second write on the same maker (a url change) must bump the TTL.
+    let url2 = url_str(&s.env, "https://maker.example/quote-v2");
+    s.client.set_url(&s.maker, &url2);
+
+    let ttl_after_second_write = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+    assert!(ttl_after_second_write > ttl_before_second_write);
+}
+
+#[test]
+fn ttl_bumps_on_token_write_after_ledger_advance() {
+    let s = setup();
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let t = token_addr(&s.env);
+    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
+    let token_key = DataKey::Token(t.clone());
+
+    let ttl_after_first_write = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&token_key));
+    assert_eq!(ttl_after_first_write, crate::PERSISTENT_TTL_EXTEND_TO);
+
+    s.env.ledger().with_mut(|li| {
+        li.sequence_number += ttl_after_first_write - 100;
+    });
+    let ttl_before_second_write = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&token_key));
+    assert!(ttl_before_second_write < crate::PERSISTENT_TTL_THRESHOLD);
+
+    // A SECOND, different maker adding the same token writes `Token(t)` again.
+    let second_maker = register_new_maker(&s, 1, "https://second.example/quote");
+    s.client
+        .add_tokens(&second_maker, &soroban_sdk::vec![&s.env, t.clone()]);
+
+    let ttl_after_second_write = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&token_key));
+    assert!(ttl_after_second_write > ttl_before_second_write);
+}
+
+#[test]
+fn ttl_bumps_on_instance_write_after_ledger_advance() {
+    let s = setup();
+
+    let ttl_after_initialize = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().instance().get_ttl());
+    assert_eq!(ttl_after_initialize, crate::INSTANCE_TTL_EXTEND_TO);
+
+    s.env.ledger().with_mut(|li| {
+        li.sequence_number += ttl_after_initialize - 100;
+    });
+    let ttl_before_set_costs = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().instance().get_ttl());
+    assert!(ttl_before_set_costs < crate::INSTANCE_TTL_THRESHOLD);
+
+    s.client.set_costs(&(BASE_COST * 2), &PER_TOKEN_COST);
+
+    let ttl_after_set_costs = s
+        .env
+        .as_contract(&s.contract_id, || s.env.storage().instance().get_ttl());
+    assert!(ttl_after_set_costs > ttl_before_set_costs);
 }
