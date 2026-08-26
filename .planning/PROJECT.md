@@ -29,6 +29,11 @@ Shipped and confirmed working (see CLAUDE.md Status for provenance):
   + `src/config.ts`)
 - ✓ Reflector fair-price advisory chip (never on the signed path)
 - ✓ Automated two-browser E2E census harness (`tools/e2e/`, mock Freighter, settles on Testnet)
+- ✓ `rfq_registry` stake-gated maker discovery contract: built, deployed, live-proven on Testnet
+  2026-08-26 (REG-01..03; register → discover → eject with exact stake refund, 59 unit tests,
+  4 mutation checks, human-approved checkpoint). Validated in Phase 1: On-Chain Maker Discovery
+- ✓ `RFQ_REGISTRY_ID` runtime-config wiring (CFG-01; `public/otc-config.js` + `src/config.ts`,
+  on the Testnet-reset checklist). Validated in Phase 1: On-Chain Maker Discovery
 
 ### Active
 
@@ -36,8 +41,6 @@ Milestone 1: FULL RFQ LOOP ON TESTNET. Definition of done: a desk taker discover
 maker via `rfq_registry`, receives a live quote from the maker's own server, and settles it on
 Testnet end-to-end. Full detail in .planning/REQUIREMENTS.md.
 
-- [ ] `rfq_registry` stake-gated maker discovery contract, deployed on Testnet (REG-01..03)
-- [ ] `RFQ_REGISTRY_ID` in the un-bundled runtime config (CFG-01)
 - [ ] Desk taker path: registry discovery, parallel quote fan-out, local validation,
       one-signature settlement, trustline pre-flight, golden-vector-pinned encoding (TAKER-01..06)
 - [ ] CSP `connect-src` gains maker-server origins, zero violations (CSP-01)
@@ -117,4 +120,4 @@ ADR-locked decisions exist). They are treated as settled direction unless delibe
 | ORACLE-D1: Reflector fair price advisory-only, on-chain SEP-40 read, tap-to-fill, never signed | Oracle spec 2026-07-15; shipped b051d2b | Good |
 
 ---
-*Last updated: 2026-08-19 after project initialization from docs ingest*
+*Last updated: 2026-08-26 after Phase 1 (On-Chain Maker Discovery) completion*
