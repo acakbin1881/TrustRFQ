@@ -335,7 +335,16 @@ impl RfqRegistry {
             .get(&key)
             .ok_or(Error::NotRegistered)?;
 
-        if cfg.tokens.len() + tokens.len() > MAX_TOKENS_PER_MAKER {
+        // WR-02: checked, matching this file's own `checked_mul_count`
+        // discipline for cost arithmetic -- `tokens.len()` is caller-supplied
+        // with no independent upper bound, so an overflow here surfaces as
+        // the typed `Error::MathOverflow` rather than an opaque host trap.
+        let requested_tokens = cfg
+            .tokens
+            .len()
+            .checked_add(tokens.len())
+            .ok_or(Error::MathOverflow)?;
+        if requested_tokens > MAX_TOKENS_PER_MAKER {
             return Err(Error::TooManyTokens);
         }
 
@@ -499,7 +508,13 @@ impl RfqRegistry {
             .get(&key)
             .ok_or(Error::NotRegistered)?;
 
-        if cfg.protocols.len() + protocols.len() > MAX_PROTOCOLS_PER_MAKER {
+        // WR-02: checked, same discipline as `add_tokens`'s cap check.
+        let requested_protocols = cfg
+            .protocols
+            .len()
+            .checked_add(protocols.len())
+            .ok_or(Error::MathOverflow)?;
+        if requested_protocols > MAX_PROTOCOLS_PER_MAKER {
             return Err(Error::TooManyProtocols);
         }
 
