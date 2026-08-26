@@ -6,7 +6,7 @@ current_phase: 2
 current_phase_name: Desk RFQ Taker Path
 status: planning
 stopped_at: Completed 01-04-PLAN.md (rfq_registry redeployed with full surface, live-proven, RFQ_REGISTRY_ID wired; Phase 1 complete)
-last_updated: "2026-08-26T13:27:06.908Z"
+last_updated: "2026-08-26T14:18:01.183Z"
 last_activity: 2026-08-26
 last_activity_desc: Phase 1 complete, transitioned to Phase 2
 progress:
@@ -73,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase ?]: rfq_registry redeployed with full surface: CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G (wasm 3450546a...), superseding the 01-01 tracer instance
 - [Phase ?]: D-12 corrected: live TTL-bump-on-write cannot show a strict increase across two close-together writes on Testnet (creation-time floor already exceeds the bump threshold); the threshold-crossing branch is Plan 01-03's unit-test-only proof
 - [Phase ?]: max_makers_per_token stays at 100 (human-confirmed): get_urls_for_token extrapolates to ~2.6% of Testnet's txMaxInstructions budget at the full cap
+- [Phase ?]: POS-D1 (2026-08-24, SCF plan §3.1 Final): TrustRFQ is a protocol, not an end-user interface; desk exists only to demonstrate the protocol; interface metrics never count as evidence
+- [Phase ?]: UI-D1 (2026-08-26): Phase 2 desk taker path = minimal reference surface over an SDK-shaped taker core (pure src/ modules extractable into the separate-repo taker SDK)
 
 ### Pending Todos
 

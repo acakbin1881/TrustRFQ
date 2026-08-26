@@ -19,7 +19,7 @@ the permanent directed OTC lane untouched.
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: On-Chain Maker Discovery** - `rfq_registry` stake-gated phone book built, tested, deployed on Testnet, and wired into the runtime config (completed 2026-08-26)
-- [ ] **Phase 2: Desk RFQ Taker Path** - the desk discovers registered makers, pulls and validates firm quotes, and settles with one wallet signature, proven against a local stub maker
+- [ ] **Phase 2: Desk RFQ Taker Path** - the desk discovers registered makers, pulls and validates firm quotes, and settles with one wallet signature, proven against a local stub maker; built as a minimal reference surface over an SDK-shaped taker core (POS-D1/UI-D1)
 - [ ] **Phase 3: Live Full RFQ Loop** - milestone gate: a real maker server's live quote discovered via the registry and settled on Testnet end-to-end
 - [ ] **Phase 4: Interim Fan-Out Retirement** - broadcast/intent layer removed now that the RFQ protocol has shipped; directed OTC lane untouched
 
@@ -73,6 +73,11 @@ Plans:
 **Goal**: A taker in the desk can select a curated pair, see live firm quotes from registered
 makers, and settle one with a single wallet signature, proven end-to-end against a local stub
 maker settling for real on Testnet
+**Positioning** (POS-D1/UI-D1, locked 2026-08-24/26): the desk surface stays deliberately
+minimal - it exists to demonstrate the protocol, not to grow users. Taker
+discovery/quote/validation/settlement logic is written as SDK-shaped pure modules under `src/`
+(the separate-repo taker SDK extracts from them); desk components are a thin shell over that
+core. Desk metrics are never cited as evidence.
 **Depends on**: Phase 1 (discovery reads need the deployed registry)
 **Requirements**: TAKER-01, TAKER-02, TAKER-03, TAKER-04, TAKER-05, TAKER-06, CSP-01, E2E-01
 **Success Criteria** (what must be TRUE):

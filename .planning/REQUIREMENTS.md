@@ -11,6 +11,14 @@ external dependency INSIDE this milestone. Phases needing a live counterparty ma
 maker (extending `tools/e2e/`) as intermediate verification, but the milestone is only DONE on the
 live full loop.
 
+**Positioning note (locked 2026-08-24, SCF Customer Development Plan §3.1; POS-D1/UI-D1 in
+PROJECT.md):** TrustRFQ is a protocol, not an end-user interface. The "desk taker" in this
+milestone is the minimal reference interface that demonstrates the protocol; it is not a product
+to grow users on. Taker logic (discovery, quote fan-out, validation, settlement) lands as
+SDK-shaped pure modules under `src/` so the separate-repo taker SDK can extract them; desk
+components stay a thin shell over that core. Interface metrics (clicks, wallet-prompt counts)
+are never cited as evidence; evidence is on-chain proofs and reproducible measurements.
+
 ## v1 Requirements
 
 Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` (adopted
@@ -44,6 +52,9 @@ Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` 
   only the registry id.)
 
 ### Desk Taker Path
+
+Scope shape (UI-D1): TAKER-01..05 describe protocol behavior surfaced through a deliberately
+minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioning note above).
 
 - [ ] **TAKER-01**: The desk discovers maker URLs for the selected pair via two
   `get_urls_for_token` read-only simulations and client-side intersection (registry reads use the
@@ -157,4 +168,5 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 
 ---
 *Requirements defined: 2026-08-19*
-*Last updated: 2026-08-19 after roadmap creation*
+*Last updated: 2026-08-26 - positioning note added (POS-D1/UI-D1: minimal reference interface,
+SDK-shaped taker core); requirement ids and phase mapping unchanged*

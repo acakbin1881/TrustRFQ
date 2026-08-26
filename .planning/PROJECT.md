@@ -74,6 +74,13 @@ Testnet end-to-end. Full detail in .planning/REQUIREMENTS.md.
   until the RFQ protocol ships, remove only then. The directed OTC lane is permanent.
 - Ecosystem: no existing signed-quote RFQ protocol surfaced on Stellar; go-to-market is maker
   recruitment + aggregator integration, not end-user acquisition.
+- **Positioning locked 2026-08-24 (SCF Customer Development Plan §3.1, Final): TrustRFQ is a
+  protocol, not an end-user interface.** No trader acquisition. Primary customer: professional
+  market makers; distribution partner: Stellar DEX aggregators (StellarBroker, WOWMAX, Soroswap
+  aggregator, stellar-dex-agg). The desk web interface exists ONLY to demonstrate the protocol
+  and is not a product to grow users on; interface metrics (clicks, wallet-prompt counts) are
+  never cited as evidence. Plan home: the private Notion "RFQ" page (Customer Development Plan
+  section); §3.1 and §4.1 (H1-H5) are Final in the SCF Google Doc.
 - Intel provenance: .planning/intel/ (ingest run 2026-08-19, 4 SPECs, zero ADRs, zero blockers).
 
 ## Constraints
@@ -118,6 +125,8 @@ ADR-locked decisions exist). They are treated as settled direction unless delibe
 | MIG-D2: golden vectors as the signature-boundary regression tripwire | Migration spec 2026-07-10; shipped | Good |
 | DESK-D1: light "milky swap" desk theme; token NAMES/selectors are a compatibility contract | Redesign spec 2026-07-12; shipped e75cf6f | Good |
 | ORACLE-D1: Reflector fair price advisory-only, on-chain SEP-40 read, tap-to-fill, never signed | Oracle spec 2026-07-15; shipped b051d2b | Good |
+| POS-D1: TrustRFQ is a protocol, not an end-user interface; the desk exists only to demonstrate the protocol; interface metrics never count as evidence | SCF Customer Development Plan §3.1, Final 2026-08-24; AirSwap-via-MetaMask precedent | Good (locked) |
+| UI-D1: Phase 2 desk taker path is a MINIMAL REFERENCE SURFACE over an SDK-shaped taker core: discovery/quote/validation/settlement land as pure `src/` modules the separate-repo taker SDK can extract; desk components stay a thin shell | Follows POS-D1; locked 2026-08-26 during Phase 2 context gathering | Pending (Phase 2) |
 
 ---
-*Last updated: 2026-08-26 after Phase 1 (On-Chain Maker Discovery) completion*
+*Last updated: 2026-08-26 after aligning planning docs with the protocol-not-interface positioning (POS-D1/UI-D1)*
