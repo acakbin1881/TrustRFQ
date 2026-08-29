@@ -28,3 +28,6 @@ tools/e2e/out/
 
 # Local guidance for Claude Code sessions (do not commit)
 CLAUDE.md
+
+# Slippage scheduler log (machine-local; the JSONL runs are the record)
+tools/slippage/runs/launchd.log

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Slippage repeat-run scheduler, 2026-08-29 -> 2026-09-03.
+
+  launchd schedules in LOCAL time. This machine is Europe/Skopje (CEST, UTC+2), so every
+  Hour below is the planned UTC slot plus 2. The slot table with both clocks lives in
+  tools/slippage/schedule.json and on the Notion plan page.
+
+    run 1  Sat 29 Aug  16:00 local = 14:00 UTC   peak hour, weekend
+    run 2  Sat 29 Aug  21:00 local = 19:00 UTC   thinnest hour of the week
+    run 3  Sun 30 Aug  14:00 local = 12:00 UTC   mid hour, quietest weekend day
+    run 4  Mon 31 Aug  07:00 local = 05:00 UTC   thin hour, thinnest weekday  (sleep risk)
+    run 5  Mon 31 Aug  21:00 local = 19:00 UTC   expected WORST case
+    run 6  Tue  1 Sep  16:00 local = 14:00 UTC   peak hour on a thin weekday
+    run 7  Wed  2 Sep  21:00 local = 19:00 UTC   thin hour, mid-week
+    run 8  Thu  3 Sep  16:00 local = 14:00 UTC   expected BEST case, sets the floor
+
+  Month+Day pins each entry to a calendar date, but launchd has no year, so these would fire
+  again in August/September 2027. UNLOAD when the window closes:
+    launchctl unload ~/Library/LaunchAgents/com.trustrfq.slippage.plist
+    rm ~/Library/LaunchAgents/com.trustrfq.slippage.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.trustrfq.slippage</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/acakbin1881/.local/bin/node</string>
+    <string>/Users/acakbin1881/Projects/TrustRFQ/tools/slippage/measure.mjs</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/acakbin1881/Projects/TrustRFQ</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/acakbin1881/Projects/TrustRFQ/tools/slippage/runs/launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/acakbin1881/Projects/TrustRFQ/tools/slippage/runs/launchd.log</string>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>29</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>29</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>30</integer><key>Hour</key><integer>14</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>31</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>31</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Month</key><integer>9</integer><key>Day</key><integer>1</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Month</key><integer>9</integer><key>Day</key><integer>2</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Month</key><integer>9</integer><key>Day</key><integer>3</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

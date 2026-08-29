@@ -1,0 +1,80 @@
+{
+  "window": "2026-08-29 → 2026-09-03",
+  "machine_timezone": "Europe/Skopje (CEST, UTC+2)",
+  "note": "Slots chosen from 14-day Horizon /trade_aggregations medians for XLM/USDC, measured 2026-08-29. Hourly volume varies 4.5x across the day (180k XLM at 19:00 UTC to 818k at 14:00 UTC). Weekday medians: Thu 544k, Fri 495k, Sat 446k, Sun 362k, Wed 279k, Tue 249k, Mon 245k. The weekend is NOT the thin period on Stellar; Mon-Wed is.",
+  "slots": [
+    {
+      "run": 1,
+      "planned_at_utc": "2026-08-29T14:00:00Z",
+      "local": "2026-08-29 16:00 CEST",
+      "weekday": "Sat",
+      "why": "Peak hour, weekend",
+      "median_hourly_volume_xlm": 818233,
+      "role": "range"
+    },
+    {
+      "run": 2,
+      "planned_at_utc": "2026-08-29T19:00:00Z",
+      "local": "2026-08-29 21:00 CEST",
+      "weekday": "Sat",
+      "why": "Thinnest hour of the week, weekend",
+      "median_hourly_volume_xlm": 180219,
+      "role": "range"
+    },
+    {
+      "run": 3,
+      "planned_at_utc": "2026-08-30T12:00:00Z",
+      "local": "2026-08-30 14:00 CEST",
+      "weekday": "Sun",
+      "why": "Mid hour, quietest weekend day",
+      "median_hourly_volume_xlm": 660512,
+      "role": "range"
+    },
+    {
+      "run": 4,
+      "planned_at_utc": "2026-08-31T05:00:00Z",
+      "local": "2026-08-31 07:00 CEST",
+      "weekday": "Mon",
+      "why": "Thin hour, thinnest weekday",
+      "median_hourly_volume_xlm": 218273,
+      "role": "range",
+      "sleep_risk": true
+    },
+    {
+      "run": 5,
+      "planned_at_utc": "2026-08-31T19:00:00Z",
+      "local": "2026-08-31 21:00 CEST",
+      "weekday": "Mon",
+      "why": "Thinnest hour on the thinnest day",
+      "median_hourly_volume_xlm": 180219,
+      "role": "expected_worst_case"
+    },
+    {
+      "run": 6,
+      "planned_at_utc": "2026-09-01T14:00:00Z",
+      "local": "2026-09-01 16:00 CEST",
+      "weekday": "Tue",
+      "why": "Peak hour on a thin weekday",
+      "median_hourly_volume_xlm": 818233,
+      "role": "range"
+    },
+    {
+      "run": 7,
+      "planned_at_utc": "2026-09-02T19:00:00Z",
+      "local": "2026-09-02 21:00 CEST",
+      "weekday": "Wed",
+      "why": "Thin hour, mid-week",
+      "median_hourly_volume_xlm": 180219,
+      "role": "range"
+    },
+    {
+      "run": 8,
+      "planned_at_utc": "2026-09-03T14:00:00Z",
+      "local": "2026-09-03 16:00 CEST",
+      "weekday": "Thu",
+      "why": "Peak hour on the thickest day",
+      "median_hourly_volume_xlm": 818233,
+      "role": "expected_best_case_sets_the_floor"
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+// Aggregate every slippage run in runs/ into the distribution that the repeat-run window is for.
+//
+// Prints three things, in this order:
+//   1. Coverage: which of the planned slots are done, pending, or drifted, and whether every run
+//      was produced by the same version of measure.mjs.
+//   2. Per pair and size, the min / median / max across runs, naming the run behind each extreme.
+//   3. The floor: the best case observed at each headline size. That is the number the SCF
+//      argument rests on, because it says "even at the most liquid moment we measured, a trade
+//      this size still loses this much".
+//
+// Usage: node tools/slippage/report.mjs [--mid]     (--mid reports bps_vs_mid instead of the
+// original spread-excluded bps_vs_baseline metric)
+
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const RUNS_DIR = join(HERE, 'runs');
+const SCHEDULE = JSON.parse(readFileSync(join(HERE, 'schedule.json'), 'utf8'));
+
+const METRIC = process.argv.includes('--mid') ? 'bps_vs_mid' : 'bps_vs_baseline';
+const HEADLINE = { 'XLM->USDC': [100000, 500000, 1000000], 'USDC->XLM': [100000, 250000], 'USDC->EURC': [100000, 250000] };
+
+const files = existsSync(RUNS_DIR)
+  ? readdirSync(RUNS_DIR).filter((f) => f.endsWith('.jsonl')).sort()
+  : [];
+
+const runs = files.map((f) => {
+  const lines = readFileSync(join(RUNS_DIR, f), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  return { file: f, meta: lines.find((l) => l.type === 'run'), series: lines.filter((l) => l.type === 'series') };
+});
+
+const median = (xs) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+};
+const fmt = (n) => (n === null || n === undefined || Number.isNaN(n) ? '   n/a' : n.toFixed(1).padStart(8));
+
+// ---------------------------------------------------------------- 1. coverage
+
+console.log('='.repeat(78));
+console.log(`COVERAGE  window ${SCHEDULE.window}   metric ${METRIC}`);
+console.log('='.repeat(78));
+
+const scheduled = runs.filter((r) => r.meta.kind === 'scheduled');
+const manual = runs.filter((r) => r.meta.kind === 'manual');
+const byRun = new Map(scheduled.map((r) => [r.meta.run_number, r]));
+
+for (const slot of SCHEDULE.slots) {
+  const r = byRun.get(slot.run);
+  const tag = slot.role === 'expected_worst_case' ? '  <- expected worst'
+    : slot.role === 'expected_best_case_sets_the_floor' ? '  <- expected best, sets the floor' : '';
+  if (!r) {
+    console.log(`  #${slot.run}  ${slot.planned_at_utc}  ${slot.weekday}  PENDING   ${slot.why}${tag}`);
+    continue;
+  }
+  const d = r.meta.drift_minutes;
+  const drift = Math.abs(d) <= 5 ? 'on time' : `${d > 0 ? '+' : ''}${d}m drift`;
+  const warn = Math.abs(d) > 120 ? '  !! DRIFT OVER 2h, treat this slot as unreliable' : '';
+  console.log(`  #${slot.run}  ${slot.planned_at_utc}  ${slot.weekday}  DONE ${drift.padEnd(12)} ${slot.why}${tag}${warn}`);
+}
+
+const done = byRun.size;
+console.log(`\n  ${done} of ${SCHEDULE.slots.length} scheduled slots collected` +
+  (manual.length ? `, plus ${manual.length} manual run(s) (excluded from the schedule)` : ''));
+
+const hashes = new Set(runs.map((r) => r.meta.script_sha256));
+if (hashes.size > 1) {
+  console.log(`\n  !! WARNING: runs were produced by ${hashes.size} different versions of measure.mjs.`);
+  for (const r of runs) console.log(`     ${r.file}  ${r.meta.script_sha256.slice(0, 12)}`);
+} else if (hashes.size === 1) {
+  console.log(`  all runs produced by measure.mjs sha256 ${[...hashes][0].slice(0, 12)}`);
+}
+
+if (!runs.length) { console.log('\nNo runs yet.'); process.exit(0); }
+
+// ---------------------------------------------------------------- 2. distribution
+
+const pairs = [...new Set(runs.flatMap((r) => r.series.map((s) => s.pair)))];
+
+for (const pair of pairs) {
+  console.log('\n' + '='.repeat(78));
+  console.log(`${pair}   ${METRIC} across ${runs.length} run(s)`);
+  console.log('='.repeat(78));
+  console.log('      send        best     median       worst   |  best run        worst run');
+  console.log('-'.repeat(78));
+
+  const sizes = [...new Set(runs.flatMap((r) => r.series.filter((s) => s.pair === pair).flatMap((s) => s.rows.map((x) => x.send))))]
+    .sort((a, b) => a - b);
+
+  for (const size of sizes) {
+    const pts = [];
+    for (const r of runs) {
+      const row = r.series.find((s) => s.pair === pair)?.rows.find((x) => x.send === size);
+      const v = row?.[METRIC];
+      if (typeof v === 'number' && !Number.isNaN(v)) pts.push({ v, r });
+    }
+    if (!pts.length) { console.log(`  ${String(size).padStart(8)}   no data`); continue; }
+    const lo = pts.reduce((a, b) => (b.v < a.v ? b : a));
+    const hi = pts.reduce((a, b) => (b.v > a.v ? b : a));
+    const label = (p) => (p.r.meta.kind === 'manual' ? 'manual' : `#${p.r.meta.run_number}`) +
+      ' ' + p.r.meta.actual_at_utc.slice(5, 16).replace('T', ' ');
+    console.log(
+      `  ${String(size).padStart(8)}  ${fmt(lo.v)}  ${fmt(median(pts.map((p) => p.v)))}  ${fmt(hi.v)}` +
+      `   |  ${label(lo).padEnd(16)} ${label(hi)}`
+    );
+  }
+
+  const spreads = runs.map((r) => r.series.find((s) => s.pair === pair)?.spread_bps).filter((x) => typeof x === 'number');
+  if (spreads.length) {
+    console.log(`\n  top-of-book spread across runs: min ${Math.min(...spreads).toFixed(2)}` +
+      `  median ${median(spreads).toFixed(2)}  max ${Math.max(...spreads).toFixed(2)} bps`);
+  }
+}
+
+// ---------------------------------------------------------------- 3. the floor
+
+console.log('\n' + '='.repeat(78));
+console.log('THE FLOOR  (best case observed, i.e. the most favourable moment we measured)');
+console.log('='.repeat(78));
+console.log('  Against a 10 bps maker-paid protocol fee.\n');
+
+for (const pair of pairs) {
+  for (const size of HEADLINE[pair] ?? []) {
+    const pts = [];
+    for (const r of runs) {
+      const row = r.series.find((s) => s.pair === pair)?.rows.find((x) => x.send === size);
+      const v = row?.[METRIC];
+      if (typeof v === 'number' && !Number.isNaN(v)) pts.push({ v, r });
+    }
+    if (!pts.length) continue;
+    const lo = pts.reduce((a, b) => (b.v < a.v ? b : a));
+    const verdict = lo.v > 10 ? `still ${(lo.v / 10).toFixed(1)}x the protocol fee` : 'BELOW the protocol fee';
+    console.log(`  ${pair.padEnd(12)} ${String(size).padStart(8)}  best case ${lo.v.toFixed(1).padStart(8)} bps  ->  ${verdict}`);
+  }
+}
+console.log();
