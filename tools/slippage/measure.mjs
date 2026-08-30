@@ -16,9 +16,18 @@
 //      sha256 so an edit mid-window cannot silently mix two methods.
 //   4. One retry with backoff on 429/5xx; a failed row is recorded, it does not abort the run.
 //
+// Two failures on 2026-08-29 forced the scheduling to move into this script, in UTC:
+//   * launchd's StartCalendarInterval fired an hour EARLY (16:00 local -> 13:00 UTC, not 14:00).
+//     It applied standard time, CET, and ignored that the machine is on CEST. So the plist is now
+//     a dumb 5-minute poller and the slot decision is made here, in UTC, where it cannot drift.
+//   * Run 2 fired on wake, before the network interface was up, and every single row failed. It
+//     still wrote a file, which CLAIMED the slot and silently burned it. So there is now a
+//     preflight network probe, and an incomplete run is quarantined instead of claiming its slot.
+//
 // Read-only, public data, no keys. Usage:
-//   node tools/slippage/measure.mjs            # scheduled run, binds to the nearest open slot
+//   node tools/slippage/measure.mjs            # poll: runs only inside an open slot's window
 //   node tools/slippage/measure.mjs --manual   # ad-hoc run, never fills a scheduled slot
+//   node tools/slippage/measure.mjs --force    # scheduled-style run ignoring the slot window
 
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
@@ -27,6 +36,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, 'runs');
+const FAILED_DIR = join(RUNS_DIR, 'failed');
 const SCHEDULE = JSON.parse(readFileSync(join(HERE, 'schedule.json'), 'utf8'));
 
 const HORIZON = 'https://horizon.stellar.org';
@@ -45,6 +55,16 @@ const SERIES = [
 ];
 
 const MANUAL = process.argv.includes('--manual');
+const FORCE = process.argv.includes('--force');
+
+// How early the poller may fire a slot, and how late a missed slot may still be caught up.
+// The catch-up window is what lets a slot survive the machine being asleep at its planned time.
+const EARLY_TOLERANCE_MS = 150 * 1000;
+const CATCHUP_WINDOW_MS = 3 * 60 * 60 * 1000;
+
+// A run that cannot reach at least this share of its rows is quarantined rather than allowed to
+// claim its slot, so a dead network cannot silently consume a measurement point.
+const MIN_COMPLETE = 0.8;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------------------------------------------------------------- http
@@ -114,6 +134,19 @@ async function topOfBook(srcAsset, dstAsset) {
   return { url, bid: bidP, ask: askP, mid, spread_bps: ((askP - bidP) / mid) * 10000 };
 }
 
+// Horizon reachable at all? A run fired by launchd on wake can start before the network
+// interface is up. Probing first, and giving up without writing anything, keeps a dead network
+// from consuming a slot.
+async function preflight() {
+  for (let i = 0; i < 6; i++) {
+    const { error } = await getJson(`${HORIZON}/`);
+    if (!error) return true;
+    console.log(`[slippage] preflight ${i + 1}/6 failed (${error}), waiting 20s`);
+    if (i < 5) await sleep(20000);
+  }
+  return false;
+}
+
 async function latestLedger() {
   const { json, error } = await getJson(`${HORIZON}/`);
   return error ? null : json.history_latest_ledger ?? null;
@@ -121,9 +154,10 @@ async function latestLedger() {
 
 // ---------------------------------------------------------------- slot binding
 
-// Which planned slot does this run belong to? Pick the nearest slot by wall-clock that no run
-// file has claimed yet. launchd fires a missed calendar job once on wake, so a run can arrive
-// late; drift_minutes records exactly how late rather than hiding it.
+// Which planned slot does this run belong to? The plist is a dumb 5-minute poller, so most
+// invocations answer "none" and exit. A slot is open from 2.5 minutes before its planned UTC
+// time until 3 hours after, and the late half of that window is what lets a slot survive the
+// machine being asleep. drift_minutes records exactly how late it landed rather than hiding it.
 function bindSlot(nowMs) {
   const claimed = new Set();
   if (existsSync(RUNS_DIR)) {
@@ -132,15 +166,17 @@ function bindSlot(nowMs) {
       if (m) claimed.add(Number(m[1]));
     }
   }
-  const open = SCHEDULE.slots.filter((s) => !claimed.has(s.run));
-  if (!open.length) return null;
-  let best = open[0];
-  let bestGap = Math.abs(Date.parse(best.planned_at_utc) - nowMs);
-  for (const s of open.slice(1)) {
-    const gap = Math.abs(Date.parse(s.planned_at_utc) - nowMs);
-    if (gap < bestGap) { best = s; bestGap = gap; }
-  }
-  return best;
+  // Only a slot whose window is open right now. Everything is compared in UTC epoch ms, so the
+  // machine's timezone and DST play no part in the decision.
+  const due = SCHEDULE.slots
+    .filter((s) => !claimed.has(s.run))
+    .filter((s) => {
+      const p = Date.parse(s.planned_at_utc);
+      return nowMs >= p - EARLY_TOLERANCE_MS && nowMs <= p + CATCHUP_WINDOW_MS;
+    });
+  if (!due.length) return null;
+  // If two windows overlap, take the earlier slot: it is the one at risk of expiring.
+  return due.reduce((a, b) => (Date.parse(a.planned_at_utc) <= Date.parse(b.planned_at_utc) ? a : b));
 }
 
 // ---------------------------------------------------------------- run
@@ -185,7 +221,19 @@ async function measureSeries(s) {
 }
 
 const startedMs = Date.now();
-const slot = MANUAL ? null : bindSlot(startedMs);
+const slot = MANUAL || FORCE ? null : bindSlot(startedMs);
+
+// The poller fires every 5 minutes; almost always there is nothing due and this is where it stops.
+if (!MANUAL && !FORCE && !slot) process.exit(0);
+
+if (!(await preflight())) {
+  // No network. Exit WITHOUT writing anything, so the slot stays open and a later poll retries it.
+  // Run 2 on 2026-08-29 is why: it fired on wake before the interface was up, every row failed,
+  // and the empty file still claimed the slot.
+  console.log(`[slippage] ${new Date().toISOString()} Horizon unreachable, aborting without claiming a slot`);
+  process.exit(0);
+}
+
 const actual = new Date(startedMs).toISOString();
 const scriptSha = createHash('sha256')
   .update(readFileSync(fileURLToPath(import.meta.url)))
@@ -193,7 +241,7 @@ const scriptSha = createHash('sha256')
 
 const meta = {
   type: 'run',
-  kind: MANUAL ? 'manual' : 'scheduled',
+  kind: MANUAL ? 'manual' : FORCE ? 'forced' : 'scheduled',
   run_number: slot?.run ?? null,
   planned_at_utc: slot?.planned_at_utc ?? null,
   actual_at_utc: actual,
@@ -214,9 +262,11 @@ console.log(
 );
 
 const lines = [JSON.stringify(meta)];
+const results = [];
 
 for (const s of SERIES) {
   const result = await measureSeries(s);
+  results.push(result);
   lines.push(JSON.stringify({ type: 'series', run_number: meta.run_number, actual_at_utc: actual, ...result }));
 
   console.log(`\n=== ${result.pair} ===`);
@@ -237,8 +287,27 @@ for (const s of SERIES) {
   }
 }
 
-mkdirSync(RUNS_DIR, { recursive: true });
+// A run only claims its slot if it actually measured something. Anything less is quarantined in
+// runs/failed/ for the record, leaving the slot open for a later poll inside its catch-up window.
+const allRows = results.flatMap((r) => r.rows);
+const goodRows = allRows.filter((r) => !r.error).length;
+const everySeriesHasBaseline = results.every((r) => r.baseline_rate !== null);
+const complete = everySeriesHasBaseline && goodRows >= allRows.length * MIN_COMPLETE;
+
 const stamp = actual.replace(/[:-]/g, '').replace(/\.\d+Z$/, 'Z');
-const name = MANUAL ? `${stamp}-manual.jsonl` : `${stamp}-run${meta.run_number}.jsonl`;
+
+if (!complete) {
+  mkdirSync(FAILED_DIR, { recursive: true });
+  const name = `${stamp}-run${meta.run_number ?? 'x'}-INCOMPLETE.jsonl`;
+  writeFileSync(join(FAILED_DIR, name), lines.join('\n') + '\n');
+  console.log(`\n[slippage] INCOMPLETE (${goodRows}/${allRows.length} rows) -> runs/failed/${name}`);
+  console.log(`[slippage] slot ${meta.run_number ?? '-'} left OPEN for a later poll`);
+  process.exit(0);
+}
+
+mkdirSync(RUNS_DIR, { recursive: true });
+const name = MANUAL ? `${stamp}-manual.jsonl`
+  : FORCE ? `${stamp}-forced.jsonl`
+  : `${stamp}-run${meta.run_number}.jsonl`;
 writeFileSync(join(RUNS_DIR, name), lines.join('\n') + '\n');
-console.log(`\n[slippage] wrote runs/${name}`);
+console.log(`\n[slippage] wrote runs/${name}  (${goodRows}/${allRows.length} rows good)`);

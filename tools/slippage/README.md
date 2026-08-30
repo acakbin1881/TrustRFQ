@@ -24,7 +24,8 @@ The spread of runs is how the floor is located, not the finding itself.
 
 ```bash
 node tools/slippage/measure.mjs --manual   # ad-hoc run; never fills a scheduled slot
-node tools/slippage/measure.mjs            # scheduled run; binds to the nearest open slot
+node tools/slippage/measure.mjs            # poll; runs only if a slot's window is open, else exits
+node tools/slippage/measure.mjs --force    # run now and record it, ignoring the slot window
 node tools/slippage/report.mjs             # coverage + distribution + the floor
 node tools/slippage/report.mjs --mid       # same, using the spread-inclusive metric
 ```
@@ -56,9 +57,13 @@ the expected best case and therefore the one that sets the floor.
 
 ## Scheduler
 
-`com.trustrfq.slippage.plist` is a `launchd` user agent, one `StartCalendarInterval` entry per slot.
-It schedules in **local time** (Europe/Skopje, CEST, UTC+2), which is why each `Hour` is the UTC
-slot plus 2. No `sudo`, no daemon, nothing outside the user account.
+`com.trustrfq.slippage.plist` is a `launchd` user agent that does one thing: run `measure.mjs`
+every 5 minutes. It knows nothing about the schedule. `measure.mjs` holds the slot table and
+decides **in UTC epoch milliseconds** whether anything is due, so almost every invocation exits in
+a few milliseconds having found nothing. A slot's window opens 2.5 minutes before its planned time
+and stays open for 3 hours, which is what lets a slot survive the machine being asleep.
+
+No `sudo`, no daemon, nothing outside the user account.
 
 ```bash
 # install
@@ -74,9 +79,34 @@ launchctl unload ~/Library/LaunchAgents/com.trustrfq.slippage.plist
 rm ~/Library/LaunchAgents/com.trustrfq.slippage.plist
 ```
 
-If the Mac is asleep at a slot, `launchd` runs the job once on wake. The run is not lost but its
-timestamp drifts, and `report.mjs` prints the drift and flags anything over two hours as unreliable.
-Only run 4 (07:00 local) is realistically at risk.
+If the Mac is asleep at a slot, the first poll after wake picks it up, as long as that is within
+the 3-hour catch-up window. `report.mjs` prints the drift and flags anything over two hours.
+
+## Two failures on the first day, and what changed
+
+Both are recorded in `schedule.json` under `corrections`, and `report.mjs` prints them.
+
+**1. `launchd` fired an hour early.** The original plist used `StartCalendarInterval` with local
+times. Slot 1 was set to 16:00 local, expecting 14:00 UTC, and the job ran at **13:00 UTC**, which
+is 15:00 CEST. `launchd` had applied standard time (CET, UTC+1) and ignored that the machine is on
+summer time (CEST, UTC+2). Run 1 is kept: it is a valid measurement, just of the 13:00 UTC hour
+(14d median 519k XLM) rather than the intended peak (818k), and its record carries `-60m` drift.
+The fix was to stop expressing the schedule in local time at all.
+
+**2. A run on wake burned its slot.** Slot 2 fired 5 minutes after wake, before the network
+interface was up. All 27 rows returned `network: fetch failed`, and the empty file was still
+written, which **claimed the slot**. That is the dangerous failure: not a missing measurement, but
+a measurement that looks present and is empty. Two fixes: `measure.mjs` now probes Horizon before
+starting and exits writing nothing if it is unreachable, and any run that fails a completeness
+check (every series must have a baseline, and at least 80% of rows must succeed) is quarantined in
+`runs/failed/` instead of claiming its slot. Both paths were tested against a dead host before
+being trusted. Slot 2 was re-dated to Sunday 2026-08-30 19:00 UTC, which is a better thin-weekend
+sample anyway since Sunday is the quieter weekend day.
+
+Because `measure.mjs` changed mid-window, `schedule.json` carries a `script_versions` list. The
+measurement logic is identical across versions, same endpoint, pairs, sizes and both bps formulas,
+so runs stay comparable; `report.mjs` prints the declared reason for each version and shouts if it
+finds an undeclared one.
 
 ## Reading the data
 

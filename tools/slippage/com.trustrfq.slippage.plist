@@ -2,21 +2,21 @@
 <!--
   Slippage repeat-run scheduler, 2026-08-29 -> 2026-09-03.
 
-  launchd schedules in LOCAL time. This machine is Europe/Skopje (CEST, UTC+2), so every
-  Hour below is the planned UTC slot plus 2. The slot table with both clocks lives in
-  tools/slippage/schedule.json and on the Notion plan page.
+  This is deliberately a DUMB 5-minute poller. It knows nothing about the schedule.
+  measure.mjs holds the slot table and decides, in UTC epoch milliseconds, whether anything is due;
+  almost every invocation exits in a few milliseconds having found nothing.
 
-    run 1  Sat 29 Aug  16:00 local = 14:00 UTC   peak hour, weekend
-    run 2  Sat 29 Aug  21:00 local = 19:00 UTC   thinnest hour of the week
-    run 3  Sun 30 Aug  14:00 local = 12:00 UTC   mid hour, quietest weekend day
-    run 4  Mon 31 Aug  07:00 local = 05:00 UTC   thin hour, thinnest weekday  (sleep risk)
-    run 5  Mon 31 Aug  21:00 local = 19:00 UTC   expected WORST case
-    run 6  Tue  1 Sep  16:00 local = 14:00 UTC   peak hour on a thin weekday
-    run 7  Wed  2 Sep  21:00 local = 19:00 UTC   thin hour, mid-week
-    run 8  Thu  3 Sep  16:00 local = 14:00 UTC   expected BEST case, sets the floor
+  Why it is not a StartCalendarInterval any more: on 2026-08-29 the calendar version fired an hour
+  EARLY. 16:00 local was requested and the job ran at 13:00 UTC, which is 15:00 CEST. launchd had
+  applied standard time (CET, UTC+1) and ignored that the machine is on summer time (CEST, UTC+2).
+  Moving the decision into the script in UTC removes launchd's timezone semantics from the problem
+  entirely, and also gives a missed slot a 3-hour catch-up window instead of one fire-on-wake.
 
-  Month+Day pins each entry to a calendar date, but launchd has no year, so these would fire
-  again in August/September 2027. UNLOAD when the window closes:
+  Install:
+    cp tools/slippage/com.trustrfq.slippage.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.trustrfq.slippage.plist
+
+  Remove when the window closes (do this, or it polls forever):
     launchctl unload ~/Library/LaunchAgents/com.trustrfq.slippage.plist
     rm ~/Library/LaunchAgents/com.trustrfq.slippage.plist
 -->
@@ -39,19 +39,12 @@
   <key>StandardErrorPath</key>
   <string>/Users/acakbin1881/Projects/TrustRFQ/tools/slippage/runs/launchd.log</string>
 
-  <key>StartCalendarInterval</key>
-  <array>
-    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>29</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>29</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>30</integer><key>Hour</key><integer>14</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>31</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Month</key><integer>8</integer><key>Day</key><integer>31</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Month</key><integer>9</integer><key>Day</key><integer>1</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Month</key><integer>9</integer><key>Day</key><integer>2</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Month</key><integer>9</integer><key>Day</key><integer>3</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>0</integer></dict>
-  </array>
+  <!-- Poll every 5 minutes. A slot opens 2.5 min before its planned UTC time, so worst-case
+       drift on a machine that is awake is under 5 minutes. -->
+  <key>StartInterval</key>
+  <integer>300</integer>
 
   <key>RunAtLoad</key>
-  <false/>
+  <true/>
 </dict>
 </plist>

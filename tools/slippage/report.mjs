@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, 'runs');
+const FAILED_DIR = join(RUNS_DIR, 'failed');
 const SCHEDULE = JSON.parse(readFileSync(join(HERE, 'schedule.json'), 'utf8'));
 
 const METRIC = process.argv.includes('--mid') ? 'bps_vs_mid' : 'bps_vs_baseline';
@@ -47,7 +48,7 @@ const scheduled = runs.filter((r) => r.meta.kind === 'scheduled');
 const manual = runs.filter((r) => r.meta.kind === 'manual');
 const byRun = new Map(scheduled.map((r) => [r.meta.run_number, r]));
 
-for (const slot of SCHEDULE.slots) {
+for (const slot of [...SCHEDULE.slots].sort((a, b) => Date.parse(a.planned_at_utc) - Date.parse(b.planned_at_utc))) {
   const r = byRun.get(slot.run);
   const tag = slot.role === 'expected_worst_case' ? '  <- expected worst'
     : slot.role === 'expected_best_case_sets_the_floor' ? '  <- expected best, sets the floor' : '';
@@ -65,10 +66,36 @@ const done = byRun.size;
 console.log(`\n  ${done} of ${SCHEDULE.slots.length} scheduled slots collected` +
   (manual.length ? `, plus ${manual.length} manual run(s) (excluded from the schedule)` : ''));
 
+// Quarantined runs never claim a slot, but they must stay visible: a slot repeatedly failing to
+// complete is a problem to fix, not an absence to shrug at.
+const quarantined = existsSync(FAILED_DIR)
+  ? readdirSync(FAILED_DIR).filter((f) => f.endsWith('.jsonl'))
+  : [];
+if (quarantined.length) {
+  console.log(`\n  ${quarantined.length} quarantined run(s) in runs/failed/ (did NOT claim a slot):`);
+  for (const f of quarantined) {
+    const hdr = JSON.parse(readFileSync(join(FAILED_DIR, f), 'utf8').split('\n')[0]);
+    console.log(`     ${f}  slot ${hdr.run_number ?? '-'}  at ${hdr.actual_at_utc}`);
+  }
+}
+
+if (SCHEDULE.corrections?.length) {
+  console.log(`\n  ${SCHEDULE.corrections.length} recorded correction(s) to this window, see schedule.json:`);
+  for (const c of SCHEDULE.corrections) console.log(`     ${c.date}  ${c.what.slice(0, 88)}...`);
+}
+
 const hashes = new Set(runs.map((r) => r.meta.script_sha256));
 if (hashes.size > 1) {
-  console.log(`\n  !! WARNING: runs were produced by ${hashes.size} different versions of measure.mjs.`);
-  for (const r of runs) console.log(`     ${r.file}  ${r.meta.script_sha256.slice(0, 12)}`);
+  // More than one script version in the series. That is only acceptable if every version is
+  // declared in schedule.json with a reason; an undeclared one means two methods got mixed.
+  const declared = new Map((SCHEDULE.script_versions ?? []).map((v) => [v.sha256, v]));
+  const undeclared = [...hashes].filter((h) => !declared.has(h.slice(0, 12)));
+  console.log(`\n  runs span ${hashes.size} versions of measure.mjs:`);
+  for (const h of hashes) {
+    const v = declared.get(h.slice(0, 12));
+    console.log(`     ${h.slice(0, 12)}  ${v ? v.note : '!! UNDECLARED, method may have changed mid-window'}`);
+  }
+  if (undeclared.length) console.log('     !! declare every version in schedule.json before citing this series');
 } else if (hashes.size === 1) {
   console.log(`  all runs produced by measure.mjs sha256 ${[...hashes][0].slice(0, 12)}`);
 }

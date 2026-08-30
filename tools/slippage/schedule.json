@@ -1,5 +1,5 @@
 {
-  "window": "2026-08-29 → 2026-09-03",
+  "window": "2026-08-29 \u2192 2026-09-03",
   "machine_timezone": "Europe/Skopje (CEST, UTC+2)",
   "note": "Slots chosen from 14-day Horizon /trade_aggregations medians for XLM/USDC, measured 2026-08-29. Hourly volume varies 4.5x across the day (180k XLM at 19:00 UTC to 818k at 14:00 UTC). Weekday medians: Thu 544k, Fri 495k, Sat 446k, Sun 362k, Wed 279k, Tue 249k, Mon 245k. The weekend is NOT the thin period on Stellar; Mon-Wed is.",
   "slots": [
@@ -10,14 +10,15 @@
       "weekday": "Sat",
       "why": "Peak hour, weekend",
       "median_hourly_volume_xlm": 818233,
-      "role": "range"
+      "role": "range",
+      "actual_note": "Landed 2026-08-29T13:00:03Z, 60 min early, due to the launchd DST bug. Represents the 13:00 UTC hour (14d median 518,844 XLM), not the intended 14:00 peak."
     },
     {
       "run": 2,
-      "planned_at_utc": "2026-08-29T19:00:00Z",
-      "local": "2026-08-29 21:00 CEST",
-      "weekday": "Sat",
-      "why": "Thinnest hour of the week, weekend",
+      "planned_at_utc": "2026-08-30T19:00:00Z",
+      "local": "2026-08-30 21:00 CEST",
+      "weekday": "Sun",
+      "why": "Thinnest hour of the week, weekend (re-dated from Sat after the run-2 network failure)",
       "median_hourly_volume_xlm": 180219,
       "role": "range"
     },
@@ -75,6 +76,32 @@
       "why": "Peak hour on the thickest day",
       "median_hourly_volume_xlm": 818233,
       "role": "expected_best_case_sets_the_floor"
+    }
+  ],
+  "corrections": [
+    {
+      "date": "2026-08-29",
+      "what": "launchd StartCalendarInterval fired one hour EARLY: 16:00 local was scheduled but the job ran at 13:00 UTC, i.e. 15:00 CEST. launchd applied standard time (CET, UTC+1) and ignored that the machine is on CEST (UTC+2).",
+      "effect": "Run 1 landed at 13:00 UTC instead of 14:00 UTC. It is a valid measurement, just of the 13:00 UTC hour (14d median 518,844 XLM) rather than the intended peak hour (818,233). It is kept, not discarded; drift_minutes records the -60m.",
+      "fix": "Scheduling moved out of launchd and into measure.mjs. The plist is now a 5-minute StartInterval poller and the slot decision is made in UTC epoch ms inside the script, where no timezone or DST can shift it."
+    },
+    {
+      "date": "2026-08-29",
+      "what": "Run 2 fired on wake at 18:05 UTC before the network interface was up. All 27 rows returned 'network: fetch failed', yet the empty file was still written and CLAIMED the slot.",
+      "effect": "Slot 2 was silently burned. The file is quarantined at runs/failed/20260829T180532Z-run2-INCOMPLETE.jsonl and slot 2 is re-dated to 2026-08-30T19:00:00Z (Sun), which is a better thin-weekend sample anyway since Sunday is the quieter weekend day.",
+      "fix": "measure.mjs now probes Horizon before starting and exits without writing if it is unreachable, and quarantines any run that fails a completeness check instead of letting it claim a slot."
+    }
+  ],
+  "script_versions": [
+    {
+      "sha256": "d86cdf1d8de1",
+      "from_run": "manual 2026-08-29T12:41Z and run 1",
+      "note": "Original. launchd held the schedule; no preflight; an incomplete run could claim its slot."
+    },
+    {
+      "sha256": "3b7690160588",
+      "from_run": "run 3 onward (2026-08-30)",
+      "note": "Scheduling moved into the script in UTC after the launchd DST bug; added a Horizon preflight and quarantine of incomplete runs after run 2 burned its slot on a dead network. MEASUREMENT LOGIC IS UNCHANGED: same endpoint, pairs, sizes and both bps formulas, so runs across the two versions stay comparable."
     }
   ]
 }
