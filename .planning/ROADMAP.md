@@ -100,8 +100,29 @@ core. Desk metrics are never cited as evidence.
   5. The extended `npm run e2e:census` drives the full RFQ taker flow through the mock Freighter
      plus a local stub maker and settles for real on Testnet, with maker origins added to
      `connect-src`, zero CSP violations, and no `'unsafe-inline'` in `script-src`
-**Plans**: TBD
+**Plans**: 5 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Tracer: one quote discovered, quoted and settled end to end, plus the golden vectors and the captured auth-entry tree
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Quote validation before any wallet prompt, with the stub maker's failure knobs proving it
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — Discovery indicator, ranked quote list with countdowns and manual re-quote, and every declared UI state
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04-PLAN.md — Trustline pre-flight and the price-guarded expired-entry retry
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 02-05-PLAN.md — Census entry point, CSP posture audit, and the panel verification checkpoint
 
 ### Phase 3: Live Full RFQ Loop
 
@@ -155,7 +176,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. On-Chain Maker Discovery | 4/4 | Complete    | 2026-08-26 |
-| 2. Desk RFQ Taker Path | 0/TBD | Not started | - |
+| 2. Desk RFQ Taker Path | 0/5 | Planned | - |
 | 3. Live Full RFQ Loop | 0/TBD | Not started | - |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
 
