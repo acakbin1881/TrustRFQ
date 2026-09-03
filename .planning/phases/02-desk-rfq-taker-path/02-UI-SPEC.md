@@ -30,6 +30,12 @@ only so the executor can build the panel without inventing look-and-feel decisio
 | Icon library | none — hand-authored inline SVG (matches the existing `AddressSeal`/chevron/orb-spinner pattern; no icon package installed) |
 | Font | `--font-display` / `--font-body` = Inter (headings, body copy); `--font-mono` = IBM Plex Mono (micro-labels, addresses, amounts-as-data, countdowns) — both already loaded, no new font |
 
+**Focal point:** the quote list is the panel's primary focal point (it is where the taker spends
+their attention comparing price/receive-amount/countdown across rows); the "Accept quote" CTA
+becomes the visual anchor only once a row is selected, at which point its accent fill (`--gold`,
+Color contract below) is the single warmest element on the panel — nothing else competes with it
+for that role.
+
 **Why no shadcn init:** `components.json` is absent, and this IS a React + Vite project, so the
 standard shadcn gate applies in principle. It is declined here as a deliberate call, not an
 oversight: CLAUDE.md states the desk's existing stylesheet is "a compatibility contract with
@@ -62,8 +68,11 @@ Exceptions: the existing desk stylesheet is a hand-tuned system that does **not*
 Where this phase's new markup sits directly beside an existing primitive (the `.order` card,
 `.badge`, `.hint`, `.empty` states, `.btn`), REUSE that primitive's exact padding/gap values
 as-is rather than rounding them to the 4-point scale — visual seams between old and new desk
-chrome are a worse outcome than a strict scale. The 4-point scale above applies to genuinely new
-layout (the quote-row list itself, the pair/amount control group).
+chrome are a worse outcome than a strict scale. **Scope of the exception, explicit:** these
+legacy non-4-multiple values (`13px`, `15px`, `26px`, etc.) are permitted ONLY where this phase's
+markup directly extends an existing primitive listed above — they must never be introduced as
+the starting value for genuinely new layout. The 4-point scale above is the only source of truth
+for new layout (the quote-row list itself, the pair/amount control group, the countdown chip).
 
 ---
 
@@ -74,20 +83,20 @@ layout (the quote-row list itself, the pair/amount control group).
 | Body | 15px | 400 (regular) | 1.5 |
 | Label | 11px | 600 (semibold) | 1.4 |
 | Heading | 17px | 600 (semibold) | 1.3 |
-| Display | 24px | 700 (bold) — documented exception, see below | 1.2 |
+| Display | 24px | 600 (semibold) | 1.2 |
 
 Font sizes in play: 11px (mono micro-labels/countdowns), 15px (body/hints), 17px (panel title),
-24px (quote amount figures) — 4 sizes, matching the template's 3-4 guidance.
+24px (quote amount figures) — 4 sizes, matching the template's 3-4 guidance. Exactly 2 weights
+declared, no exceptions: **400 (regular)** for body copy/hints, **600 (semibold)** for every
+other role including the quote row's receive-amount figure.
 
-**Weight exception, documented:** the contract's 2-weight rule is 400/600 for everything this
-phase writes fresh. The one exception is the quote row's receive-amount figure at **700**, which
-directly reuses `.legbox__v`'s existing weight (`public/styles.css:1101-1114`, `font-weight:
-700`) — the RFQ quote row is modeled on the existing OrderCard `.legbox` pattern (a labeled
-amount pill), and giving it a different weight than every other "amount" in the desk would be the
-inconsistency, not the fix. Mono micro-labels (`.field__label`, `.settle__title` pattern) already
-render at 500/600 in the existing system; this phase standardizes new mono labels at 600 to stay
-inside the 2-weight budget without a visible regression (500→600 on an 11px uppercase label is not
-perceptible).
+**Departure from `.legbox__v`, noted:** the existing OrderCard amount pill
+(`public/styles.css:1101-1114`) renders its value at `font-weight: 700`. The RFQ quote row's
+receive-amount figure intentionally renders at **600** instead, to keep this contract's weight
+budget at exactly 2 with no exception. This is a minor, deliberate visual departure from
+`.legbox__v` — acceptable because the RFQ panel is a new, self-contained surface (not a shared
+component instance with the OTC `.legbox`), so the two can read slightly differently without
+producing a visible inconsistency within either surface on its own.
 
 ---
 
@@ -98,7 +107,7 @@ perceptible).
 | Dominant (60%) | `--bg` (#EFF1FA canvas) / `--bg-raised` (#FFFFFF cards) | Panel background, quote-list card surface |
 | Secondary (30%) | `--bg-sunken` (#EFF1F7) | Quote row wells (mirrors `.legbox`), amount input field, disabled states |
 | Accent (10%) | `--gold` family (#16171D ink accent — NOT literal gold) | Reserved for: the "Accept quote" primary CTA fill (`.btn--gold`), the best-preselected quote row's selection ring/border, the section-nav glyph circle for the new RFQ tab (matches the existing `.section-fab__glyph` pattern) |
-| Destructive | `--red` (#C93838) | Reserved for: expired-quote countdown text, drop/refusal error copy, settlement failure text (`.settle__err`) — never for the "Re-quote" button, which is a neutral retry, not a destructive action |
+| Destructive | `--red` (#C93838) | Reserved for: expired-quote countdown text, drop/refusal error copy, settlement failure text (`.settle__err`) — never for the "Refresh quotes" button, which is a neutral retry, not a destructive action |
 
 Accent reserved for: **only** the three elements listed above. Never used for informational
 copy (the "N makers found" indicator, countdowns, price figures render in `--text-1`/`--text-2`,
@@ -118,11 +127,11 @@ per the table above.
 | Element | Copy |
 |---------|------|
 | Primary CTA (settle) | "Accept quote" |
-| Secondary action (manual refresh, D-05) | "Re-quote" |
+| Secondary action (manual refresh, D-05) | "Refresh quotes" |
 | Empty state heading (zero makers registered for the pair) | "No makers registered" |
 | Empty state body (zero makers registered) | "No makers are registered for this pair yet on the registry. Try a different pair." |
 | Empty state heading (zero valid quotes after fan-out) | "No quotes available" |
-| Empty state body (zero valid quotes) | "No registered maker responded in time. Re-quote to try again, or pick a different pair." |
+| Empty state body (zero valid quotes) | "No registered maker responded in time. Refresh quotes to try again, or pick a different pair." |
 | Error state (re-quote fan-out failure) | "Couldn't refresh quotes — try again." (Toast, `err` variant, existing `errMsg` pattern) |
 | Error state (settlement failure) | Raw contract/RPC error text via the existing `.settle__err` convention (never a friendly rewrite — matches `SettlementStrip`'s current behavior for the OTC lane) |
 | Trustline passive note (D-08, shown on pair select if makerToken trustline is missing) | "You'll need a trustline for {TOKEN} to settle this swap — makers may decline to quote without one." |
@@ -164,9 +173,9 @@ Applicable state considerations resolved: 15 covered, 2 backstop, 0 unresolved
 | overflow | n-makers-indicator / trustline-note | ✅ dismissed | Both are single short lines at label/hint scale (max ~3 digits for the count, one sentence for the note) — no wrap risk observed in the equivalent existing `.eyebrow`/`.hint` usages. |
 | overflow | settlement-confirmation | ✅ covered | The tx hash renders truncated + linked via the existing `trunc()` helper (`src/core/tokens.ts`), the same pattern already used for the wallet-chip address — never the raw 64-char hex inline. |
 | zero-one-many | quote-list | ✅ covered | Zero → the empty card; one → a single row rendered as a normal (already-best) row, no singular-copy branch needed since rows carry no count language; many → the ranked, capped-and-scrollable list (overflow row above). |
-| long-text | quote-row amounts | ✅ covered | Figures use tabular-nums and the existing `.legbox__v` numeric style at a fixed size — the RFQ amount is the sell-side figure the taker already typed, not the giant Ticket hero digits, so no dynamic shrink-on-length logic is needed. |
+| long-text | quote-row amounts | ✅ covered | Figures use tabular-nums and the existing `.legbox__v` numeric layout at a fixed size (weight overridden to 600 per the Typography contract's 2-weight budget, see the `.legbox__v` departure note) — the RFQ amount is the sell-side figure the taker already typed, not the giant Ticket hero digits, so no dynamic shrink-on-length logic is needed. |
 | long-text | amount-input | 🧪 backstop | Very large typed amounts (approaching the `amountTooLarge` cap `Ticket.tsx` already enforces) are assumed to reuse that same validation for the RFQ amount field; not independently re-verified for this new input in this research pass — implementation/tests should confirm the cap applies identically. |
-| long-text | accept-button / re-quote-button labels | ✅ dismissed | Fixed short microcopy ("Accept quote", "Re-quote"), never dynamically generated or user-influenced length. |
+| long-text | accept-button / re-quote-button labels | ✅ dismissed | Fixed short microcopy ("Accept quote", "Refresh quotes"), never dynamically generated or user-influenced length. |
 
 ---
 
