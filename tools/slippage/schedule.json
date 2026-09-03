@@ -76,6 +76,15 @@
       "why": "Peak hour on the thickest day",
       "median_hourly_volume_xlm": 818233,
       "role": "expected_best_case_sets_the_floor"
+    },
+    {
+      "run": 9,
+      "planned_at_utc": "2026-09-04T14:00:00Z",
+      "local": "2026-09-04 16:00 CEST",
+      "weekday": "Fri",
+      "why": "Insurance for the peak hour, which is still unsampled after run 1 drifted and run 6 was lost to sleep",
+      "median_hourly_volume_xlm": 818233,
+      "role": "expected_best_case_sets_the_floor"
     }
   ],
   "corrections": [
@@ -90,6 +99,18 @@
       "what": "Run 2 fired on wake at 18:05 UTC before the network interface was up. All 27 rows returned 'network: fetch failed', yet the empty file was still written and CLAIMED the slot.",
       "effect": "Slot 2 was silently burned. The file is quarantined at runs/failed/20260829T180532Z-run2-INCOMPLETE.jsonl and slot 2 is re-dated to 2026-08-30T19:00:00Z (Sun), which is a better thin-weekend sample anyway since Sunday is the quieter weekend day.",
       "fix": "measure.mjs now probes Horizon before starting and exits without writing if it is unreachable, and quarantines any run that fails a completeness check instead of letting it claim a slot."
+    },
+    {
+      "date": "2026-09-01",
+      "what": "Run 6 (Tue 14:00 UTC, the peak hour) never fired. The Mac was in deep sleep across the whole window; its periodic DarkWakes are 2 seconds and do not run LaunchAgents.",
+      "effect": "The peak hour (14:00 UTC, 14d median 818,233 XLM) is still unsampled, because run 1 also missed it by an hour via the launchd DST bug. Run 8 is now the only planned chance at it.",
+      "fix": "Slot 9 added on Fri 2026-09-04 14:00 UTC as insurance for the peak hour. Thursday is the thickest weekday (544k) and Friday the second thickest (495k), so slot 9 is the best available backup for slot 8."
+    },
+    {
+      "date": "2026-09-03",
+      "what": "The 3-hour catch-up window let a run claim a slot from a completely different hour. Run 4 landed +150m (07:30 UTC, 244k hour) against a planned 05:00 UTC (218k), and run 5 landed +160m (21:39 UTC, 393k hour) against a planned 19:00 UTC (180k).",
+      "effect": "Run 5 was the expected worst case and did NOT measure the thin hour it was for. Runs 2 and 7 did land in the 19:00 UTC hour, so the thin end is still covered, but by accident of scheduling rather than by design.",
+      "fix": "Catch-up window tightened from 3h to 45 min: a slot names an hour, so a run that cannot land in roughly that hour should leave the slot honestly PENDING rather than mislabel a different hour. Separately, report.mjs now labels every run by the hour it ACTUALLY measured and that hour's median volume, so the reader never has to trust the planned label."
     }
   ],
   "script_versions": [
@@ -102,6 +123,38 @@
       "sha256": "3b7690160588",
       "from_run": "run 3 onward (2026-08-30)",
       "note": "Scheduling moved into the script in UTC after the launchd DST bug; added a Horizon preflight and quarantine of incomplete runs after run 2 burned its slot on a dead network. MEASUREMENT LOGIC IS UNCHANGED: same endpoint, pairs, sizes and both bps formulas, so runs across the two versions stay comparable."
+    },
+    {
+      "sha256": "2a889dbad46d",
+      "from_run": "run 8 onward (2026-09-03)",
+      "note": "Catch-up window tightened from 3h to 45 min so a late run cannot mislabel a different hour. MEASUREMENT LOGIC STILL UNCHANGED: same endpoint, pairs, sizes and both bps formulas."
     }
-  ]
+  ],
+  "hourly_median_volume_xlm": {
+    "0": 408301,
+    "1": 406657,
+    "2": 438695,
+    "3": 311898,
+    "4": 186255,
+    "5": 218273,
+    "6": 219670,
+    "7": 244395,
+    "8": 370809,
+    "9": 314764,
+    "10": 360618,
+    "11": 464395,
+    "12": 660512,
+    "13": 518844,
+    "14": 818233,
+    "15": 745674,
+    "16": 525356,
+    "17": 341642,
+    "18": 297684,
+    "19": 180219,
+    "20": 364695,
+    "21": 393377,
+    "22": 203713,
+    "23": 218290
+  },
+  "hourly_median_source": "Horizon /trade_aggregations, XLM/USDC, 336 hourly buckets, 2026-08-15 to 2026-08-29. Used to label each run by the hour it ACTUALLY measured, not the hour it was planned for."
 }

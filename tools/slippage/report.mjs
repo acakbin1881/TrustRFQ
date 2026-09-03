@@ -21,6 +21,7 @@ const FAILED_DIR = join(RUNS_DIR, 'failed');
 const SCHEDULE = JSON.parse(readFileSync(join(HERE, 'schedule.json'), 'utf8'));
 
 const METRIC = process.argv.includes('--mid') ? 'bps_vs_mid' : 'bps_vs_baseline';
+const hourlyMedian = SCHEDULE.hourly_median_volume_xlm ?? {};
 const HEADLINE = { 'XLM->USDC': [100000, 500000, 1000000], 'USDC->XLM': [100000, 250000], 'USDC->EURC': [100000, 250000] };
 
 const files = existsSync(RUNS_DIR)
@@ -57,9 +58,19 @@ for (const slot of [...SCHEDULE.slots].sort((a, b) => Date.parse(a.planned_at_ut
     continue;
   }
   const d = r.meta.drift_minutes;
-  const drift = Math.abs(d) <= 5 ? 'on time' : `${d > 0 ? '+' : ''}${d}m drift`;
-  const warn = Math.abs(d) > 120 ? '  !! DRIFT OVER 2h, treat this slot as unreliable' : '';
-  console.log(`  #${slot.run}  ${slot.planned_at_utc}  ${slot.weekday}  DONE ${drift.padEnd(12)} ${slot.why}${tag}${warn}`);
+  const drift = Math.abs(d) <= 5 ? 'on time' : `${d > 0 ? '+' : ''}${d}m`;
+  // A run is labelled by the hour it ACTUALLY measured, never by the hour it was planned for.
+  // Drift of an hour or more means a different market, and the planned label would be a lie.
+  const actualHour = new Date(r.meta.actual_at_utc).getUTCHours();
+  const plannedHour = new Date(slot.planned_at_utc).getUTCHours();
+  const vol = hourlyMedian[String(actualHour)];
+  const mismatch = actualHour !== plannedHour
+    ? `  !! measured the ${String(actualHour).padStart(2, '0')}:00 hour, NOT the planned ${String(plannedHour).padStart(2, '0')}:00`
+    : '';
+  console.log(
+    `  #${slot.run}  ${slot.planned_at_utc}  ${slot.weekday}  DONE ${drift.padEnd(7)}` +
+    ` measured ${String(actualHour).padStart(2, '0')}:00 UTC (${vol ? vol.toLocaleString('en-US') : '?'} XLM/h)  ${slot.why}${tag}${mismatch}`
+  );
 }
 
 const done = byRun.size;
@@ -98,6 +109,28 @@ if (hashes.size > 1) {
   if (undeclared.length) console.log('     !! declare every version in schedule.json before citing this series');
 } else if (hashes.size === 1) {
   console.log(`  all runs produced by measure.mjs sha256 ${[...hashes][0].slice(0, 12)}`);
+}
+
+// What liquidity range did the series actually sample? This, not the slot table, is what the
+// floor claim can be built on.
+const sampled = runs
+  .filter((r) => r.meta.kind === 'scheduled')
+  .map((r) => ({ h: new Date(r.meta.actual_at_utc).getUTCHours(), run: r.meta.run_number }))
+  .map((x) => ({ ...x, vol: hourlyMedian[String(x.h)] ?? null }))
+  .filter((x) => x.vol !== null)
+  .sort((a, b) => a.vol - b.vol);
+if (sampled.length) {
+  const peak = Math.max(...Object.values(hourlyMedian));
+  const thin = Math.min(...Object.values(hourlyMedian));
+  console.log('\n  Liquidity actually sampled, thinnest hour first:');
+  for (const x of sampled) {
+    console.log(`     #${x.run}  ${String(x.h).padStart(2, '0')}:00 UTC  ${x.vol.toLocaleString('en-US').padStart(9)} XLM/h`);
+  }
+  console.log(`     network range is ${thin.toLocaleString('en-US')} to ${peak.toLocaleString('en-US')} XLM/h;` +
+    ` this series spans ${sampled[0].vol.toLocaleString('en-US')} to ${sampled[sampled.length - 1].vol.toLocaleString('en-US')}`);
+  if (sampled[sampled.length - 1].vol < peak) {
+    console.log(`     !! the peak hour (${peak.toLocaleString('en-US')} XLM/h) is NOT yet sampled, so the floor is not yet established`);
+  }
 }
 
 if (!runs.length) { console.log('\nNo runs yet.'); process.exit(0); }

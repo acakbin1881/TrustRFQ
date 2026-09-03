@@ -60,7 +60,11 @@ const FORCE = process.argv.includes('--force');
 // How early the poller may fire a slot, and how late a missed slot may still be caught up.
 // The catch-up window is what lets a slot survive the machine being asleep at its planned time.
 const EARLY_TOLERANCE_MS = 150 * 1000;
-const CATCHUP_WINDOW_MS = 3 * 60 * 60 * 1000;
+// 45 minutes, tightened from 3 hours on 2026-09-03. A slot names a specific HOUR, chosen for that
+// hour's liquidity. A 3-hour catch-up let run 4 land at 07:30 for a 05:00 slot and run 5 at 21:39
+// for a 19:00 slot, so both recorded a different hour's market under the planned hour's label.
+// Leaving a slot honestly PENDING is better than filling it with the wrong hour.
+const CATCHUP_WINDOW_MS = 45 * 60 * 1000;
 
 // A run that cannot reach at least this share of its rows is quarantined rather than allowed to
 // claim its slot, so a dead network cannot silently consume a measurement point.
