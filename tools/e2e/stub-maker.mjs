@@ -262,7 +262,11 @@ async function handleGetMakerSideOrder(params) {
       rootArgCount: tree.args.args.length,
       subInvocationCount: tree.invocations.length,
     };
-    writeFileSync(CAPTURE_PATH, JSON.stringify(capture, null, 2));
+    // buildInvocationTree's natively-typed args include BigInt (i128/u64
+    // amounts), which JSON.stringify cannot serialize on its own — stringify
+    // every BigInt rather than dropping precision through Number.
+    const replacer = (_key, value) => (typeof value === 'bigint' ? value.toString() : value);
+    writeFileSync(CAPTURE_PATH, JSON.stringify(capture, replacer, 2));
     log(`captured auth-entry tree -> ${CAPTURE_PATH}`);
   }
 
