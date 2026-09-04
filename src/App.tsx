@@ -29,12 +29,13 @@ import { BroadcastList } from './ui/BroadcastList';
 import { Gate } from './ui/Gate';
 import { OfferList } from './ui/OfferList';
 import { PairsPanel } from './ui/PairsPanel';
+import { RfqPanel } from './ui/RfqPanel';
 import { SectionSheet } from './ui/SectionSheet';
 import { Ticket } from './ui/Ticket';
 import { errMsg, ToastProvider, useToast } from './ui/Toast';
 import { useNow } from './ui/useNow';
 
-type TabName = 'create' | 'incoming' | 'sent';
+type TabName = 'create' | 'incoming' | 'sent' | 'rfq';
 
 /** An offer still awaiting somebody's move. 'countered' counts: the desk has counter-offers now. */
 const isOpen = (o: Order, now: number) =>
@@ -139,6 +140,7 @@ function Desk() {
               { id: 'create', label: 'New offer', glyph: '+' },
               { id: 'incoming', label: 'Incoming', glyph: '↓', count: incomingCount },
               { id: 'sent', label: 'Sent', glyph: '↑', count: sentCount },
+              { id: 'rfq', label: 'RFQ', glyph: '⇄' },
             ] as const}
           />
         ) : null} />
@@ -192,6 +194,10 @@ function Desk() {
                 </>
               )
             ) : null}
+          </div>
+
+          <div className={tab === 'rfq' ? 'panel is-active' : 'panel'} data-panel="rfq">
+            {address ? <RfqPanel address={address} balances={balances} /> : null}
           </div>
         </section>
       </main>
