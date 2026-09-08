@@ -58,6 +58,9 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
   const [settled, setSettled] = useState<{ hash: string; event: SwapExecutedEvent | null } | null>(null);
   const [settleErr, setSettleErr] = useState<string | null>(null);
   const busy = useRef(false);
+  // guards a slow fan-out pass resolving after the pair/amount changed —
+  // mirrors src/data/useFairPrice.ts's pairRef staleness guard.
+  const requestRef = useRef('');
 
   const sameToken = sellToken === buyToken;
   const canQuote = !sameToken && validAmount(amount);
@@ -71,6 +74,8 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
 
   const refreshQuotes = useCallback(async () => {
     if (!canQuote || busy.current) return;
+    const requestKey = `${sellToken}|${buyToken}|${amount}`;
+    requestRef.current = requestKey;
     setPhase('discovering');
     setQuotes([]);
     setSettled(null);
@@ -81,13 +86,18 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       // discovery: this desk sells `sellToken`, so it needs a maker who sells
       // `buyToken` (makerToken) and accepts `sellToken` (takerToken).
       const urls = await discoverMakerUrls(buySac, sellSac);
+      if (requestRef.current !== requestKey) return; // a newer pass superseded this one
       setMakerCount(urls.length);
       if (urls.length === 0) {
         setPhase('empty-makers');
         return;
       }
       setPhase('quoting');
-      const results = await fanOutMakerSideOrder(urls, {
+      // Every returned response is validated before it can reach this panel
+      // (TAKER-03) — rejections never become rows, they only reach the dev
+      // console so a doctored quote's drop can be proven, not just observed
+      // as absent.
+      const { accepted, rejections } = await fanOutMakerSideOrder(urls, {
         network: PASSPHRASE,
         swapContract: RFQ_SWAP_CONTRACT_ID,
         makerToken: buySac,
@@ -96,11 +106,24 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
         takerWallet: address,
         minExpiry: Math.floor(Date.now() / 1000) + 30,
       });
-      const ranked = [...results].sort((a, b) => priceOf(b) - priceOf(a)); // D-04: best first
+      if (requestRef.current !== requestKey) return; // a newer pass superseded this one
+      if (rejections.length) {
+        // JSON-stringified (not passed as a raw object) so an E2E console
+        // listener (tools/e2e/rfq-driver.mjs's D-12 scenarios) can read the
+        // rejection reason directly out of the message text — a raw object
+        // arg would only serialize to a JSHandle placeholder there.
+        // eslint-disable-next-line no-console
+        console.debug(
+          '[rfq] dropped quotes',
+          JSON.stringify(rejections.map((r) => ({ url: r.url, reason: r.rejection.reason, detail: r.rejection.detail }))),
+        );
+      }
+      const ranked = [...accepted].sort((a, b) => priceOf(b) - priceOf(a)); // D-04: best first
       setQuotes(ranked);
       setSelected(0);
       setPhase(ranked.length ? 'quoted' : 'empty-quotes');
     } catch (e) {
+      if (requestRef.current !== requestKey) return; // a newer pass superseded this one
       toast(errMsg(e, "Couldn't refresh quotes — try again."), 'err');
       setPhase('idle');
     }

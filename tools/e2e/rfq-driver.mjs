@@ -9,6 +9,18 @@
 // including `counts.promptsByType` so the one-prompt property (TAKER-04) is
 // measured, not asserted from memory.
 //
+// After the happy path settles, six scenarios total (D-12): the happy path
+// plus one scenario per failure knob (SLOW/MALFORMED/REFUSE/DRIFTED/
+// WRONG_FEE). Each knob is selected PER-REQUEST via the `x-e2e-mode` header
+// (must match stub-maker.mjs's MODE_HEADER) — intercepted and injected with
+// Playwright's page.route(), never a change to the desk's own fetch call, so
+// one running stub-maker instance serves every mode without a src/ change.
+// Each scenario asserts the doctored/dropped quote never becomes a
+// selectable row and costs zero NEW wallet prompts; DRIFTED/WRONG_FEE also
+// assert the SPECIFIC rejection reason recorded in the dev console
+// (src/ui/RfqPanel.tsx's console.debug of fanOutMakerSideOrder's
+// rejections) so the run proves WHICH check caught the quote.
+//
 //   node tools/e2e/rfq-driver.mjs
 //
 // Assumes the built app is already being served (npm run build && npm run
@@ -28,6 +40,18 @@ const FRIENDBOT = 'https://friendbot.stellar.org';
 const NETWORK = Networks.TESTNET;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:4173/otc.html';
 const SCRATCH = process.env.SCRATCH || path.join(REPO_ROOT, 'tools', 'e2e', 'out');
+
+// Must match tools/e2e/stub-maker.mjs's MODE_HEADER exactly.
+const MODE_HEADER = 'x-e2e-mode';
+
+// Exactly five knobs (D-12), no more.
+const D12_SCENARIOS = [
+  { mode: 'SLOW', label: 'SLOW — delay past the 3s fan-out timeout' },
+  { mode: 'MALFORMED', label: 'MALFORMED — response body is not valid JSON' },
+  { mode: 'REFUSE', label: 'REFUSE — JSON-RPC error -33700 (taker trustline missing)' },
+  { mode: 'DRIFTED', label: 'DRIFTED — signed makerAmount != claimed order.makerAmount', expectedReason: 'tree_mismatch' },
+  { mode: 'WRONG_FEE', label: 'WRONG_FEE — signed feeBps != live get_config', expectedReason: 'fee_mismatch' },
+];
 const REPORT = process.env.REPORT || path.join(SCRATCH, `report-rfq-${Date.now()}.json`);
 const HEADED = !!process.env.HEADED;
 const SELL_AMOUNT = process.env.SELL_AMOUNT || '1';
@@ -95,6 +119,46 @@ async function stopStubMaker(child) {
   });
 }
 
+/**
+ * Run one D-12 scenario: switch the maker's per-request mode (via the route
+ * interception set up in main()), re-fan-out, and assert the doctored/dropped
+ * quote never becomes a row and costs zero new wallet prompts. For
+ * DRIFTED/WRONG_FEE, also captures the specific rejection reason
+ * src/ui/RfqPanel.tsx logged to the dev console — proving WHICH check caught
+ * the quote, not merely that a row is absent (an absent row could equally
+ * mean the request never arrived).
+ */
+async function runD12Scenario(page, tally, consoleLines, setMode, scenario) {
+  const promptsBefore = tally.counts().walletPrompts;
+  const consoleStart = consoleLines.length;
+  setMode(scenario.mode);
+  await click(tally, page.locator('#rfqRefreshBtn'), `refresh-quotes-${scenario.mode.toLowerCase()}`, { kind: 'ui-click-nav' });
+  await page.locator('.empty', { hasText: 'No quotes available' }).waitFor({ state: 'visible', timeout: 20000 });
+  const rowCount = await page.locator('.rfq-quotes .order').count();
+  const promptsAfter = tally.counts().walletPrompts;
+  const newConsole = consoleLines.slice(consoleStart).join('\n');
+  const reasonMatch = newConsole.match(/"reason":"(\w+)"/);
+  const result = {
+    mode: scenario.mode,
+    label: scenario.label,
+    rowAppeared: rowCount > 0,
+    walletPrompts: promptsAfter - promptsBefore,
+    rejectionReason: reasonMatch ? reasonMatch[1] : null,
+  };
+  if (result.rowAppeared) {
+    throw new Error(`D-12 scenario ${scenario.mode}: a doctored/dropped quote appeared as a selectable row`);
+  }
+  if (result.walletPrompts !== 0) {
+    throw new Error(`D-12 scenario ${scenario.mode}: expected zero wallet prompts, observed ${result.walletPrompts}`);
+  }
+  if (scenario.expectedReason && result.rejectionReason !== scenario.expectedReason) {
+    throw new Error(
+      `D-12 scenario ${scenario.mode}: expected rejection reason "${scenario.expectedReason}", observed "${result.rejectionReason}"`,
+    );
+  }
+  return result;
+}
+
 async function main() {
   mkdirSync(SCRATCH, { recursive: true });
 
@@ -125,10 +189,24 @@ async function main() {
   page.on('console', (m) => consoleLines.push(`[${m.type()}] ${m.text()}`));
   page.on('pageerror', (e) => consoleLines.push(`[pageerror] ${e.message}`));
 
+  // D-12: intercept the desk's own outgoing request to the maker's URL and
+  // inject the mode header — the desk's fetch call itself is never modified
+  // (no src/ change), only what the browser actually sends over the wire.
+  let currentD12Mode = null;
+  const setD12Mode = (mode) => { currentD12Mode = mode; };
+  await page.route(maker.url, async (route) => {
+    const headers = { ...route.request().headers() };
+    if (currentD12Mode) headers[MODE_HEADER] = currentD12Mode;
+    else delete headers[MODE_HEADER];
+    await route.continue({ headers });
+  });
+
+  const scenarioResults = [];
   const startedAt = new Date().toISOString();
   const meta = () => ({
     role: 'taker', publicKey: takerKp.publicKey(), makerUrl: maker.url, makerPubkey: maker.pubkey,
     sellAmount: SELL_AMOUNT, baseUrl: BASE_URL, startedAt, finishedAt: new Date().toISOString(), settleTxHash,
+    scenarios: scenarioResults,
   });
 
   const consolePath = path.join(SCRATCH, `console-rfq-${Date.now()}.log`);
@@ -179,11 +257,27 @@ async function main() {
     await link.waitFor({ state: 'visible', timeout: 240000 });
     settleTxHash = ((await link.getAttribute('href')) ?? '').split('/tx/')[1] ?? null;
     tally.record('milestone', 'settled-observed');
+    scenarioResults.push({
+      mode: 'HAPPY_PATH', label: 'happy path — settles for real with exactly one signTransaction prompt',
+      rowAppeared: true, walletPrompts: 1, rejectionReason: null, txHash: settleTxHash,
+    });
+
+    // D-12: the happy path stays first (a regression in the knobs must never
+    // mask a regression in settlement) — now prove each failure knob costs
+    // zero wallet prompts and never surfaces a row, one scenario per knob.
+    for (const scenario of D12_SCENARIOS) {
+      step(`d12-${scenario.mode.toLowerCase()}`);
+      const result = await runD12Scenario(page, tally, consoleLines, setD12Mode, scenario);
+      scenarioResults.push(result);
+      log(`D-12 ${scenario.mode}: rowAppeared=${result.rowAppeared} walletPrompts=${result.walletPrompts} reason=${result.rejectionReason ?? 'n/a'}`);
+    }
+    tally.record('milestone', 'd12-scenarios-complete');
 
     const body = tally.writeReport(REPORT, { ...meta(), status: 'ok', failedStep: null });
     writeFileSync(consolePath, consoleLines.join('\n'));
     console.log(`REPORT ${REPORT}`);
     console.log(JSON.stringify(body.counts));
+    console.log(`SCENARIOS ${scenarioResults.length} (expected 6): ${scenarioResults.map((s) => s.mode).join(', ')}`);
     await browser.close();
     await stopStubMaker(maker.child);
     process.exit(0);

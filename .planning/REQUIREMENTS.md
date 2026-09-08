@@ -64,7 +64,7 @@ minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioni
   wire shapes and error codes) to discovered makers in parallel with a 2-3s timeout, dropping
   malformed responses
 
-- [ ] **TAKER-03**: The desk validates and selects quotes locally before any wallet interaction:
+- [x] **TAKER-03**: The desk validates and selects quotes locally before any wallet interaction:
   economics match the request, `feeBps` equals the on-chain `get_config` value, sane
   expiry/`signatureExpirationLedger`, and the decoded `authEntry` invocation tree matches the
   order terms
@@ -74,7 +74,7 @@ minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioni
   `assembleTransaction`, submit + poll, confirmation via `getTransaction` plus the swap event; no
   wallet `signAuthEntry` on the taker path
 
-- [ ] **TAKER-05**: Trustline pre-flight with an "add trustline" prompt before settlement; an
+- [x] **TAKER-05**: Trustline pre-flight with an "add trustline" prompt before settlement; an
   expired-entry failure auto-refreshes the quote and retries once; tokens resolve only from the
   curated allow-list (`src/core/tokens.ts`), never raw user-pasted addresses
 
@@ -150,9 +150,9 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | CFG-01 | Phase 1 | Complete |
 | TAKER-01 | Phase 2 | Pending |
 | TAKER-02 | Phase 2 | Pending |
-| TAKER-03 | Phase 2 | Pending |
+| TAKER-03 | Phase 2 | Complete |
 | TAKER-04 | Phase 2 | Pending |
-| TAKER-05 | Phase 2 | Pending |
+| TAKER-05 | Phase 2 | Complete |
 | TAKER-06 | Phase 2 | Pending |
 | CSP-01 | Phase 2 | Pending |
 | E2E-01 | Phase 2 | Pending |
