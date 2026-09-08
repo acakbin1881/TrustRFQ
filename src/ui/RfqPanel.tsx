@@ -7,15 +7,24 @@
 //
 // D-03: this module writes to no off-chain store, ever. It never imports a
 // database client.
+//
+// Row order comes from discover.ts's rankQuotes, never an ad-hoc sort here
+// (D-04) — the panel is presentation over that pure ranking, not a second
+// implementation of the selection rule. Selection is tracked by the quote's
+// own authEntry rather than its array index, so a row dropping out from
+// under the taker (countdown hitting zero, D-05) can never silently
+// re-point the preselected action at a different quote.
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { EXPLORER, HORIZON_URL, PASSPHRASE, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
 import type { BalanceMap } from '../core/balances';
 import { balanceOf } from '../core/balances';
+import { amountTooLarge } from '../core/negotiation';
+import { bestQuote, dropExpired, fmtCountdown, rankQuotes } from '../core/rfq/discover';
 import { sacIdFor } from '../core/rfq/order';
 import { ensureRfqTrustline, settleQuote, type RfqChainConfig, type RfqWalletSigner, type SwapExecutedEvent } from '../core/rfq/settle';
 import type { MakerSideOrderResult } from '../core/rfq/wire';
-import { TOKENS, fmtRemaining, isExpired, trunc, validAmount } from '../core/tokens';
+import { TOKENS, tokenLabel, trunc, validAmount } from '../core/tokens';
 import { discoverMakerUrls, fanOutMakerSideOrder } from '../data/rfqNetwork';
 import { kit } from '../wallet/kit';
 import { TokenSelect } from './TokenSelect';
@@ -29,6 +38,8 @@ interface RfqPanelProps {
 
 type Phase = 'idle' | 'discovering' | 'quoting' | 'quoted' | 'empty-makers' | 'empty-quotes' | 'settling' | 'settled';
 
+const MAX_VISIBLE_ROWS = 6;
+
 const rfqChain: RfqChainConfig = {
   rpcUrl: RPC_URL,
   horizonUrl: HORIZON_URL,
@@ -41,19 +52,20 @@ const signerFor = (address: string): RfqWalletSigner => ({
   signTransaction: (xdr, opts) => kit.signTransaction(xdr, opts),
 });
 
-/** A quote's price, receive-per-sell — higher is better for the taker. */
-const priceOf = (q: MakerSideOrderResult) => Number(q.order.makerAmount) / Number(q.order.takerAmount);
-
 export function RfqPanel({ address, balances }: RfqPanelProps) {
   const toast = useToast();
   const now = useNow(1000);
+  const nowSeconds = Math.floor(now / 1000);
 
   const [sellToken, setSellToken] = useState(TOKENS[0].value);
   const [buyToken, setBuyToken] = useState(TOKENS[1]?.value ?? TOKENS[0].value);
   const [amount, setAmount] = useState('');
   const [makerCount, setMakerCount] = useState<number | null>(null);
   const [quotes, setQuotes] = useState<MakerSideOrderResult[]>([]);
-  const [selected, setSelected] = useState(0);
+  // The preselected/selected row is tracked by identity (the quote's own
+  // authEntry), not array position — an index would silently re-point at a
+  // different quote once dropExpired removes an earlier row (D-05).
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [settled, setSettled] = useState<{ hash: string; event: SwapExecutedEvent | null } | null>(null);
   const [settleErr, setSettleErr] = useState<string | null>(null);
@@ -62,22 +74,34 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
   // mirrors src/data/useFairPrice.ts's pairRef staleness guard.
   const requestRef = useRef('');
 
-  const sameToken = sellToken === buyToken;
-  const canQuote = !sameToken && validAmount(amount);
+  // No pair selected (D-02's starting state): the curated allow-list has
+  // exactly two tokens today, so "no pair selected" is the same-token state
+  // Ticket.tsx already guards against — there is no third token to pick that
+  // would make this state reachable any other way.
+  const noPair = sellToken === buyToken;
+  const overCap = amount.trim() !== '' && amountTooLarge(amount);
+  const canQuote = !noPair && validAmount(amount) && !overCap;
   const hasBuyTrustline = buyToken === 'XLM' || balanceOf(balances, buyToken) !== '0' || balances?.[buyToken] !== undefined;
 
-  // D-05: drop expired rows from the visible list (no auto re-fan-out).
-  const liveQuotes = useMemo(
-    () => quotes.filter((q) => !isExpired({ expiration: new Date(q.order.expiry * 1000).toISOString() }, now)),
-    [quotes, now],
-  );
+  // D-05: drop expired rows from the visible list; ranking itself is decided
+  // once, at fetch time (rankQuotes below) — dropExpired only filters, it
+  // never reorders, so an earlier-returned quote keeps its earlier position
+  // for as long as it stays live.
+  const liveQuotes = useMemo(() => dropExpired(quotes, nowSeconds), [quotes, nowSeconds]);
+  // T-02-15: cap what actually renders, not just what scrolls into view — a
+  // maker-count flood (bounded on-chain at 100 by max_makers_per_token) must
+  // never grow the panel's render cost past 6 rows.
+  const visibleQuotes = liveQuotes.slice(0, MAX_VISIBLE_ROWS);
+  const selectedIndex = useMemo(() => {
+    const idx = visibleQuotes.findIndex((q) => q.authEntry === selectedKey);
+    return idx >= 0 ? idx : 0;
+  }, [visibleQuotes, selectedKey]);
 
   const refreshQuotes = useCallback(async () => {
     if (!canQuote || busy.current) return;
     const requestKey = `${sellToken}|${buyToken}|${amount}`;
     requestRef.current = requestKey;
     setPhase('discovering');
-    setQuotes([]);
     setSettled(null);
     setSettleErr(null);
     try {
@@ -89,6 +113,8 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       if (requestRef.current !== requestKey) return; // a newer pass superseded this one
       setMakerCount(urls.length);
       if (urls.length === 0) {
+        setQuotes([]);
+        setSelectedKey(null);
         setPhase('empty-makers');
         return;
       }
@@ -118,12 +144,14 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
           JSON.stringify(rejections.map((r) => ({ url: r.url, reason: r.rejection.reason, detail: r.rejection.detail }))),
         );
       }
-      const ranked = [...accepted].sort((a, b) => priceOf(b) - priceOf(a)); // D-04: best first
+      const ranked = rankQuotes(accepted); // D-04: best price first, best preselected
       setQuotes(ranked);
-      setSelected(0);
+      setSelectedKey(bestQuote(ranked)?.authEntry ?? null);
       setPhase(ranked.length ? 'quoted' : 'empty-quotes');
     } catch (e) {
       if (requestRef.current !== requestKey) return; // a newer pass superseded this one
+      // A failed refresh leaves whatever rows were already on screen alone —
+      // `quotes`/`selectedKey` are deliberately untouched here.
       toast(errMsg(e, "Couldn't refresh quotes — try again."), 'err');
       setPhase('idle');
     }
@@ -131,7 +159,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
 
   const accept = useCallback(async () => {
     if (busy.current) return;
-    const quote = liveQuotes[selected] ?? liveQuotes[0];
+    const quote = visibleQuotes[selectedIndex] ?? visibleQuotes[0];
     if (!quote) return;
     busy.current = true;
     setPhase('settling');
@@ -153,74 +181,84 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
     } finally {
       busy.current = false;
     }
-  }, [liveQuotes, selected, buyToken, address, toast]);
+  }, [visibleQuotes, selectedIndex, buyToken, address, toast]);
 
   const busyDiscovering = phase === 'discovering' || phase === 'quoting';
   const busySettling = phase === 'settling';
+  const fieldsDisabled = busyDiscovering || busySettling;
+  const showMakerLine = makerCount !== null && makerCount > 0;
+  const showEmptyMakers = phase === 'empty-makers';
+  const showEmptyQuotes = phase === 'empty-quotes' || (phase === 'quoted' && visibleQuotes.length === 0);
 
   return (
     <div className="rfq-panel">
       <div className="field">
         <label className="field__label" htmlFor="rfqSellToken">Sell</label>
-        <div className="rfq-row" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <input type="text" id="rfqAmount" inputMode="decimal" placeholder="0.00" value={amount}
-            disabled={busyDiscovering || busySettling}
+        <div className="rfq-sell-row">
+          <input type="text" id="rfqAmount" inputMode="decimal"
+            placeholder={noPair ? 'Choose a pair to see live quotes.' : '0.00'}
+            value={amount} disabled={fieldsDisabled || noPair}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))} />
           <TokenSelect id="rfqSellToken" value={sellToken} options={TOKENS} label="Sell token"
-            disabled={busyDiscovering || busySettling} onChange={setSellToken} />
+            disabled={fieldsDisabled} onChange={setSellToken} />
         </div>
       </div>
 
       <div className="field">
         <label className="field__label" htmlFor="rfqBuyToken">Buy</label>
         <TokenSelect id="rfqBuyToken" value={buyToken} options={TOKENS} label="Buy token"
-          disabled={busyDiscovering || busySettling} onChange={setBuyToken} />
+          disabled={fieldsDisabled} onChange={setBuyToken} />
       </div>
 
-      {!hasBuyTrustline && buyToken !== 'XLM' ? (
+      {noPair ? (
+        <div className="hint">Choose a pair to see live quotes.</div>
+      ) : overCap ? (
+        <div className="hint is-err">Amount too large (max 10,000,000,000,000).</div>
+      ) : !hasBuyTrustline && buyToken !== 'XLM' ? (
         <div className="hint">You'll need a trustline for {buyToken.split(':')[0]} to settle this swap — makers may decline to quote without one.</div>
       ) : null}
 
       <div className="order__actions">
         <button type="button" id="rfqRefreshBtn" className={busyDiscovering ? 'btn btn--gold is-busy' : 'btn btn--gold'}
-          disabled={!canQuote || busyDiscovering || busySettling} onClick={() => void refreshQuotes()}>
+          disabled={!canQuote || fieldsDisabled} onClick={() => void refreshQuotes()}>
           {busyDiscovering ? <span className="btn__orb" aria-hidden="true"><span className="spin" /></span> : 'Refresh quotes'}
         </button>
       </div>
 
-      {makerCount !== null && phase !== 'idle' ? (
-        <div className="hint">{makerCount} maker{makerCount === 1 ? '' : 's'} found</div>
+      {showMakerLine ? (
+        <div className="hint rfq-indicator">{makerCount} maker{makerCount === 1 ? '' : 's'} found</div>
       ) : null}
 
-      {phase === 'empty-makers' ? (
+      {showEmptyMakers ? (
         <div className="empty">
           <div>No makers registered</div>
           <div className="hint">No makers are registered for this pair yet on the registry. Try a different pair.</div>
         </div>
       ) : null}
 
-      {phase === 'empty-quotes' || (phase === 'quoted' && liveQuotes.length === 0) ? (
+      {showEmptyQuotes ? (
         <div className="empty">
           <div>No quotes available</div>
           <div className="hint">No registered maker responded in time. Refresh quotes to try again, or pick a different pair.</div>
         </div>
       ) : null}
 
-      {liveQuotes.length > 0 && !settled ? (
+      {visibleQuotes.length > 0 && !settled ? (
         <div className="rfq-quotes">
-          {liveQuotes.slice(0, 6).map((q, i) => {
-            const remainingMs = q.order.expiry * 1000 - now;
-            const label = remainingMs <= 0 ? 'Expired' : `Expires in ${fmtRemaining(new Date(q.order.expiry * 1000).toISOString(), now)}`;
+          {visibleQuotes.map((q, i) => {
+            const countdown = fmtCountdown(q.order.expiry, nowSeconds);
+            const expired = countdown === 'Expired';
+            const label = expired ? 'Expired' : `Expires in ${countdown}`;
             return (
-              <div key={`${q.authEntry.slice(0, 24)}-${i}`}
-                className={i === selected ? 'order legbox--in' : 'order'}
-                onClick={() => setSelected(i)}>
+              <div key={q.authEntry}
+                className={i === selectedIndex ? 'order rfq-row is-selected' : 'order rfq-row'}
+                onClick={() => setSelectedKey(q.authEntry)}>
                 <div className="legbox">
                   <div className="legbox__k">You receive</div>
-                  <div className="legbox__v">{q.order.makerAmount} <span className="legbox__t">{buyToken.split(':')[0]}</span></div>
+                  <div className="legbox__v">{q.order.makerAmount} <span className="legbox__t">{tokenLabel(buyToken)}</span></div>
                 </div>
                 <div className="order__meta">
-                  <span className="sig">{label}</span>
+                  <span className={expired ? 'sig rfq-countdown is-expired' : 'sig rfq-countdown'}>{label}</span>
                 </div>
               </div>
             );
@@ -228,7 +266,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
           <div className="hint">Fee is paid by the maker — you receive the full quoted amount.</div>
           <div className="order__actions">
             <button type="button" id="rfqAcceptBtn" className={busySettling ? 'btn btn--gold is-busy' : 'btn btn--gold'}
-              disabled={busySettling || liveQuotes.length === 0} onClick={() => void accept()}>
+              disabled={busySettling || visibleQuotes.length === 0} onClick={() => void accept()}>
               {busySettling ? <span className="btn__orb" aria-hidden="true"><span className="spin" /></span> : 'Accept quote'}
             </button>
           </div>
