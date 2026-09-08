@@ -29,6 +29,14 @@
 // CAPTURE_AUTH_TREE=1 (Task 2 only): on the FIRST quote signed, writes
 // fixtures/rfq-auth-tree.json with the real decoded invocation tree — the
 // empirical answer to RESEARCH.md Assumption A1.
+//
+// D-12 failure knobs (Task 3): the driver selects a per-request mode via the
+// `x-e2e-mode` header, so one running server instance serves every mode in a
+// single pass. Exactly five, no more: SLOW, MALFORMED, REFUSE, DRIFTED,
+// WRONG_FEE (see handleModedRequest below). DRIFTED and WRONG_FEE are still
+// REALLY SIGNED — a fabricated entry would let the taker's decoder reject
+// them for the wrong reason (undecodable_entry) and prove nothing about
+// TAKER-03's actual comparisons.
 
 import { createServer } from 'node:http';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -281,14 +289,103 @@ async function handleGetMakerSideOrder(params) {
 // on every response — otherwise every browser taker is blocked before the
 // wire protocol even runs. Wide-open '*' matches a real maker server, which
 // has no way to know every taker origin in advance.
+const MODE_HEADER = 'x-e2e-mode';
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'POST, OPTIONS',
-  'access-control-allow-headers': 'content-type',
+  'access-control-allow-headers': `content-type, ${MODE_HEADER}`,
 };
+
+// The desk's per-request fan-out timeout (src/data/rfqNetwork.ts's
+// AbortSignal.timeout(3000)) — SLOW must delay comfortably past this so the
+// taker's own drop, not a coincidence, is what removes the quote.
+const FAN_OUT_TIMEOUT_MS = 3000;
+const SLOW_DELAY_MS = FAN_OUT_TIMEOUT_MS + 1500;
+
+function writeJson(res, body) {
+  // SLOW replies after the client's own AbortSignal.timeout(3000) has almost
+  // certainly already fired (SLOW_DELAY_MS is 1.5s past it), so the socket
+  // may already be closed by the time this runs. Writing to a destroyed
+  // response must not crash the server — an unhandled 'error' on `res` would
+  // otherwise take down the whole stub-maker process mid-driver-run.
+  if (res.writableEnded || res.destroyed) return;
+  try {
+    res.writeHead(200, { ...CORS_HEADERS, 'content-type': 'application/json' });
+    res.end(JSON.stringify(body));
+  } catch {
+    // client already gone — nothing to do.
+  }
+}
+
+/**
+ * The D-12 failure-knob dispatch. Exactly five modes, no more — the
+ * indicative-pricing method, the buy-fixed direction method, and a
+ * websocket transport are all deliberately unimplemented (see the grep
+ * acceptance criteria in 02-02-PLAN.md Task 3).
+ */
+async function handleModedRequest(mode, msg, res) {
+  if (mode === 'SLOW') {
+    await new Promise((resolve) => setTimeout(resolve, SLOW_DELAY_MS));
+    const result = await handleGetMakerSideOrder(msg.params);
+    writeJson(res, { jsonrpc: '2.0', id: msg.id, result });
+    return;
+  }
+  if (mode === 'MALFORMED') {
+    // A body that is not valid JSON — the driver's MALFORMED scenario;
+    // rfqNetwork.test.ts's unit suite separately covers the well-formed-
+    // but-missing-authEntry malformed variant.
+    if (!res.writableEnded && !res.destroyed) {
+      try {
+        res.writeHead(200, { ...CORS_HEADERS, 'content-type': 'application/json' });
+        res.end('not valid json{{{');
+      } catch {
+        // client already gone — nothing to do.
+      }
+    }
+    return;
+  }
+  if (mode === 'REFUSE') {
+    writeJson(res, { jsonrpc: '2.0', id: msg.id, error: { code: -33700, message: 'taker trustline missing' } });
+    return;
+  }
+  if (mode === 'DRIFTED') {
+    // Really signed for the TRUE terms, then the JSON response's claimed
+    // makerAmount is silently reduced by one atomic unit relative to what
+    // the signed tree actually says — validateQuote's tree comparison, not
+    // its economics check, is what must catch this.
+    const result = await handleGetMakerSideOrder(msg.params);
+    const driftedAmount = atomicToDecimal(toAtomic(result.order.makerAmount) - 1n);
+    const drifted = { ...result, order: { ...result.order, makerAmount: driftedAmount } };
+    writeJson(res, { jsonrpc: '2.0', id: msg.id, result: drifted });
+    return;
+  }
+  if (mode === 'WRONG_FEE') {
+    // Really signed for the TRUE live fee — swap()'s own FeeMismatch check
+    // runs INSIDE the recording-mode simulation this maker signs against, so
+    // simulating (let alone signing) a call with an already-wrong fee_bps
+    // fails outright and never produces an entry at all. Instead: sign
+    // genuinely for the correct fee, then claim a DIFFERENT feeBps in the
+    // JSON response — validateQuote's fee_bps-vs-get_config check catches
+    // this before it ever reaches the tree decode (where the entry's own
+    // embedded fee_bps would in fact still match the live value).
+    const result = await handleGetMakerSideOrder(msg.params);
+    const wrongFee = { ...result, order: { ...result.order, feeBps: result.order.feeBps + 1 } };
+    writeJson(res, { jsonrpc: '2.0', id: msg.id, result: wrongFee });
+    return;
+  }
+  // No mode (or an unrecognised one): the faithful happy path.
+  const result = await handleGetMakerSideOrder(msg.params);
+  writeJson(res, { jsonrpc: '2.0', id: msg.id, result });
+}
 
 function startHttp() {
   httpServer = createServer((req, res) => {
+    // SLOW's delayed reply can land after the client has already aborted
+    // (past its own AbortSignal.timeout) and torn down the socket — an
+    // unhandled 'error' on `res` would otherwise crash this whole process
+    // mid-driver-run. No-op: writeJson/the MALFORMED branch already check
+    // writableEnded/destroyed before writing.
+    res.on('error', () => {});
     if (req.method === 'OPTIONS') {
       res.writeHead(204, CORS_HEADERS);
       res.end();
@@ -316,9 +413,7 @@ function startHttp() {
         return;
       }
       try {
-        const result = await handleGetMakerSideOrder(msg.params);
-        res.writeHead(200, { ...CORS_HEADERS, 'content-type': 'application/json' });
-        res.end(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result }));
+        await handleModedRequest(req.headers[MODE_HEADER], msg, res);
       } catch (e) {
         log(`getMakerSideOrder failed: ${e?.message || e}`);
         res.writeHead(200, { ...CORS_HEADERS, 'content-type': 'application/json' });

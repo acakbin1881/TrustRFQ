@@ -108,10 +108,14 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       });
       if (requestRef.current !== requestKey) return; // a newer pass superseded this one
       if (rejections.length) {
+        // JSON-stringified (not passed as a raw object) so an E2E console
+        // listener (tools/e2e/rfq-driver.mjs's D-12 scenarios) can read the
+        // rejection reason directly out of the message text — a raw object
+        // arg would only serialize to a JSHandle placeholder there.
         // eslint-disable-next-line no-console
         console.debug(
           '[rfq] dropped quotes',
-          rejections.map((r) => ({ url: r.url, reason: r.rejection.reason, detail: r.rejection.detail })),
+          JSON.stringify(rejections.map((r) => ({ url: r.url, reason: r.rejection.reason, detail: r.rejection.detail }))),
         );
       }
       const ranked = [...accepted].sort((a, b) => priceOf(b) - priceOf(a)); // D-04: best first
