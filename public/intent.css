@@ -617,10 +617,13 @@
    display:contents — it has no box left to give a margin to) */
 [data-panel="sent"] .intent-broadcasts { margin-top: 4px; }
 
-/* === RFQ layer (Phase 2, D-01) ===========================================
+/* === RFQ layer (Phase 2, D-01/D-04/D-05/D-07) =============================
    A deliberately small panel — minimal reference surface (UI-D1), not a new
-   visual system. Reuses .field/.order/.legbox/.settle/.stepper/.hint/.empty
-   from styles.css; the only new classes are thin layout wrappers below. */
+   visual system. Reuses .field/.order/.legbox/.settle/.stepper/.hint/.empty/
+   .sig from styles.css; the classes below (Plan 02-03) are thin layout
+   wrappers over those primitives, using the 4-point spacing scale
+   (02-UI-SPEC.md Spacing Scale: sm=8px, md=16px) for every genuinely new
+   layout value. */
 [data-panel="rfq"] .rfq-panel {
   display: flex;
   flex-direction: column;
@@ -628,6 +631,22 @@
   max-width: 560px;
   margin: 0 auto;
 }
+
+/* The sell field's amount input + token picker, side by side. */
+[data-panel="rfq"] .rfq-sell-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* D-02: the one-line "N makers found" discovery indicator — never a list. */
+[data-panel="rfq"] .rfq-indicator {
+  letter-spacing: 0.01em;
+}
+
+/* D-04/T-02-15: the ranked, capped-and-scrollable quote list. The 6-row DOM
+   cap lives in RfqPanel.tsx (visibleQuotes.slice), so this scroll container
+   is a defensive second layer, not the only bound on render cost. */
 [data-panel="rfq"] .rfq-quotes {
   display: flex;
   flex-direction: column;
@@ -640,4 +659,33 @@
   padding: 16px 18px;
   margin-bottom: 0;
 }
-[data-panel="rfq"] .rfq-row { gap: 8px; }
+
+/* One quote row: receive-amount pill on the left, countdown chip on the
+   right (Implementation Notes: "the countdown rendered as a small mono chip
+   to its right"). T-02-14: the accent ring marks the RANKED best row, not
+   maker identity (D-07 — no identity element exists on this row at all). */
+[data-panel="rfq"] .rfq-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+[data-panel="rfq"] .rfq-row.is-selected {
+  border-color: var(--gold);
+}
+/* Typography contract departure, recorded: .legbox__v's desk default is
+   weight 700; the RFQ row intentionally renders at 600 to keep this
+   contract's 2-weight budget (400/600) with no exception. */
+[data-panel="rfq"] .rfq-row .legbox__v {
+  font-weight: 600;
+}
+
+/* D-05: the per-row countdown chip, reusing .sig's existing mono/pill/border
+   shape (the same chip family .legbox__t already renders) — no new pill. */
+[data-panel="rfq"] .rfq-countdown.is-expired {
+  color: var(--red);
+  border-color: rgba(201, 56, 56, 0.3);
+  background: rgba(201, 56, 56, 0.06);
+}

@@ -30,13 +30,22 @@
 // fixtures/rfq-auth-tree.json with the real decoded invocation tree — the
 // empirical answer to RESEARCH.md Assumption A1.
 //
-// D-12 failure knobs (Task 3): the driver selects a per-request mode via the
-// `x-e2e-mode` header, so one running server instance serves every mode in a
-// single pass. Exactly five, no more: SLOW, MALFORMED, REFUSE, DRIFTED,
-// WRONG_FEE (see handleModedRequest below). DRIFTED and WRONG_FEE are still
-// REALLY SIGNED — a fabricated entry would let the taker's decoder reject
-// them for the wrong reason (undecodable_entry) and prove nothing about
-// TAKER-03's actual comparisons.
+// D-12 failure knobs (02-02-PLAN.md Task 3): the driver selects a
+// per-request mode via the `x-e2e-mode` header, so one running server
+// instance serves every mode in a single pass. Exactly five, no more: SLOW,
+// MALFORMED, REFUSE, DRIFTED, WRONG_FEE (see handleModedRequest below).
+// DRIFTED and WRONG_FEE are still REALLY SIGNED — a fabricated entry would
+// let the taker's decoder reject them for the wrong reason
+// (undecodable_entry) and prove nothing about TAKER-03's actual comparisons.
+//
+// 02-03-PLAN.md Task 3 addition, same mode-header mechanism: SHORT_TTL (a
+// genuinely signed quote with a much shorter business-layer expiry, proving
+// D-05's expiry-drop path). STUB_MAKER_RATE overrides the fixed demo rate
+// so a second instance can quote a genuinely different price for
+// MULTI_QUOTE. ZERO_MAKERS does NOT use a maker-side knob at all — see
+// tools/e2e/rfq-driver.mjs's header comment for why (a permanently
+// unremovable stray registry entry makes a true on-chain zero unreachable
+// for this pair; ZERO_MAKERS instead patches the registry's own RPC read).
 
 import { createServer } from 'node:http';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -63,9 +72,24 @@ const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBA43RFMQBPBHVQENUZK5OMT
 const CAPTURE_AUTH_TREE = !!process.env.CAPTURE_AUTH_TREE;
 const CAPTURE_PATH = path.join(REPO_ROOT, 'fixtures', 'rfq-auth-tree.json');
 
-// Fixed demo rate: 2 USDC per 1 XLM. A stub, not a market price.
-const RATE = 2n;
+// Fixed demo rate: 2 USDC per 1 XLM. A stub, not a market price. Overridable
+// (Task 3's MULTI_QUOTE scenario spawns a second instance at a different
+// rate so the driver can prove best-price-first ranking against two
+// genuinely different, genuinely signed quotes.)
+const RATE = BigInt(process.env.STUB_MAKER_RATE || '2');
 const QUOTE_TTL_SEC = 90;
+// Task 3's EXPIRY_DROP mode signs a genuinely valid quote with a much
+// shorter business-layer expiry so the panel's own countdown clock (not a
+// click) drops the row within the driver's wait window. 30s: the
+// discovery+fan-out round trip is normally ~1-2s, but Testnet RPC latency
+// was observed to spike into the tens of SECONDS deep into this driver's
+// long combined run (two shorter TTLs, 6s and 12s, both arrived
+// already-expired and were rejected by validateQuote's own `expired` check
+// before any row ever rendered — see 02-03-SUMMARY.md). 30s trades scenario
+// speed for robustness against that documented Testnet flakiness
+// (CLAUDE.md/prior SUMMARYs: "transient Testnet RPC latency, not a code
+// defect").
+const SHORT_TTL_SEC = 30;
 const MAKER_USDC_FUNDING = '1000'; // decimal, whole USDC
 const TRUST_LIMIT = '100000000';
 
@@ -242,7 +266,7 @@ async function signQuote(order) {
   return { authEntry: signedMaker.toXDR('base64'), signatureExpirationLedger: validUntil, entries, makerIdx };
 }
 
-async function handleGetMakerSideOrder(params) {
+async function handleGetMakerSideOrder(params, ttlSec = QUOTE_TTL_SEC) {
   const takerAtomic = toAtomic(params.takerAmount);
   const makerAtomic = takerAtomic * RATE;
   const order = {
@@ -252,7 +276,7 @@ async function handleGetMakerSideOrder(params) {
     makerAmount: atomicToDecimal(makerAtomic),
     takerToken: params.takerToken,
     takerAmount: params.takerAmount,
-    expiry: Math.floor(Date.now() / 1000) + QUOTE_TTL_SEC,
+    expiry: Math.floor(Date.now() / 1000) + ttlSec,
     orderId: orderCounter++,
     feeBps,
   };
@@ -318,12 +342,20 @@ function writeJson(res, body) {
 }
 
 /**
- * The D-12 failure-knob dispatch. Exactly five modes, no more — the
- * indicative-pricing method, the buy-fixed direction method, and a
- * websocket transport are all deliberately unimplemented (see the grep
- * acceptance criteria in 02-02-PLAN.md Task 3).
+ * The D-12 failure-knob dispatch (five modes, no more — the indicative-
+ * pricing method, the buy-fixed direction method, and a websocket transport
+ * are all deliberately unimplemented, see the grep acceptance criteria in
+ * 02-02-PLAN.md Task 3) plus SHORT_TTL, a Task-3-only (02-03-PLAN.md) mode
+ * that reuses the exact same per-request mode-header mechanism to prove
+ * D-05's expiry-drop path against a genuinely signed, genuinely short-lived
+ * quote rather than a fabricated one.
  */
 async function handleModedRequest(mode, msg, res) {
+  if (mode === 'SHORT_TTL') {
+    const result = await handleGetMakerSideOrder(msg.params, SHORT_TTL_SEC);
+    writeJson(res, { jsonrpc: '2.0', id: msg.id, result });
+    return;
+  }
   if (mode === 'SLOW') {
     await new Promise((resolve) => setTimeout(resolve, SLOW_DELAY_MS));
     const result = await handleGetMakerSideOrder(msg.params);
