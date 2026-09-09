@@ -19,8 +19,8 @@
 // Proven live: tools/rfq-live-swap.mjs's `settle()`, tx 49fa69b2258d5....
 
 import * as Stellar from '@stellar/stellar-sdk';
-import { assetFor } from '../canonical';
-import { orderToScVal } from './order';
+import { ensureTrustline } from '../fill';
+import { orderToScVal, tokenForSac } from './order';
 import type { RfqOrder } from './wire';
 
 /** The one-method taker-side signer slice — nothing else can be requested. */
@@ -41,7 +41,6 @@ export interface RfqChainConfig {
 }
 
 const rpcServer = (c: RfqChainConfig) => new Stellar.rpc.Server(c.rpcUrl);
-const horizonServer = (c: RfqChainConfig) => new Stellar.Horizon.Server(c.horizonUrl);
 
 /**
  * The one `swap` invocation, shared by the recording-mode probe and the
@@ -59,29 +58,6 @@ function buildSwapOp(config: RfqChainConfig, order: RfqOrder, auth?: Stellar.xdr
     args: [orderToScVal(order)],
     auth, // pre-attached BEFORE simulate — Pitfall 2
   });
-}
-
-/**
- * D-08's in-flow trustline pre-flight: a no-op if the taker already holds a
- * trustline for `tokenStr`, otherwise one `changeTrust` op through the SAME
- * narrowed signer settleQuote uses (no detached authorization involved).
- * Mirrors src/core/fill.ts's ensureTrustline, re-scoped to RfqWalletSigner
- * so the RFQ path never even TYPES a wider signer.
- */
-export async function ensureRfqTrustline(config: RfqChainConfig, tokenStr: string, signer: RfqWalletSigner): Promise<void> {
-  const { asset, native } = assetFor(tokenStr);
-  if (native) return;
-  const horizon = horizonServer(config);
-  const acct = await horizon.loadAccount(signer.address);
-  if (acct.balances.some((b) => 'asset_code' in b && b.asset_code === asset.code && b.asset_issuer === asset.issuer)) return;
-  const tx = new Stellar.TransactionBuilder(acct, { fee: Stellar.BASE_FEE, networkPassphrase: config.passphrase })
-    .addOperation(Stellar.Operation.changeTrust({ asset }))
-    .setTimeout(180)
-    .build();
-  const { signedTxXdr } = await signer.signTransaction(tx.toXDR(), {
-    address: signer.address, networkPassphrase: config.passphrase,
-  });
-  await horizon.submitTransaction(Stellar.TransactionBuilder.fromXDR(signedTxXdr, config.passphrase) as Stellar.Transaction);
 }
 
 export async function waitForTx(server: Stellar.rpc.Server, hash: string): Promise<string> {
@@ -161,8 +137,23 @@ function isMakerAddressEntry(entry: Stellar.xdr.SorobanAuthorizationEntry, maker
 }
 
 /**
- * Settle a taker-bound quote: assemble, sign as the taker (the ONE prompt),
- * submit, poll, and read back the SwapExecuted event.
+ * Settle a taker-bound quote: front with the D-08 trustline pre-flight,
+ * assemble, sign as the taker (the ONE swap prompt), submit, poll, and read
+ * back the SwapExecuted event.
+ *
+ * D-08: before building the swap transaction, ensure the taker can receive
+ * `order.makerToken` — the asset they are about to be paid in. Imported
+ * UNCHANGED from src/core/fill.ts (T-02-21): the RFQ lane must never grow a
+ * second trustline-creation construction site. A no-op for the native asset
+ * or an already-held trustline (the common case), so the uncommon case produces
+ * the trustline prompt FIRST and the swap prompt SECOND — load-bearing,
+ * since the census already found settlement simulation fails on a
+ * cross-asset order until the receiving trustline is on chain.
+ * `tokenForSac` resolves the wire's SAC id back to the curated token string
+ * `ensureTrustline` needs; by the time a quote reaches here it has already
+ * passed validateQuote's allow-list check (TAKER-05), so this should never
+ * fail, but the module stays fail-closed rather than skip the check silently
+ * if it somehow did.
  *
  * Two simulation passes, both against the SAME `swap` call:
  *   1. A RECORDING-mode probe (no auth attached) to learn the FULL entry set
@@ -173,7 +164,12 @@ function isMakerAddressEntry(entry: Stellar.xdr.SorobanAuthorizationEntry, maker
  *      entries, so the taker's own entry must travel too even though it
  *      needs no signature.
  *   2. The maker's pre-signed entry substituted into that full set, attached
- *      BEFORE an ENFORCING-mode simulation that actually validates it.
+ *      BEFORE an ENFORCING-mode simulation that actually validates it. A
+ *      maker entry whose signature_expiration_ledger has already passed is
+ *      rejected RIGHT HERE (verified live: host text "signature has
+ *      expired") — before the taker's wallet is ever prompted to sign
+ *      anything; src/core/rfq/retry.ts's isExpiredAuthFailure matches this
+ *      exact host-level failure.
  */
 export async function settleQuote(
   config: RfqChainConfig,
@@ -181,6 +177,10 @@ export async function settleQuote(
   authEntryBase64: string,
   signer: RfqWalletSigner,
 ): Promise<SettleResult> {
+  const makerTokenStr = tokenForSac(order.makerToken, config.passphrase);
+  if (!makerTokenStr) throw new Error('Maker token is not on the curated allow-list.');
+  await ensureTrustline(config, makerTokenStr, signer);
+
   const server = rpcServer(config);
 
   const probeAccount = await server.getAccount(signer.address);

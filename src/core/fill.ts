@@ -69,8 +69,18 @@ export async function waitForTx(server: Stellar.rpc.Server, hash: string): Promi
   throw new Error('Timed out waiting for confirmation.');
 }
 
-/** make sure the signer can receive the (non-native) asset they're owed */
-export async function ensureTrustline(c: ChainConfig, tokenStr: string, signer: WalletSigner): Promise<void> {
+/**
+ * Make sure the signer can receive the (non-native) asset they're owed.
+ * Only needs `address` + `signTransaction` from the signer — the narrower
+ * `Pick` (rather than the full `WalletSigner`) is what lets the RFQ lane's
+ * one-method `RfqWalletSigner` (src/core/rfq/settle.ts) satisfy this call
+ * without ever even TYPING a `signAuthEntry` method.
+ */
+export async function ensureTrustline(
+  c: ChainConfig,
+  tokenStr: string,
+  signer: Pick<WalletSigner, 'address' | 'signTransaction'>,
+): Promise<void> {
   const { asset, native } = assetFor(tokenStr);
   if (native) return;
   const h = horizon(c);
