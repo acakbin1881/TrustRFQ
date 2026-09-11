@@ -83,6 +83,19 @@
 //
 // Assumes the built app is already being served (npm run build && npm run
 // preview -- --port 4173), matching tools/e2e/run-all.mjs's convention.
+//
+// 02-05-PLAN.md Task 1: tools/e2e/run-all.mjs's --lane rfq/all spawns this
+// file as a child process with RUN_ID and PAIR env vars, the same
+// convention run-all.mjs's OTC driver() helper already uses, plus a
+// deterministic REPORT path so the parent can read the report back after
+// exit. Both env vars are optional — running this file directly (as above)
+// falls back to Date.now() for RUN_ID and the pair stays the curated
+// XLM/USDC pair (D-06) regardless of PAIR, since every scenario below is
+// written against that specific pair's token addresses and rates. A
+// top-level uncaughtException/unhandledRejection handler (below) ensures
+// the stub maker is still ejected even if a truly uncaught error escapes
+// the try/catch in main() — the third of the three exit paths (success,
+// scenario failure, uncaught exception) T-02-25 requires.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -114,13 +127,33 @@ const D12_SCENARIOS = [
   { mode: 'DRIFTED', label: 'DRIFTED — signed makerAmount != claimed order.makerAmount', expectedReason: 'tree_mismatch' },
   { mode: 'WRONG_FEE', label: 'WRONG_FEE — signed feeBps != live get_config', expectedReason: 'fee_mismatch' },
 ];
-const REPORT = process.env.REPORT || path.join(SCRATCH, `report-rfq-${Date.now()}.json`);
+const RUN_ID = process.env.RUN_ID || String(Date.now());
+const REPORT = process.env.REPORT || path.join(SCRATCH, `report-rfq-${RUN_ID}.json`);
 const HEADED = !!process.env.HEADED;
 const SELL_AMOUNT = process.env.SELL_AMOUNT || '1';
 const TRUST_LIMIT = '100000000';
 
 const horizon = new Horizon.Server(HORIZON_URL);
 const log = (...a) => console.log(`[rfq-driver ${new Date().toISOString().slice(11, 19)}]`, ...a);
+
+// Defense-in-depth ejection (02-05-PLAN.md Task 1, T-02-25): main()'s own
+// try/catch already stops the stub maker on both the success path and any
+// scenario failure it catches. This module-scope handler covers the THIRD
+// exit path — a truly uncaught exception or unhandled rejection escaping
+// that try/catch entirely (e.g. from an event-listener callback not awaited
+// by anything) — so a leftover-staked, unreachable maker never lingers on
+// the live registry regardless of how this process dies.
+let activeStubMakerChild = null;
+async function ejectAndExit(kind, err) {
+  console.error(`[rfq-driver] ${kind}:`, err);
+  if (activeStubMakerChild) {
+    await stopStubMaker(activeStubMakerChild).catch(() => {});
+    activeStubMakerChild = null;
+  }
+  process.exit(1);
+}
+process.on('uncaughtException', (err) => { ejectAndExit('UNCAUGHT EXCEPTION', err); });
+process.on('unhandledRejection', (err) => { ejectAndExit('UNHANDLED REJECTION', err); });
 
 async function friendbot(pub) {
   for (let i = 0; i < 8; i++) {
@@ -744,6 +777,7 @@ async function runTrustlineScenario(browser, tally) {
 
 async function main() {
   mkdirSync(SCRATCH, { recursive: true });
+  log(`RUN_ID=${RUN_ID} report=${REPORT}`);
 
   const takerKp = Keypair.random();
   log(`taker ${takerKp.publicKey()}`);
@@ -754,6 +788,7 @@ async function main() {
 
   log('starting stub maker...');
   const maker = await spawnStubMaker();
+  activeStubMakerChild = maker.child; // arms the uncaughtException/unhandledRejection eject above
   log(`stub maker ready: ${maker.url} (${maker.pubkey})`);
 
   const tally = new Tally();
@@ -925,7 +960,7 @@ async function main() {
   const scenarioResults = [];
   const startedAt = new Date().toISOString();
   const meta = () => ({
-    role: 'taker', publicKey: takerKp.publicKey(), makerUrl: maker.url, makerPubkey: maker.pubkey,
+    runId: RUN_ID, role: 'taker', publicKey: takerKp.publicKey(), makerUrl: maker.url, makerPubkey: maker.pubkey,
     sellAmount: SELL_AMOUNT, baseUrl: BASE_URL, startedAt, finishedAt: new Date().toISOString(), settleTxHash,
     scenarios: scenarioResults,
   });
@@ -936,6 +971,7 @@ async function main() {
     writeFileSync(consolePath, consoleLines.join('\n'));
     tally.writeReport(REPORT, { ...meta(), status: 'failed', failedStep: stepRef.current, error: 'hard cap' });
     await stopStubMaker(maker.child);
+    activeStubMakerChild = null;
     process.exit(1);
   }, 600000);
   hardCap.unref();
@@ -1039,6 +1075,7 @@ async function main() {
     console.log(`SCENARIOS ${scenarioResults.length} (expected 12): ${scenarioResults.map((s) => s.mode).join(', ')}`);
     await browser.close();
     await stopStubMaker(maker.child);
+    activeStubMakerChild = null;
     process.exit(0);
   } catch (err) {
     const shot = path.join(SCRATCH, `fail-rfq-${Date.now()}-${stepRef.current}.png`);
@@ -1052,6 +1089,7 @@ async function main() {
     console.error(`console log: ${consolePath}`);
     await browser.close().catch(() => {});
     await stopStubMaker(maker.child);
+    activeStubMakerChild = null;
     process.exit(1);
   }
 }

@@ -420,10 +420,19 @@ Both scripts create throwaway actors through Friendbot and need no key file.
 ```bash
 npm run build && npm run preview -- --port 4173     # terminal 1
 
-node tools/e2e/rfq-driver.mjs                       # RFQ lane: spawns the stub maker, 9 scenarios,
-                                                    # settles for real, report in tools/e2e/out/
-npm run e2e:census                                  # directed lane, two browsers, click census
+npm run e2e:census                                  # directed lane only (default): two browsers, click census
+npm run e2e:rfq                                      # RFQ lane only: spawns the stub maker, 12 scenarios,
+                                                      # settles for real, report in tools/e2e/out/
+node tools/e2e/run-all.mjs --lane all                # both lanes in one run, OTC first
 ```
+
+`tools/e2e/run-all.mjs --lane otc|rfq|all` (`otc` is the default, so the plain `npm run e2e:census`
+invocation above is unchanged from before the RFQ lane existed) is the one documented entry point
+for both censuses; `npm run e2e:rfq` is a shorthand for `--lane rfq`. The RFQ lane funds and manages
+its own taker actor and stub maker internally (no `prepare-keys.mjs` step), registers the stub on
+the live `rfq_registry` with a real XLM stake, and always ejects it for a full refund — on a clean
+run, a scenario failure, or an uncaught exception — so a failed run never leaves a staked,
+unreachable maker listed for a later run to discover.
 
 The harness drives the built app through a mock Freighter (a postMessage shim, no extension), so
 every wallet prompt is counted rather than assumed. Two things the RFQ run needs that a fresh clone
@@ -431,6 +440,14 @@ does not have: the gitignored `demo-keys.json` (the stub maker sells the demo US
 and reads the issuer secret from it; see `tools/derive-keys.mjs` and `tools/mint-usdc.mjs`), and
 Testnet XLM, because the stub maker stakes real XLM to register. It ejects for a full refund on
 SIGINT or SIGTERM; a hard kill leaves a staked, dead entry behind.
+
+**The deployed CSP gains no maker origin from this harness.** The stub maker is served from a
+loopback address by a process the deployed edge configuration never sees, and the local `vite
+preview` server applies no policy headers at all — the two environments stay genuinely separate.
+A real maker's origin joins `vercel.json`'s `connect-src` by hand at deploy time, one origin at a
+time, the same curation discipline the token allow-list already uses; see
+[What is proven, and what is not](#what-is-proven-and-what-is-not) for the current state of that
+allow-list.
 
 ### Try the desk by hand
 
