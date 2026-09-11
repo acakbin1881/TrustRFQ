@@ -120,6 +120,30 @@ let capturedOnce = false;
 let httpServer;
 let latestLedgerSeq = 0;
 let ledgerRefreshTimer;
+// EXPIRED_ENTRY (Task 3): armed on the FIRST request after the mode
+// transitions from something else INTO 'EXPIRED_ENTRY' — that one request
+// gets the deep-past signature; every later request while the mode stays
+// applied (e.g. the desk's own D-09 retry re-querying this same maker) gets
+// a genuinely fresh, currently-valid entry, matching how a real maker
+// server always signs fresh at issuance time.
+//
+// `lastRequote` (continuation-session fix): RETRY_EQUAL and RETRY_WORSE run
+// back-to-back on the SAME running maker, both under the SAME base mode
+// 'EXPIRED_ENTRY' (only the ':EQUAL'/':WORSE' suffix differs) — the base-
+// mode-only transition check below never re-fires for RETRY_WORSE's own
+// first request, because the immediately preceding request (RETRY_EQUAL's
+// own successful retry re-fetch) already left `lastBaseMode` at
+// 'EXPIRED_ENTRY'. Caught live in this continuation session: RETRY_WORSE's
+// "doomed" quote was silently issued genuinely valid (never armed), so
+// Accept settled it immediately with no failure, no retry, and no
+// reconfirm note — rather than the intended doomed-then-reconfirm sequence.
+// Re-arming on a REQUOTE change too (not just a base-mode change) fixes it:
+// EQUAL's own two calls (doomed, then its retry) share requote 'EQUAL' and
+// must NOT re-arm each other; WORSE's first call changes requote from
+// 'EQUAL' to 'WORSE' and MUST re-arm.
+let expiredEntryArmed = false;
+let lastBaseMode = null;
+let lastRequote = null;
 
 async function refreshLedgerSeq() {
   try {
@@ -235,15 +259,50 @@ function toContractOrder(order) {
   };
 }
 
-/** Build the would-be swap tx with a throwaway source, RECORDING-mode sim, sign. */
-async function signQuote(order) {
+/**
+ * Build the would-be swap tx with a throwaway source, RECORDING-mode sim,
+ * sign. `expired` (02-04-PLAN.md Task 3, D-09) signs with a
+ * signature_expiration_ledger already DEEP IN THE PAST (currentLedger minus
+ * a large offset), not merely a short TTL — verified live against the
+ * deployed rfq_swap (2026-09-09): the host rejects such an entry during the
+ * taker's ENFORCING-mode simulate with the diagnostic text
+ * "signature has expired" (HostError: Error(Auth, InvalidInput)), and this
+ * happens UNCONDITIONALLY the instant it is checked. A short-but-nonzero TTL
+ * would instead be racy against Testnet's ~5s ledger-close timing — exactly
+ * the failure class 02-03-SUMMARY.md's SHORT_TTL history already
+ * documents — so EXPIRED_ENTRY deliberately does not reuse that pattern.
+ * Signing itself is a pure client-side XDR + ed25519 operation and does not
+ * validate the ledger number against anything network-side, so an
+ * already-past `validUntil` still produces a genuinely signed entry (never a
+ * fabricated one).
+ */
+async function signQuote(order, { expired = false } = {}) {
   const contract = new Contract(RFQ_SWAP_CONTRACT_ID);
   const contractOrder = toContractOrder(order);
   // Throwaway: the probe's source sequence doesn't matter for the auth entry
   // the maker signs (Address-credential entries are keyed by address, not by
   // the probe tx's own envelope) — only the pubkey (the real taker) matters,
   // so `require_auth` for the taker's SourceAccount credential resolves.
-  const probeSource = new Account(order.taker, '0');
+  //
+  // The sequence value, however, is NOT arbitrary in practice (continuation-
+  // session fix): a literal constant '0' here previously fed the SAME
+  // (source, sequence) pair into every RECORDING-mode probe this maker ever
+  // ran, and the RPC's recording-mode auto-assigns the maker's own
+  // Address-credential nonce from inputs that include that pair — caught
+  // live in this continuation session as `HostError: Error(Auth,
+  // ExistingValue)` / "nonce already exists for address" on a genuinely
+  // FRESH quote (RETRY_WORSE's doomed entry), rejected before it could even
+  // reach the failure this scenario needed, because an EARLIER quote's
+  // maker entry (from this same running maker, same constant probe tuple)
+  // had already been submitted and consumed that identical nonce on-chain
+  // minutes earlier. `order.orderId` (a monotonic `orderCounter++`, already
+  // assigned above, unique for the life of this process) makes each probe's
+  // (source, sequence) pair unique too, so this class of collision cannot
+  // recur — the probe's OWN sequence still never appears in the signed
+  // entry itself (only the pubkey does), so this changes no on-chain
+  // semantics, only which throwaway numbers two DIFFERENT probes happen to
+  // share.
+  const probeSource = new Account(order.taker, String(order.orderId));
   const probe = new TransactionBuilder(probeSource, { fee: FEE, networkPassphrase: NETWORK })
     .addOperation(contract.call('swap', orderScVal(contractOrder)))
     .setTimeout(TIMEOUT)
@@ -261,14 +320,24 @@ async function signQuote(order) {
   // saving that keeps quote generation comfortably under TAKER-02's 2-3s
   // client-side fetch timeout. The larger +180 buffer (vs. rfq-live-swap.mjs's
   // +60) absorbs the cache's staleness window.
-  const validUntil = latestLedgerSeq + 180;
+  const validUntil = expired ? Math.max(1, latestLedgerSeq - 2000) : latestLedgerSeq + 180;
   const signedMaker = await authorizeEntry(entries[makerIdx], makerKp, validUntil, NETWORK);
   return { authEntry: signedMaker.toXDR('base64'), signatureExpirationLedger: validUntil, entries, makerIdx };
 }
 
-async function handleGetMakerSideOrder(params, ttlSec = QUOTE_TTL_SEC) {
+/** RE_QUOTE_PRICE (Task 3): the rate a re-quote applies RELATIVE TO the base
+ *  RATE — "better"/"equal"/"worse" for the taker, one atomic-unit step so
+ *  the direction is unambiguous regardless of RATE's own magnitude. Clamped
+ *  at 1n so WORSE can never produce a non-positive (invalid) rate. */
+function rateForRequote(requote) {
+  if (requote === 'BETTER') return RATE + 1n;
+  if (requote === 'WORSE') return RATE > 1n ? RATE - 1n : RATE;
+  return RATE; // 'EQUAL' or unset
+}
+
+async function handleGetMakerSideOrder(params, ttlSec = QUOTE_TTL_SEC, { expired = false, rate = RATE } = {}) {
   const takerAtomic = toAtomic(params.takerAmount);
-  const makerAtomic = takerAtomic * RATE;
+  const makerAtomic = takerAtomic * rate;
   const order = {
     maker: makerKp.publicKey(),
     taker: params.takerWallet,
@@ -281,7 +350,7 @@ async function handleGetMakerSideOrder(params, ttlSec = QUOTE_TTL_SEC) {
     feeBps,
   };
 
-  const { authEntry, signatureExpirationLedger, entries, makerIdx } = await signQuote(order);
+  const { authEntry, signatureExpirationLedger, entries, makerIdx } = await signQuote(order, { expired });
 
   if (CAPTURE_AUTH_TREE && !capturedOnce) {
     capturedOnce = true;
@@ -345,12 +414,35 @@ function writeJson(res, body) {
  * The D-12 failure-knob dispatch (five modes, no more — the indicative-
  * pricing method, the buy-fixed direction method, and a websocket transport
  * are all deliberately unimplemented, see the grep acceptance criteria in
- * 02-02-PLAN.md Task 3) plus SHORT_TTL, a Task-3-only (02-03-PLAN.md) mode
- * that reuses the exact same per-request mode-header mechanism to prove
- * D-05's expiry-drop path against a genuinely signed, genuinely short-lived
- * quote rather than a fabricated one.
+ * 02-02-PLAN.md Task 3) plus SHORT_TTL (02-03-PLAN.md Task 3) and
+ * EXPIRED_ENTRY (02-04-PLAN.md Task 3, D-09), both reusing the exact same
+ * per-request mode-header mechanism to prove a real path against a
+ * genuinely signed quote rather than a fabricated one.
+ *
+ * EXPIRED_ENTRY's mode value may carry an optional RE_QUOTE_PRICE suffix —
+ * "EXPIRED_ENTRY:BETTER" / ":EQUAL" / ":WORSE" — controlling the rate the
+ * SECOND (genuinely valid, retry) quote applies relative to the first
+ * (doomed) one; see rateForRequote and signQuote's header comment.
  */
-async function handleModedRequest(mode, msg, res) {
+async function handleModedRequest(modeRaw, msg, res) {
+  const [mode, requote] = String(modeRaw || '').split(':');
+  const modeJustApplied =
+    mode === 'EXPIRED_ENTRY' && (lastBaseMode !== 'EXPIRED_ENTRY' || lastRequote !== (requote ?? null));
+  if (modeJustApplied) expiredEntryArmed = true;
+  if (mode !== 'EXPIRED_ENTRY') expiredEntryArmed = false;
+  lastBaseMode = mode || null;
+  lastRequote = mode === 'EXPIRED_ENTRY' ? (requote ?? null) : null;
+
+  if (mode === 'EXPIRED_ENTRY') {
+    const isFirstCallThisApplication = expiredEntryArmed;
+    expiredEntryArmed = false; // only ONE doomed entry per application of the mode
+    const rate = isFirstCallThisApplication ? RATE : rateForRequote(requote);
+    const result = await handleGetMakerSideOrder(msg.params, QUOTE_TTL_SEC, {
+      expired: isFirstCallThisApplication, rate,
+    });
+    writeJson(res, { jsonrpc: '2.0', id: msg.id, result });
+    return;
+  }
   if (mode === 'SHORT_TTL') {
     const result = await handleGetMakerSideOrder(msg.params, SHORT_TTL_SEC);
     writeJson(res, { jsonrpc: '2.0', id: msg.id, result });

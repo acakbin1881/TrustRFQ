@@ -19,6 +19,7 @@ import { Address } from '@stellar/stellar-sdk';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { EXPLORER, HORIZON_URL, PASSPHRASE, RFQ_REGISTRY_ID, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
 import type { BalanceMap } from '../core/balances';
+import { ensureTrustline } from '../core/fill';
 import { amountTooLarge } from '../core/negotiation';
 import { bestQuote, dropExpired, fmtCountdown, quotePrice, rankQuotes } from '../core/rfq/discover';
 import { sacIdFor } from '../core/rfq/order';
@@ -147,6 +148,28 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
     setSettleErr(null);
     setRetryNote(null);
     try {
+      // D-08 (continuation-session correction, verified live 2026-09-11
+      // against the deployed rfq_swap): a maker's signed quote comes from a
+      // RECORDING-mode simulation of the REAL `swap` call, which actually
+      // executes the maker -> taker SAC transfer — so a maker CANNOT produce
+      // a quote for a taker who lacks the buyToken trustline at all; the
+      // simulation hard-fails with "trustline entry is missing for account"
+      // (Error(Contract, #13)) and the taker never sees a row, no matter how
+      // many times they refresh. The plan's original design (trustline
+      // established at ACCEPT, after a quote already exists) is therefore
+      // unreachable: there is no quote to accept until the trustline exists.
+      // Moving the SAME `ensureTrustline` call (still imported unchanged
+      // from src/core/fill.ts, still zero cost once the trustline is live)
+      // to fire here, before the fan-out, keeps D-08's "in-flow, gated
+      // behind an explicit taker action" principle intact — Refresh quotes
+      // is still the taker's own click, not a background prompt — while
+      // actually letting a first-time taker get a quote at all. settleQuote
+      // keeps its own ensureTrustline front-step too (src/core/rfq/settle.ts,
+      // Task 2, unchanged): a harmless no-op in the normal case, and a
+      // fail-safe if this step is ever bypassed.
+      if (needsTrustline(balances, buyToken)) {
+        await ensureTrustline(rfqChain, buyToken, signerFor(address));
+      }
       const sellSac = sacIdFor(sellToken, PASSPHRASE);
       const buySac = sacIdFor(buyToken, PASSPHRASE);
       // discovery: this desk sells `sellToken`, so it needs a maker who sells
