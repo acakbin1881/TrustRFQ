@@ -19,7 +19,7 @@ affects: [phase-3-real-maker-server]
 # Actuals (#2632)
 actuals:
   tokens: 3751
-  tasks: 2
+  tasks: 3
   commits: 2
 
 tech-stack:
@@ -73,25 +73,27 @@ coverage:
         status: pass
     human_judgment: false
   - id: D3
-    description: "Human verification of the RFQ panel against 02-UI-SPEC.md — Task 3, a blocking checkpoint:human-verify not executed by this worktree"
-    verification: []
+    description: "Human verification of the RFQ panel against 02-UI-SPEC.md — Task 3, a blocking checkpoint:human-verify"
+    verification:
+      - check: "Real browser + real Freighter on Testnet, 2026-09-11: RFQ section renders in the desk's visual language; quote row showed 200 USDC for 100 XLM with ticking countdown, best row preselected, no maker address/URL exposed; empty amount disables the primary action; Accept produced exactly ONE Freighter prompt; settlement confirmed on-chain (tx c8efe29c8855dab7f6d58d786202d6ebcf10ff6b5b6f4c43c3340f1db6993206, taker demo-USDC 0 -> 200); tx-hash link opened a successful explorer transaction; compose/incoming/sent visually unaffected"
+        status: pass
     human_judgment: true
     rationale: "Explicit checkpoint task per the plan; requires a real browser + real Freighter wallet exercising visual/interaction properties (nav label, spacing, countdown ticking, exactly-one-prompt settlement) that no headless assertion covers. Everything it depends on (the full taker path + this plan's Tasks 1-2) is already live-verified and passing."
 
 duration: ~80min (live Testnet E2E runs dominate: 3x npm run e2e:rfq at ~2.5-5min each, 2x npm run e2e:census, cargo test + stellar contract build)
 completed: 2026-09-11
-status: halted
+status: complete
 ---
 
-# Phase 2 Plan 5: E2E Census Wiring + CSP Posture Audit Summary (halted at Task 3 checkpoint)
+# Phase 2 Plan 5: E2E Census Wiring + CSP Posture Audit Summary
 
-**`tools/e2e/run-all.mjs` gains a `--lane otc|rfq|all` selector (default `otc`, byte-for-byte unchanged behaviour) folding the RFQ taker census into the one documented entry point, plus a live-reconfirmed CSP posture audit proving `vercel.json` moved by zero bytes this phase — both proven live on Testnet, with Task 3's human verification of the panel still pending.**
+**`tools/e2e/run-all.mjs` gains a `--lane otc|rfq|all` selector (default `otc`, byte-for-byte unchanged behaviour) folding the RFQ taker census into the one documented entry point, plus a live-reconfirmed CSP posture audit proving `vercel.json` moved by zero bytes this phase — both proven live on Testnet, and Task 3's human verification of the panel passed on 2026-09-11 (approved; settlement tx c8efe29c…).**
 
 ## Performance
 
 - **Duration:** ~80 min (dominated by live Testnet E2E runs: three full `npm run e2e:rfq` passes, two `npm run e2e:census` passes, `cargo test` + `stellar contract build`)
-- **Completed:** 2026-09-11 (Tasks 1-2 only; Task 3 checkpoint pending)
-- **Tasks:** 2 of 3 (Task 3 is the blocking `checkpoint:human-verify`, not executed by this worktree)
+- **Completed:** 2026-09-11 (all 3 tasks; Task 3 human-verified and approved)
+- **Tasks:** 3 of 3 (Task 3 was the blocking `checkpoint:human-verify`, approved by the developer)
 - **Files modified:** 4 (`tools/e2e/run-all.mjs`, `tools/e2e/rfq-driver.mjs`, `package.json`, `README.md`)
 
 ## Accomplishments
@@ -107,7 +109,13 @@ status: halted
 1. **Task 1: Fold the RFQ lane into the census entry point** — `5515b25` (feat)
 2. **Task 2: CSP posture audit and the phase artifact record** — `958a479` (docs)
 
-Task 3 (checkpoint:human-verify, gate="blocking") was reached and is documented below as the reason for this halt. No commit exists for it; the orchestrator resumes execution there once the human verifies.
+Task 3 (checkpoint:human-verify, gate="blocking") was verified by the developer on 2026-09-11 and **approved**: real browser + real Freighter, 100 XLM -> 200 USDC settled on-chain (tx `c8efe29c8855dab7f6d58d786202d6ebcf10ff6b5b6f4c43c3340f1db6993206`), exactly one wallet prompt, working explorer link, other sections visually unaffected.
+
+Three real-world findings surfaced during the manual verification (none required code changes, all worth knowing):
+
+1. **Stub maker's default port (4174) collides with vite preview's auto-bump.** `npm run preview -- --port 4173` silently bumps to 4174 when 4173 is occupied, which is exactly the stub maker's default; the maker then registers on-chain but crashes on EADDRINUSE *after* registration (setup registers before `startHttp()`), leaving a dead registry entry. Workaround: `STUB_MAKER_PORT=4180 node tools/e2e/stub-maker.mjs`. A future tweak could bind first and register second, or default the port away from vite's range.
+2. **The panel's empty state can't distinguish maker errors from timeouts.** A maker that *responds quickly with a JSON-RPC error* (here: recording-sim `Error(Contract, #10)` — SAC insufficient balance) renders the same "No registered maker responded in time" copy as a dead maker. Cosmetic, but it sent the manual verification down a network-debugging path when the actual cause was economic.
+3. **Quote capacity is bounded by the maker's inventory, invisibly.** The stub maker (RATE=2, 1000 demo-USDC inventory) can sign at most a 500-XLM sell; a 1000-XLM request fails inside the maker's own recording-mode signing simulation (the SAC transfer actually executes there). This is the settlement guarantee working as designed — a maker literally cannot sign a quote it cannot fill — but a real maker server will want to advertise or clamp its size limits.
 
 ## Files Created/Modified
 
