@@ -69,7 +69,7 @@ minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioni
   expiry/`signatureExpirationLedger`, and the decoded `authEntry` invocation tree matches the
   order terms
 
-- [ ] **TAKER-04**: Accepting a quote settles via one ordinary Freighter `signTransaction`: the
+- [x] **TAKER-04**: Accepting a quote settles via one ordinary Freighter `signTransaction`: the
   taker's G-account is tx source with the maker's `authEntry` attached, enforcing simulate +
   `assembleTransaction`, submit + poll, confirmation via `getTransaction` plus the swap event; no
   wallet `signAuthEntry` on the taker path
@@ -151,7 +151,7 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | TAKER-01 | Phase 2 | Pending |
 | TAKER-02 | Phase 2 | Pending |
 | TAKER-03 | Phase 2 | Complete |
-| TAKER-04 | Phase 2 | Pending |
+| TAKER-04 | Phase 2 | Complete |
 | TAKER-05 | Phase 2 | Complete |
 | TAKER-06 | Phase 2 | Pending |
 | CSP-01 | Phase 2 | Pending |

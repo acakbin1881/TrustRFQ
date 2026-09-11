@@ -15,17 +15,19 @@
 // under the taker (countdown hitting zero, D-05) can never silently
 // re-point the preselected action at a different quote.
 
+import { Address } from '@stellar/stellar-sdk';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { EXPLORER, HORIZON_URL, PASSPHRASE, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
+import { EXPLORER, HORIZON_URL, PASSPHRASE, RFQ_REGISTRY_ID, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
 import type { BalanceMap } from '../core/balances';
-import { balanceOf } from '../core/balances';
+import { ensureTrustline } from '../core/fill';
 import { amountTooLarge } from '../core/negotiation';
-import { bestQuote, dropExpired, fmtCountdown, rankQuotes } from '../core/rfq/discover';
+import { bestQuote, dropExpired, fmtCountdown, quotePrice, rankQuotes } from '../core/rfq/discover';
 import { sacIdFor } from '../core/rfq/order';
-import { ensureRfqTrustline, settleQuote, type RfqChainConfig, type RfqWalletSigner, type SwapExecutedEvent } from '../core/rfq/settle';
-import type { MakerSideOrderResult } from '../core/rfq/wire';
+import { needsTrustline, retryDecision } from '../core/rfq/retry';
+import { settleQuote, type RfqChainConfig, type RfqWalletSigner, type SwapExecutedEvent } from '../core/rfq/settle';
+import type { MakerSideOrderResult, RfqOrder } from '../core/rfq/wire';
 import { TOKENS, tokenLabel, trunc, validAmount } from '../core/tokens';
-import { discoverMakerUrls, fanOutMakerSideOrder } from '../data/rfqNetwork';
+import { discoverMakerUrls, fanOutMakerSideOrder, simulateRead } from '../data/rfqNetwork';
 import { kit } from '../wallet/kit';
 import { TokenSelect } from './TokenSelect';
 import { errMsg, useToast } from './Toast';
@@ -52,6 +54,40 @@ const signerFor = (address: string): RfqWalletSigner => ({
   signTransaction: (xdr, opts) => kit.signTransaction(xdr, opts),
 });
 
+/**
+ * D-09's "fetch exactly one fresh quote" — from the SAME maker whose entry
+ * just failed, never a full re-fan-out to every discovered maker (that would
+ * be a second uninvited network burst on a path the taker did not ask to
+ * refresh). The maker's own URL is looked up by their address via the
+ * registry's `get_maker` read (simulateRead is already exported generically
+ * by src/data/rfqNetwork.ts, so this needs no change there); the re-quote
+ * itself still goes through `fanOutMakerSideOrder`'s TAKER-03 validation
+ * gate — a retry never trusts an unvalidated re-quote either. Every field
+ * (token pair, amount) is read off the FAILED order itself rather than
+ * live component state, so the re-quote is for the exact trade the taker
+ * actually agreed to. Returns null (never throws) on any failure — that is
+ * retryDecision's own "no fresh quote" stop condition, not a crash.
+ */
+async function fetchOneFreshQuote(order: RfqOrder, takerWallet: string): Promise<MakerSideOrderResult | null> {
+  try {
+    const makerConfig = (await simulateRead(RFQ_REGISTRY_ID, 'get_maker', [
+      new Address(order.maker).toScVal(),
+    ])) as { url: string };
+    const { accepted } = await fanOutMakerSideOrder([makerConfig.url], {
+      network: PASSPHRASE,
+      swapContract: RFQ_SWAP_CONTRACT_ID,
+      makerToken: order.makerToken,
+      takerToken: order.takerToken,
+      takerAmount: order.takerAmount,
+      takerWallet,
+      minExpiry: Math.floor(Date.now() / 1000) + 30,
+    });
+    return accepted[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function RfqPanel({ address, balances }: RfqPanelProps) {
   const toast = useToast();
   const now = useNow(1000);
@@ -69,6 +105,9 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [settled, setSettled] = useState<{ hash: string; event: SwapExecutedEvent | null } | null>(null);
   const [settleErr, setSettleErr] = useState<string | null>(null);
+  // D-09's visible retry/reconfirm note — never silent (an auto-retry) and
+  // never blank (a reconfirm), set by the guarded retry loop in accept().
+  const [retryNote, setRetryNote] = useState<string | null>(null);
   const busy = useRef(false);
   // guards a slow fan-out pass resolving after the pair/amount changed —
   // mirrors src/data/useFairPrice.ts's pairRef staleness guard.
@@ -81,7 +120,10 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
   const noPair = sellToken === buyToken;
   const overCap = amount.trim() !== '' && amountTooLarge(amount);
   const canQuote = !noPair && validAmount(amount) && !overCap;
-  const hasBuyTrustline = buyToken === 'XLM' || balanceOf(balances, buyToken) !== '0' || balances?.[buyToken] !== undefined;
+  // D-08: read straight off the balances App.tsx already threaded down — no
+  // extra network cost, and a null (not-yet-fetched) map keeps this note
+  // suppressed rather than asserting a trustline is missing.
+  const showTrustlineNote = needsTrustline(balances, buyToken);
 
   // D-05: drop expired rows from the visible list; ranking itself is decided
   // once, at fetch time (rankQuotes below) — dropExpired only filters, it
@@ -104,7 +146,30 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
     setPhase('discovering');
     setSettled(null);
     setSettleErr(null);
+    setRetryNote(null);
     try {
+      // D-08 (continuation-session correction, verified live 2026-09-11
+      // against the deployed rfq_swap): a maker's signed quote comes from a
+      // RECORDING-mode simulation of the REAL `swap` call, which actually
+      // executes the maker -> taker SAC transfer — so a maker CANNOT produce
+      // a quote for a taker who lacks the buyToken trustline at all; the
+      // simulation hard-fails with "trustline entry is missing for account"
+      // (Error(Contract, #13)) and the taker never sees a row, no matter how
+      // many times they refresh. The plan's original design (trustline
+      // established at ACCEPT, after a quote already exists) is therefore
+      // unreachable: there is no quote to accept until the trustline exists.
+      // Moving the SAME `ensureTrustline` call (still imported unchanged
+      // from src/core/fill.ts, still zero cost once the trustline is live)
+      // to fire here, before the fan-out, keeps D-08's "in-flow, gated
+      // behind an explicit taker action" principle intact — Refresh quotes
+      // is still the taker's own click, not a background prompt — while
+      // actually letting a first-time taker get a quote at all. settleQuote
+      // keeps its own ensureTrustline front-step too (src/core/rfq/settle.ts,
+      // Task 2, unchanged): a harmless no-op in the normal case, and a
+      // fail-safe if this step is ever bypassed.
+      if (needsTrustline(balances, buyToken)) {
+        await ensureTrustline(rfqChain, buyToken, signerFor(address));
+      }
       const sellSac = sacIdFor(sellToken, PASSPHRASE);
       const buySac = sacIdFor(buyToken, PASSPHRASE);
       // discovery: this desk sells `sellToken`, so it needs a maker who sells
@@ -164,16 +229,53 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
     busy.current = true;
     setPhase('settling');
     setSettleErr(null);
+    setRetryNote(null);
+    // D-09: the price the taker actually saw and agreed to when they clicked
+    // Accept — fixed for the whole sequence below, even across the one
+    // permitted retry, because that is the price consent was given for.
+    const seenPrice = quotePrice(quote);
     try {
       const signer = signerFor(address);
-      // D-08: the changeTrust prompt happens in-flow, right here — a no-op if
-      // the trustline already exists.
-      await ensureRfqTrustline(rfqChain, buyToken, signer);
-      toast('Submitting settlement — check your wallet…');
-      const result = await settleQuote(rfqChain, quote.order, quote.authEntry, signer);
-      setSettled({ hash: result.hash, event: result.event });
-      setPhase('settled');
-      toast('Settled on-chain 🎉', 'ok');
+      let attemptQuote = quote;
+      let attempts = 0;
+      // D-08's changeTrust prompt now happens IN settleQuote itself (fronted
+      // there, imported from src/core/fill.ts) — a no-op if the trustline
+      // already exists. At most one automatic retry, ever (D-09) — a plain
+      // loop rather than recursion so that bound stays visible right here.
+      for (;;) {
+        try {
+          toast('Submitting settlement — check your wallet…');
+          const result = await settleQuote(rfqChain, attemptQuote.order, attemptQuote.authEntry, signer);
+          setSettled({ hash: result.hash, event: result.event });
+          setPhase('settled');
+          toast('Settled on-chain 🎉', 'ok');
+          return;
+        } catch (settleFailure) {
+          const fresh = await fetchOneFreshQuote(attemptQuote.order, address);
+          const decision = retryDecision({
+            failure: settleFailure, seenPrice, freshQuote: fresh, attemptsAlready: attempts,
+          });
+          if (decision.action === 'auto_retry' && fresh) {
+            attempts += 1;
+            attemptQuote = fresh;
+            setQuotes((qs) => rankQuotes(qs.map((q) => (q.authEntry === quote.authEntry ? fresh : q))));
+            setSelectedKey(fresh.authEntry);
+            setRetryNote('Quote refreshed at the same or better price — retrying automatically.');
+            continue; // the ONE automatic retry — attemptsAlready now blocks a second
+          }
+          if (decision.action === 'reconfirm' && fresh) {
+            // Stop. Replace the row with the fresh (worse) price so it is on
+            // screen, and open no wallet prompt until the taker acts again —
+            // never sign at a price they have not seen.
+            setQuotes((qs) => rankQuotes(qs.map((q) => (q.authEntry === quote.authEntry ? fresh : q))));
+            setSelectedKey(fresh.authEntry);
+            setRetryNote('Price changed — review the new quote before continuing.');
+            setPhase('quoted');
+            return;
+          }
+          throw settleFailure; // stop — surface the raw settlement error, unchanged
+        }
+      }
     } catch (e) {
       setSettleErr(errMsg(e, 'Settlement failed.'));
       setPhase('quoted');
@@ -181,7 +283,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
     } finally {
       busy.current = false;
     }
-  }, [visibleQuotes, selectedIndex, buyToken, address, toast]);
+  }, [visibleQuotes, selectedIndex, address, toast]);
 
   const busyDiscovering = phase === 'discovering' || phase === 'quoting';
   const busySettling = phase === 'settling';
@@ -214,7 +316,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
         <div className="hint">Choose a pair to see live quotes.</div>
       ) : overCap ? (
         <div className="hint is-err">Amount too large (max 10,000,000,000,000).</div>
-      ) : !hasBuyTrustline && buyToken !== 'XLM' ? (
+      ) : showTrustlineNote ? (
         <div className="hint">You'll need a trustline for {buyToken.split(':')[0]} to settle this swap — makers may decline to quote without one.</div>
       ) : null}
 
@@ -228,6 +330,8 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       {showMakerLine ? (
         <div className="hint rfq-indicator">{makerCount} maker{makerCount === 1 ? '' : 's'} found</div>
       ) : null}
+
+      {retryNote ? <div className="hint">{retryNote}</div> : null}
 
       {showEmptyMakers ? (
         <div className="empty">
