@@ -14,7 +14,8 @@
     "check:bundle": "node tools/bundle-check-driver.mjs",
     "check:dev": "node tools/dev-smoke.mjs",
     "capture": "node tools/capture-server.mjs",
-    "e2e:census": "node tools/e2e/run-all.mjs"
+    "e2e:census": "node tools/e2e/run-all.mjs",
+    "e2e:rfq": "node tools/e2e/run-all.mjs --lane rfq"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "1.9.5",
