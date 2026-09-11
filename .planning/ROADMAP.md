@@ -100,7 +100,7 @@ core. Desk metrics are never cited as evidence.
   5. The extended `npm run e2e:census` drives the full RFQ taker flow through the mock Freighter
      plus a local stub maker and settles for real on Testnet, with maker origins added to
      `connect-src`, zero CSP violations, and no `'unsafe-inline'` in `script-src`
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans executed
 **UI hint**: yes
 
 Plans:
@@ -122,7 +122,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 02-05-PLAN.md — Census entry point, CSP posture audit, and the panel verification checkpoint
+- [x] 02-05-PLAN.md — Census entry point, CSP posture audit, and the panel verification checkpoint
 
 ### Phase 3: Live Full RFQ Loop
 
@@ -176,7 +176,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. On-Chain Maker Discovery | 4/4 | Complete    | 2026-08-26 |
-| 2. Desk RFQ Taker Path | 4/5 | In Progress|  |
+| 2. Desk RFQ Taker Path | 5/5 | In Progress|  |
 | 3. Live Full RFQ Loop | 0/TBD | Not started | - |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
 
