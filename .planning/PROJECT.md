@@ -34,6 +34,11 @@ Shipped and confirmed working (see CLAUDE.md Status for provenance):
   4 mutation checks, human-approved checkpoint). Validated in Phase 1: On-Chain Maker Discovery
 - ✓ `RFQ_REGISTRY_ID` runtime-config wiring (CFG-01; `public/otc-config.js` + `src/config.ts`,
   on the Testnet-reset checklist). Validated in Phase 1: On-Chain Maker Discovery
+- ✓ Desk RFQ taker path: registry discovery, parallel quote fan-out with per-maker isolation,
+  local fail-closed validation, one-signature settlement, trustline pre-flight + guarded retry,
+  SDK-shaped pure modules under `src/core/rfq/` (TAKER-01..06; stub-maker E2E settling on Testnet,
+  E2E-01; human-verified checkpoint 02-05; gap closure 02-06 mutation-verified).
+  Validated in Phase 2: Desk RFQ Taker Path
 
 ### Active
 
@@ -41,10 +46,13 @@ Milestone 1: FULL RFQ LOOP ON TESTNET. Definition of done: a desk taker discover
 maker via `rfq_registry`, receives a live quote from the maker's own server, and settles it on
 Testnet end-to-end. Full detail in .planning/REQUIREMENTS.md.
 
-- [ ] Desk taker path: registry discovery, parallel quote fan-out, local validation,
+- [x] Desk taker path: registry discovery, parallel quote fan-out, local validation,
       one-signature settlement, trustline pre-flight, golden-vector-pinned encoding (TAKER-01..06)
-- [ ] CSP `connect-src` gains maker-server origins, zero violations (CSP-01)
-- [ ] E2E census extended with a local stub maker, settling for real on Testnet (E2E-01)
+      — validated in Phase 2
+- [ ] CSP `connect-src` gains maker-server origins, zero violations (CSP-01; maker-origin clause
+      deferred to Phase 3 by D-11 — no real maker origin exists yet)
+- [x] E2E census extended with a local stub maker, settling for real on Testnet (E2E-01) —
+      validated in Phase 2
 - [ ] Live full loop against a real maker server from the separate repo (E2E-02, the milestone gate)
 - [ ] Broadcast/intent fan-out retired only after the RFQ protocol ships (RETIRE-01)
 
@@ -129,4 +137,4 @@ ADR-locked decisions exist). They are treated as settled direction unless delibe
 | UI-D1: Phase 2 desk taker path is a MINIMAL REFERENCE SURFACE over an SDK-shaped taker core: discovery/quote/validation/settlement land as pure `src/` modules the separate-repo taker SDK can extract; desk components stay a thin shell | Follows POS-D1; locked 2026-08-26 during Phase 2 context gathering | Pending (Phase 2) |
 
 ---
-*Last updated: 2026-08-26 after aligning planning docs with the protocol-not-interface positioning (POS-D1/UI-D1)*
+*Last updated: 2026-09-12 after Phase 2 (Desk RFQ Taker Path) completed: TAKER-01..06 + E2E-01 validated, fan-out isolation gap closed (02-06)*
