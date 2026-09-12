@@ -60,7 +60,7 @@ minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioni
   `get_urls_for_token` read-only simulations and client-side intersection (registry reads use the
   already-allowed RPC origin)
 
-- [ ] **TAKER-02**: The desk fans out `getMakerSideOrder` (Stellar RFQ v1: JSON-RPC 2.0, AirSwap
+- [x] **TAKER-02**: The desk fans out `getMakerSideOrder` (Stellar RFQ v1: JSON-RPC 2.0, AirSwap
   wire shapes and error codes) to discovered makers in parallel with a 2-3s timeout, dropping
   malformed responses
 
@@ -149,7 +149,7 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | REG-03 | Phase 1 | Complete |
 | CFG-01 | Phase 1 | Complete |
 | TAKER-01 | Phase 2 | Pending |
-| TAKER-02 | Phase 2 | Pending |
+| TAKER-02 | Phase 2 | Complete |
 | TAKER-03 | Phase 2 | Complete |
 | TAKER-04 | Phase 2 | Complete |
 | TAKER-05 | Phase 2 | Complete |
