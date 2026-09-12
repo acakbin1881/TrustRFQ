@@ -100,7 +100,7 @@ core. Desk metrics are never cited as evidence.
   5. The extended `npm run e2e:census` drives the full RFQ taker flow through the mock Freighter
      plus a local stub maker and settles for real on Testnet, with maker origins added to
      `connect-src`, zero CSP violations, and no `'unsafe-inline'` in `script-src`
-**Plans**: 5/5 plans executed
+**Plans**: 6 plans — 5/5 executed, plus 02-06 (gap closure)
 **UI hint**: yes
 
 Plans:
@@ -123,6 +123,10 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 02-05-PLAN.md — Census entry point, CSP posture audit, and the panel verification checkpoint
+
+**Wave 6** *(gap closure — from 02-VERIFICATION.md / 02-REVIEW.md CR-01)*
+
+- [ ] 02-06-PLAN.md — Per-maker fan-out isolation: a value-level malformed quote costs one quote, never the whole pass
 
 ### Phase 3: Live Full RFQ Loop
 
