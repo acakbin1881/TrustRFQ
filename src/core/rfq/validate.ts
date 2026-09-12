@@ -69,7 +69,14 @@ export type REJECT_REASON =
   | 'wrong_target'
   | 'token_not_allowed'
   | 'undecodable_entry'
-  | 'tree_mismatch';
+  | 'tree_mismatch'
+  // A maker- or desk-controlled decimal-string amount could not be
+  // interpreted at all (non-numeric, absent, or the wrong JSON type) — as
+  // distinct from a value that WAS interpretable and simply disagreed with
+  // something (economics_mismatch / tree_mismatch). Added 02-06 to close the
+  // per-maker fan-out isolation gap: without this, an uninterpretable value
+  // throws out of toAtomic and denies the whole pass, not just this quote.
+  | 'malformed_field';
 
 export interface QuoteRejection {
   reason: REJECT_REASON;
@@ -83,6 +90,18 @@ export type ValidatedQuote =
   | { accepted: false; rejection: QuoteRejection };
 
 const reject = (reason: REJECT_REASON, detail: string): ValidatedQuote => ({ accepted: false, rejection: { reason, detail } });
+
+/** Guards a maker- or desk-controlled decimal-string amount through toAtomic,
+ *  converting a throw into null instead of letting it escape. Module-private:
+ *  every call site decides its own rejection detail so a maker-supplied value
+ *  and the desk's own request can still be told apart by the caller. */
+function tryToAtomic(value: unknown): bigint | null {
+  try {
+    return toAtomic(value as string);
+  } catch {
+    return null;
+  }
+}
 
 // The root `execute` node's arg count for the maker's `require_auth_for_args`
 // tuple over (taker, maker_token, maker_amount, taker_token, taker_amount,
@@ -165,8 +184,20 @@ export function validateQuote(result: MakerSideOrderResult, ctx: ValidateContext
   // maker's claimed order fields (makerAmount is the maker's PRICE and is
   // deliberately not checked here — it is cross-checked against the signed
   // tree below instead). ---
-  const requestTakerAtomic = toAtomic(ctx.request.takerAmount);
-  const orderTakerAtomic = toAtomic(order.takerAmount);
+  const requestTakerAtomic = tryToAtomic(ctx.request.takerAmount);
+  if (requestTakerAtomic === null) {
+    return reject(
+      'malformed_field',
+      `ctx.request.takerAmount (${JSON.stringify(ctx.request.takerAmount)}) could not be interpreted as a decimal amount — this is the desk's own request, not the maker's response`,
+    );
+  }
+  const orderTakerAtomic = tryToAtomic(order.takerAmount);
+  if (orderTakerAtomic === null) {
+    return reject(
+      'malformed_field',
+      `order.takerAmount (${JSON.stringify(order.takerAmount)}) could not be interpreted as a decimal amount — this value came from the maker's response`,
+    );
+  }
   if (
     order.taker !== ctx.request.takerWallet ||
     order.takerToken !== ctx.request.takerToken ||
@@ -247,8 +278,24 @@ export function validateQuote(result: MakerSideOrderResult, ctx: ValidateContext
 
     const [treeTaker, treeMakerToken, treeMakerAmount, treeTakerToken, treeTakerAmount, treeExpiry, treeOrderId, treeFeeBps] =
       rootArgs.args;
-    const makerAtomic = toAtomic(order.makerAmount);
-    const takerAtomic = toAtomic(order.takerAmount);
+    // Explicit rejections, reached BEFORE any tree_mismatch check below: an
+    // uninterpretable amount is reported as uninterpretable, never folded
+    // into "the signed tree disagreed" — that reason must keep meaning a
+    // signed tree that genuinely contradicts the quoted order (02-06).
+    const makerAtomic = tryToAtomic(order.makerAmount);
+    if (makerAtomic === null) {
+      return reject(
+        'malformed_field',
+        `order.makerAmount (${JSON.stringify(order.makerAmount)}) could not be interpreted as a decimal amount — this value came from the maker's response`,
+      );
+    }
+    const takerAtomic = tryToAtomic(order.takerAmount);
+    if (takerAtomic === null) {
+      return reject(
+        'malformed_field',
+        `order.takerAmount (${JSON.stringify(order.takerAmount)}) could not be interpreted as a decimal amount — this value came from the maker's response`,
+      );
+    }
 
     let rootArgsMatch = true;
     try {

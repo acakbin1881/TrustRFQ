@@ -12,6 +12,7 @@
 import { Address, nativeToScVal, rpc, xdr } from '@stellar/stellar-sdk';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import authTreeFixture from '../../fixtures/rfq-auth-tree.json';
+import * as validateModule from '../core/rfq/validate';
 import type { GetMakerSideOrderParams, RfqOrder } from '../core/rfq/wire';
 
 const PASSPHRASE = 'Test SDF Network ; September 2015';
@@ -189,5 +190,93 @@ describe('fanOutMakerSideOrder — the validated fan-out (TAKER-02 + TAKER-03)',
     expect(accepted).toHaveLength(1);
     expect(rejections).toHaveLength(1);
     expect(rejections[0].rejection.reason).toBe('tree_mismatch');
+  });
+
+  // Gap-closure regression (02-06, VERIFICATION.md missing item 3): a single
+  // maker returning a value-level malformed order.takerAmount must cost
+  // exactly one quote, never the whole pass. Before the guard exists in
+  // validate.ts + the call-site catch here, this throws a raw SyntaxError out
+  // of validateQuote and rejects fanOutMakerSideOrder's whole promise instead
+  // of resolving with a per-quote outcome.
+  it('a pass mixing one maker with a non-numeric takerAmount and three valid makers isolates the bad quote to one rejection', async () => {
+    const malformedOrder = { ...BASE_ORDER, takerAmount: 'abc' };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === 'http://malformed.test') {
+          return jsonResponse({ jsonrpc: '2.0', id: 1, result: { ...GOOD_RESULT, order: malformedOrder } });
+        }
+        return jsonResponse({ jsonrpc: '2.0', id: 1, result: GOOD_RESULT });
+      }),
+    );
+
+    const { accepted, rejections } = await fanOutMakerSideOrder(
+      ['http://maker-a.test', 'http://maker-b.test', 'http://maker-c.test', 'http://malformed.test'],
+      PARAMS,
+    );
+
+    expect(accepted).toHaveLength(3);
+    expect(rejections).toHaveLength(1);
+    expect(rejections[0].url).toBe('http://malformed.test');
+    expect(rejections[0].rejection.reason).toBe('malformed_field');
+    // Discriminates the pure-layer guard's own classification from the
+    // call-site catch's generic backstop text (mutation check, 02-06): the
+    // pure layer's crafted detail names the field and its provenance; the
+    // backstop's detail is just `String(e)` on the raw SyntaxError. Removing
+    // the validate.ts guard (while the call-site catch stays) still isolates
+    // the quote by count, but this assertion catches the classification
+    // regressing to the generic backstop path.
+    expect(rejections[0].rejection.detail).toContain('could not be interpreted as a decimal amount');
+    expect(rejections[0].rejection.detail).toContain("maker's response");
+  });
+
+  // Gap-closure mutation check (02-06): once every currently-known
+  // maker-controlled numeric field is guarded in validate.ts (Task 1 + Task
+  // 2), validateQuote is total for all of them and none can reach the
+  // call-site catch by throwing — so the mixed-pass test above cannot, by
+  // itself, prove the catch is load-bearing rather than dead code. This test
+  // proves it structurally: it forces validateQuote to throw for a reason
+  // the pure layer does not (and, by design, never will) classify, and
+  // asserts the catch still isolates it to one quote. Removing the
+  // try/catch in fanOutMakerSideOrder's loop turns this RED (the whole
+  // promise rejects); restoring it turns it GREEN again.
+  it('the call-site catch isolates a throw from validateQuote for a reason the pure layer never classifies (structural backstop)', async () => {
+    const POISON_ORDER_ID = -1;
+    const poisonOrder = { ...BASE_ORDER, orderId: POISON_ORDER_ID };
+    const actualValidateQuote = validateModule.validateQuote;
+    vi.spyOn(validateModule, 'validateQuote').mockImplementation((result, ctx) => {
+      if (result.order.orderId === POISON_ORDER_ID) {
+        throw new Error('structural probe: a bug elsewhere in validateQuote, not a maker-controlled field');
+      }
+      return actualValidateQuote(result, ctx);
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === 'http://poison.test') return jsonResponse({ jsonrpc: '2.0', id: 1, result: { ...GOOD_RESULT, order: poisonOrder } });
+        return jsonResponse({ jsonrpc: '2.0', id: 1, result: GOOD_RESULT });
+      }),
+    );
+
+    const { accepted, rejections } = await fanOutMakerSideOrder(['http://good.test', 'http://poison.test'], PARAMS);
+
+    expect(accepted).toHaveLength(1);
+    expect(rejections).toHaveLength(1);
+    expect(rejections[0].url).toBe('http://poison.test');
+    expect(rejections[0].rejection.reason).toBe('malformed_field');
+  });
+
+  // Gap-closure regression (02-06, Task 2): a failed per-pass config read
+  // must keep failing the WHOLE pass, never degrade into a per-quote skip of
+  // the fee/paused gate. This is the counterweight to the mixed-pass case
+  // above — it pins the fail-closed direction against a future widening of
+  // the per-quote catch upward into the shared Promise.all reads.
+  it('rejects the whole pass when the per-pass get_config read fails', async () => {
+    vi.spyOn(rpc.Server.prototype, 'simulateTransaction').mockRestore();
+    vi.spyOn(rpc.Server.prototype, 'simulateTransaction').mockRejectedValue(new Error('rpc unavailable'));
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ jsonrpc: '2.0', id: 1, result: GOOD_RESULT })));
+
+    await expect(fanOutMakerSideOrder(['http://good.test'], PARAMS)).rejects.toThrow();
   });
 });

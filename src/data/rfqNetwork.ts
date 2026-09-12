@@ -137,9 +137,17 @@ export async function fanOutMakerSideOrder(
   const rejections: FanOutRejection[] = [];
   for (const s of settled) {
     if (s.status !== 'fulfilled' || s.value.result === null) continue; // dropped at the wire layer (TAKER-02)
-    const verdict = validateQuote(s.value.result, ctx);
-    if (verdict.accepted) accepted.push(verdict.quote);
-    else rejections.push({ url: s.value.url, rejection: verdict.rejection });
+    try {
+      const verdict = validateQuote(s.value.result, ctx);
+      if (verdict.accepted) accepted.push(verdict.quote);
+      else rejections.push({ url: s.value.url, rejection: verdict.rejection });
+    } catch (e) {
+      // Backstop for a throw the pure layer did not already classify, not
+      // the primary defence — validateQuote is total for every input by
+      // design (02-06). One maker's uninterpretable value must still cost
+      // only this quote, never the whole fan-out pass.
+      rejections.push({ url: s.value.url, rejection: { reason: 'malformed_field', detail: String(e) } });
+    }
   }
   return { accepted, rejections };
 }
