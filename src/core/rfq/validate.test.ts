@@ -195,6 +195,68 @@ describe('validateQuote — tree_mismatch', () => {
   });
 });
 
+// Gap-closure value-edge coverage (02-06, Task 2): the measured toAtomic
+// probe table splits maker-controlled amounts into two groups — values that
+// THROW (must reject as malformed_field, and must not escape as an
+// exception) and values that silently PARSE to something interpretable but
+// wrong (must stay economics_mismatch, never get folded into
+// malformed_field). Getting the two groups backwards would either miss the
+// isolation gap or blur an honest wrong-value rejection into a generic one.
+describe('validateQuote — malformed_field (02-06 gap closure)', () => {
+  it('rejects a non-numeric takerAmount without throwing', () => {
+    const doctoredOrder = { ...BASE_ORDER, takerAmount: 'abc' };
+    let v: ReturnType<typeof validateQuote>;
+    expect(() => {
+      v = validateQuote(baseResult({ order: doctoredOrder }), baseCtx());
+    }).not.toThrow();
+    expect(v!).toMatchObject({ accepted: false, rejection: { reason: 'malformed_field' } });
+  });
+
+  it('rejects a non-numeric makerAmount without throwing', () => {
+    const doctoredOrder = { ...BASE_ORDER, makerAmount: 'xyz' };
+    let v: ReturnType<typeof validateQuote>;
+    expect(() => {
+      v = validateQuote(baseResult({ order: doctoredOrder }), baseCtx());
+    }).not.toThrow();
+    expect(v!).toMatchObject({ accepted: false, rejection: { reason: 'malformed_field' } });
+  });
+
+  it('rejects an absent takerAmount without throwing', () => {
+    const doctoredOrder = { ...BASE_ORDER, takerAmount: undefined } as unknown as RfqOrder;
+    let v: ReturnType<typeof validateQuote>;
+    expect(() => {
+      v = validateQuote(baseResult({ order: doctoredOrder }), baseCtx());
+    }).not.toThrow();
+    expect(v!).toMatchObject({ accepted: false, rejection: { reason: 'malformed_field' } });
+  });
+
+  it('rejects a wrong-JSON-type takerAmount (an object) without throwing', () => {
+    const doctoredOrder = { ...BASE_ORDER, takerAmount: {} } as unknown as RfqOrder;
+    let v: ReturnType<typeof validateQuote>;
+    expect(() => {
+      v = validateQuote(baseResult({ order: doctoredOrder }), baseCtx());
+    }).not.toThrow();
+    expect(v!).toMatchObject({ accepted: false, rejection: { reason: 'malformed_field' } });
+  });
+});
+
+describe('validateQuote — interpretable-but-wrong values stay economics_mismatch, not malformed_field', () => {
+  it('rejects an empty-string takerAmount (parses to 0) as economics_mismatch', () => {
+    const v = validateQuote(baseResult(), baseCtx({ request: baseRequest({ takerAmount: '' }) }));
+    expect(v).toMatchObject({ accepted: false, rejection: { reason: 'economics_mismatch' } });
+  });
+
+  it('rejects a negative takerAmount as economics_mismatch', () => {
+    const v = validateQuote(baseResult(), baseCtx({ request: baseRequest({ takerAmount: '-1' }) }));
+    expect(v).toMatchObject({ accepted: false, rejection: { reason: 'economics_mismatch' } });
+  });
+
+  it('rejects a hex-prefixed takerAmount (BigInt accepts hex) as economics_mismatch', () => {
+    const v = validateQuote(baseResult(), baseCtx({ request: baseRequest({ takerAmount: '0x10' }) }));
+    expect(v).toMatchObject({ accepted: false, rejection: { reason: 'economics_mismatch' } });
+  });
+});
+
 describe('validateQuote — concurrency (no shared state)', () => {
   it('validating a mixed array yields the same per-quote verdicts as validating each alone', () => {
     const good = baseResult();

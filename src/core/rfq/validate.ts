@@ -278,8 +278,24 @@ export function validateQuote(result: MakerSideOrderResult, ctx: ValidateContext
 
     const [treeTaker, treeMakerToken, treeMakerAmount, treeTakerToken, treeTakerAmount, treeExpiry, treeOrderId, treeFeeBps] =
       rootArgs.args;
-    const makerAtomic = toAtomic(order.makerAmount);
-    const takerAtomic = toAtomic(order.takerAmount);
+    // Explicit rejections, reached BEFORE any tree_mismatch check below: an
+    // uninterpretable amount is reported as uninterpretable, never folded
+    // into "the signed tree disagreed" — that reason must keep meaning a
+    // signed tree that genuinely contradicts the quoted order (02-06).
+    const makerAtomic = tryToAtomic(order.makerAmount);
+    if (makerAtomic === null) {
+      return reject(
+        'malformed_field',
+        `order.makerAmount (${JSON.stringify(order.makerAmount)}) could not be interpreted as a decimal amount — this value came from the maker's response`,
+      );
+    }
+    const takerAtomic = tryToAtomic(order.takerAmount);
+    if (takerAtomic === null) {
+      return reject(
+        'malformed_field',
+        `order.takerAmount (${JSON.stringify(order.takerAmount)}) could not be interpreted as a decimal amount — this value came from the maker's response`,
+      );
+    }
 
     let rootArgsMatch = true;
     try {
