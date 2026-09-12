@@ -56,7 +56,7 @@ Source: `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` 
 Scope shape (UI-D1): TAKER-01..05 describe protocol behavior surfaced through a deliberately
 minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioning note above).
 
-- [ ] **TAKER-01**: The desk discovers maker URLs for the selected pair via two
+- [x] **TAKER-01**: The desk discovers maker URLs for the selected pair via two
   `get_urls_for_token` read-only simulations and client-side intersection (registry reads use the
   already-allowed RPC origin)
 
@@ -78,18 +78,18 @@ minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioni
   expired-entry failure auto-refreshes the quote and retries once; tokens resolve only from the
   curated allow-list (`src/core/tokens.ts`), never raw user-pasted addresses
 
-- [ ] **TAKER-06**: The RFQ canonical order encoding is deterministic and pinned with golden
+- [x] **TAKER-06**: The RFQ canonical order encoding is deterministic and pinned with golden
   vectors (same discipline as `fillCanonicalArgs`), under `src/` so vitest covers it
 
 ### CSP
 
-- [ ] **CSP-01**: `vercel.json` `connect-src` gains every maker-server origin the desk queries;
+- [x] **CSP-01**: `vercel.json` `connect-src` gains every maker-server origin the desk queries;
   zero CSP violations in the browser console; `'unsafe-inline'` never enters `script-src`.
   (Changes only when desk taker integration starts.)
 
 ### End-to-End Verification
 
-- [ ] **E2E-01**: `tools/e2e/` is extended with a local stub maker (a quote server signing real
+- [x] **E2E-01**: `tools/e2e/` is extended with a local stub maker (a quote server signing real
   auth entries) and a taker driver covering the full RFQ quote flow through the mock Freighter,
   settling for real on Testnet (intermediate verification while the real maker server is absent)
 
@@ -148,14 +148,14 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | REG-02 | Phase 1 | Complete |
 | REG-03 | Phase 1 | Complete |
 | CFG-01 | Phase 1 | Complete |
-| TAKER-01 | Phase 2 | Pending |
+| TAKER-01 | Phase 2 | Complete |
 | TAKER-02 | Phase 2 | Complete |
 | TAKER-03 | Phase 2 | Complete |
 | TAKER-04 | Phase 2 | Complete |
 | TAKER-05 | Phase 2 | Complete |
-| TAKER-06 | Phase 2 | Pending |
-| CSP-01 | Phase 2 | Pending |
-| E2E-01 | Phase 2 | Pending |
+| TAKER-06 | Phase 2 | Complete |
+| CSP-01 | Phase 2 | Complete |
+| E2E-01 | Phase 2 | Complete |
 | E2E-02 | Phase 3 | Pending |
 | RETIRE-01 | Phase 4 | Pending |
 | SWAP-01 | (none: pre-satisfied) | Complete (2026-08-18) |

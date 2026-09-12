@@ -19,7 +19,7 @@ the permanent directed OTC lane untouched.
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: On-Chain Maker Discovery** - `rfq_registry` stake-gated phone book built, tested, deployed on Testnet, and wired into the runtime config (completed 2026-08-26)
-- [ ] **Phase 2: Desk RFQ Taker Path** - the desk discovers registered makers, pulls and validates firm quotes, and settles with one wallet signature, proven against a local stub maker; built as a minimal reference surface over an SDK-shaped taker core (POS-D1/UI-D1)
+- [x] **Phase 2: Desk RFQ Taker Path** - the desk discovers registered makers, pulls and validates firm quotes, and settles with one wallet signature, proven against a local stub maker; built as a minimal reference surface over an SDK-shaped taker core (POS-D1/UI-D1) (completed 2026-09-12)
 - [ ] **Phase 3: Live Full RFQ Loop** - milestone gate: a real maker server's live quote discovered via the registry and settled on Testnet end-to-end
 - [ ] **Phase 4: Interim Fan-Out Retirement** - broadcast/intent layer removed now that the RFQ protocol has shipped; directed OTC lane untouched
 
@@ -180,7 +180,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. On-Chain Maker Discovery | 4/4 | Complete    | 2026-08-26 |
-| 2. Desk RFQ Taker Path | 6/6 | In Progress|  |
+| 2. Desk RFQ Taker Path | 6/6 | Complete    | 2026-09-12 |
 | 3. Live Full RFQ Loop | 0/TBD | Not started | - |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
 
