@@ -100,7 +100,7 @@ core. Desk metrics are never cited as evidence.
   5. The extended `npm run e2e:census` drives the full RFQ taker flow through the mock Freighter
      plus a local stub maker and settles for real on Testnet, with maker origins added to
      `connect-src`, zero CSP violations, and no `'unsafe-inline'` in `script-src`
-**Plans**: 6 plans — 5/5 executed, plus 02-06 (gap closure)
+**Plans**: 6/6 plans executed — 5/5 executed, plus 02-06 (gap closure)
 **UI hint**: yes
 
 Plans:
@@ -126,7 +126,7 @@ Plans:
 
 **Wave 6** *(gap closure — from 02-VERIFICATION.md / 02-REVIEW.md CR-01)*
 
-- [ ] 02-06-PLAN.md — Per-maker fan-out isolation: a value-level malformed quote costs one quote, never the whole pass
+- [x] 02-06-PLAN.md — Per-maker fan-out isolation: a value-level malformed quote costs one quote, never the whole pass
 
 ### Phase 3: Live Full RFQ Loop
 
@@ -180,7 +180,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. On-Chain Maker Discovery | 4/4 | Complete    | 2026-08-26 |
-| 2. Desk RFQ Taker Path | 5/5 | In Progress|  |
+| 2. Desk RFQ Taker Path | 6/6 | In Progress|  |
 | 3. Live Full RFQ Loop | 0/TBD | Not started | - |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
 
