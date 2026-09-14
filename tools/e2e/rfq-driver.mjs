@@ -84,6 +84,40 @@
 // Assumes the built app is already being served (npm run build && npm run
 // preview -- --port 4173), matching tools/e2e/run-all.mjs's convention.
 //
+// LIVE mode (03-02-PLAN.md Task 2, gated on REAL_MAKER_ADDRESS): the exact
+// same file drives a REAL, remote maker instead of the local stub, and its
+// defining property is SUBTRACTION relative to everything above — no child
+// process (spawnStubMaker is replaced with resolveRealMaker, which learns
+// the maker's url from a genuine on-chain get_maker read, never an env var
+// or constant), no request interception of any kind (both route
+// registrations in main() are skipped outright), and none of the D-12 /
+// discovery / retry / trustline scenarios run (every one of them depends on
+// a stub-maker knob or a route patch that simply does not exist here). What
+// remains is the happy path only, against a real remote server over the
+// public internet, and a CSP-violation capture
+// (installCspCapture/cspViolations) that turns "the browser didn't complain"
+// into a deterministic, read-back array rather than a console-string guess.
+// A local vite preview serves no Content-Security-Policy header at all
+// (vercel.json's headers are a Vercel-deploy-only config), so that array is
+// trivially empty against localhost; the array only becomes meaningful once
+// this same script runs against a deployed Vercel branch preview
+// (03-02-PLAN.md Task 3), which is the ONLY environment that can prove the
+// CSP-permits-this-origin claim end-to-end.
+//
+// LIVE_DIRECTIONS (comma-separated, default "xlm-usdc") lets a future run
+// cover more than one pair; this task implements only xlm-usdc, the second
+// direction is 03-03-PLAN.md's expansion. Every attempt (including one that
+// finds no row on the first try) is recorded in each direction result's
+// `attempts` array — 03-RESEARCH.md Pitfall 1 flags Vercel cold starts
+// against the taker's fixed 3s per-request fan-out timeout
+// (src/data/rfqNetwork.ts) as a real risk, and the whole point of recording
+// every attempt is that this run record can never be a hand-picked
+// successful attempt (T-03-10). `npm run e2e:rfq:live` requires
+// REAL_MAKER_ADDRESS and BASE_URL to be exported; the stub lane
+// (`npm run e2e:rfq`) is completely unaffected — every route registration,
+// scenario function and D-12 loop below stays byte-for-byte what it was
+// before this mode existed, each simply skipped when LIVE_MODE is true.
+//
 // 02-05-PLAN.md Task 1: tools/e2e/run-all.mjs's --lane rfq/all spawns this
 // file as a child process with RUN_ID and PAIR env vars, the same
 // convention run-all.mjs's OTC driver() helper already uses, plus a
@@ -101,7 +135,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { Horizon, Keypair, Networks, Operation, TransactionBuilder, Asset, xdr, scValToNative } from '@stellar/stellar-sdk';
+import {
+  Horizon, Keypair, Networks, Operation, TransactionBuilder, Asset, xdr, scValToNative,
+  Account, Address, Contract, rpc,
+} from '@stellar/stellar-sdk';
 import { readFileSync } from 'node:fs';
 import { CHROME, REPO_ROOT, Tally, click, fillField } from './lib.mjs';
 import { initScriptFor, makeWalletHandler } from './freighter-mock.mjs';
@@ -132,6 +169,19 @@ const REPORT = process.env.REPORT || path.join(SCRATCH, `report-rfq-${RUN_ID}.js
 const HEADED = !!process.env.HEADED;
 const SELL_AMOUNT = process.env.SELL_AMOUNT || '1';
 const TRUST_LIMIT = '100000000';
+
+// LIVE mode (Task 2). Same fallback convention as tools/rfq-registry-live.mjs
+// and tools/e2e/stub-maker.mjs.
+const REAL_MAKER_ADDRESS = process.env.REAL_MAKER_ADDRESS || null;
+const LIVE_MODE = !!REAL_MAKER_ADDRESS;
+const LIVE_DIRECTIONS = (process.env.LIVE_DIRECTIONS || 'xlm-usdc')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
+// Mirrored from src/data/rfqNetwork.ts: the free read-only-simulation trick
+// — no signing, no fee, no network write. This is the ONLY source of the
+// maker's URL in LIVE mode; see readRegisteredMaker below.
+const ZERO_BALANCE_SOURCE = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const rpcServer = new rpc.Server(RPC_URL);
 
 const horizon = new Horizon.Server(HORIZON_URL);
 const log = (...a) => console.log(`[rfq-driver ${new Date().toISOString().slice(11, 19)}]`, ...a);
@@ -180,6 +230,168 @@ async function openTakerUsdcTrustline(takerKp) {
     .build();
   tx.sign(takerKp);
   await horizon.submitTransaction(tx);
+}
+
+/** The demo USDC SAC id, derived the same way src/core/canonical.ts's
+ *  sacIdFor does (Asset.contractId), from the same issuer secret
+ *  openTakerUsdcTrustline above already reads. LIVE mode uses this only to
+ *  confirm the registry's on-chain get_maker read lists both tokens this
+ *  driver's own xlm-usdc direction needs — never to guess a maker URL. */
+function usdcSacId() {
+  const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
+  const issuerKp = Keypair.fromSecret(keys.issuer_secret);
+  return new Asset('USDC', issuerKp.publicKey()).contractId(NETWORK);
+}
+
+/**
+ * LIVE mode (Task 2): mirrors src/data/rfqNetwork.ts's simulateRead exactly
+ * — a TransactionBuilder on the zero-balance source account, one `get_maker`
+ * call on RFQ_REGISTRY_ID with the maker's Address ScVal, simulateTransaction,
+ * scValToNative on the retval. This is the ONLY source of the maker's URL in
+ * LIVE mode: the driver must never accept a URL from an environment variable
+ * or a constant, because the whole point of success criterion 1 is that
+ * nothing in the flow knows the URL ahead of the registry.
+ */
+async function readRegisteredMaker(address) {
+  const src = new Account(ZERO_BALANCE_SOURCE, '0');
+  const contract = new Contract(RFQ_REGISTRY_ID);
+  const tx = new TransactionBuilder(src, { fee: '100', networkPassphrase: NETWORK })
+    .addOperation(contract.call('get_maker', new Address(address).toScVal()))
+    .setTimeout(30)
+    .build();
+  const sim = await rpcServer.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) {
+    throw new Error(`readRegisteredMaker: get_maker simulation failed for ${address}: ${sim.error}`);
+  }
+  const entry = scValToNative(sim.result.retval);
+  if (typeof entry?.url !== 'string' || !entry.url.startsWith('https://')) {
+    throw new Error(`readRegisteredMaker: on-chain url is not an https:// URL: ${JSON.stringify(entry?.url)}`);
+  }
+  const tokens = Array.isArray(entry.tokens) ? entry.tokens : [];
+  const nativeSac = Asset.native().contractId(NETWORK);
+  const usdcSac = usdcSacId();
+  if (!tokens.includes(nativeSac) || !tokens.includes(usdcSac)) {
+    throw new Error(
+      `readRegisteredMaker: registered tokens ${JSON.stringify(tokens)} do not cover both the native ` +
+      `SAC (${nativeSac}) and the demo USDC SAC (${usdcSac})`,
+    );
+  }
+  // JSON.stringify (Tally.writeReport) cannot serialize a BigInt, and
+  // scValToNative decodes the contract's i128 `staked` field as one — caught
+  // live (an UNHANDLED REJECTION crashed the process after a genuine
+  // settlement). Stringify it here, at the read boundary, rather than at
+  // every later call site that might touch this value.
+  return { ...entry, staked: entry.staked.toString() };
+}
+
+/**
+ * LIVE mode (Task 2): resolves the SAME shape spawnStubMaker resolves — url
+ * and pubkey, plus a null child — so every existing url-consumption site
+ * (the maker-url page.on counters, meta()'s makerUrl/makerPubkey fields)
+ * keeps working unchanged. `child` is always null: there is no process to
+ * eject.
+ */
+async function resolveRealMaker() {
+  const registryEntry = await readRegisteredMaker(REAL_MAKER_ADDRESS);
+  return { child: null, url: registryEntry.url, pubkey: REAL_MAKER_ADDRESS, registryEntry };
+}
+
+/**
+ * LIVE mode (Task 2): a deterministic capture of every securitypolicyviolation
+ * event the page fires, read back with page.evaluate at the end of the run —
+ * this is real evidence the CSP genuinely permitted (or blocked) the
+ * cross-origin POST to the maker, not a console-string match. Against a
+ * local vite preview there is no Content-Security-Policy header at all
+ * (vercel.json's headers apply only once deployed), so the array is
+ * trivially empty there; the meaningful measurement is the Vercel
+ * branch-preview run (03-02-PLAN.md Task 3).
+ */
+async function installCspCapture(context) {
+  await context.addInitScript(() => {
+    window.__cspViolations = [];
+    document.addEventListener('securitypolicyviolation', (e) => {
+      window.__cspViolations.push({
+        blockedURI: e.blockedURI,
+        violatedDirective: e.violatedDirective,
+        documentURI: e.documentURI,
+      });
+    });
+  });
+}
+
+/**
+ * LIVE mode (Task 2): drives one direction end-to-end against the REAL,
+ * deployed maker — no route interception, no stub knobs, the desk's own
+ * Refresh quotes button as the only retry mechanism. Handles xlm-usdc only
+ * for this task (the second direction is 03-03-PLAN.md's expansion). Allows
+ * up to two attempts because 03-RESEARCH.md Pitfall 1 flags Vercel cold
+ * starts against the taker's fixed 3s per-request fan-out timeout
+ * (src/data/rfqNetwork.ts) as a real, not hypothetical, risk; every attempt
+ * — including one that finds no row — is pushed into the returned
+ * `attempts` array, so the run record can never be a hand-picked successful
+ * attempt (T-03-10).
+ */
+async function runLiveDirection(page, tally, direction) {
+  if (direction !== 'xlm-usdc') {
+    throw new Error(`runLiveDirection: unsupported direction "${direction}" (only xlm-usdc is implemented by this task)`);
+  }
+  const sellToken = 'XLM';
+  const buyToken = 'USDC';
+  const startedAt = Date.now();
+  const attempts = [];
+
+  await fillField(tally, page.locator('#rfqAmount'), `fill-sell-amount-live-${direction}`, SELL_AMOUNT);
+
+  const rowLocator = page.locator('.rfq-quotes .order.rfq-row');
+  let rowCount = 0;
+  for (let attemptIndex = 0; attemptIndex < 2 && rowCount === 0; attemptIndex++) {
+    const attemptStart = Date.now();
+    const label = attemptIndex === 0
+      ? `refresh-quotes-live-${direction}`
+      : `refresh-quotes-live-${direction}-retry`;
+    await click(tally, page.locator('#rfqRefreshBtn'), label, { kind: 'ui-click-nav' });
+    await Promise.race([
+      rowLocator.first().waitFor({ state: 'visible', timeout: 20000 }),
+      page.locator('.empty', { hasText: 'No quotes available' }).waitFor({ state: 'visible', timeout: 20000 }),
+    ]).catch(() => {}); // a timeout here is itself evidence — recorded below as rowCount 0
+    rowCount = await rowLocator.count();
+    const indicatorText = await page.locator('.hint.rfq-indicator').innerText().catch(() => '');
+    const makersFoundMatch = indicatorText.match(/(\d+)/);
+    attempts.push({
+      attemptIndex,
+      elapsedMs: Date.now() - attemptStart,
+      makersFound: makersFoundMatch ? parseInt(makersFoundMatch[1], 10) : null,
+      rowCount,
+    });
+  }
+
+  if (rowCount === 0) {
+    throw new Error(`LIVE ${direction}: no quote row appeared after ${attempts.length} attempt(s)`);
+  }
+
+  const quotedReceiveAmount = (await rowLocator.first().locator('.legbox__v').innerText()).trim();
+
+  await click(tally, page.locator('#rfqAcceptBtn'), `accept-quote-live-${direction}`);
+  // SUBMIT_TRANSACTION fires here — the ONE taker signTransaction prompt.
+
+  const link = page.locator('.settle a', { hasText: 'View transaction' });
+  await link.waitFor({ state: 'visible', timeout: 240000 });
+  const txHash = ((await link.getAttribute('href')) ?? '').split('/tx/')[1] ?? null;
+  if (!txHash || !/^[0-9a-f]{64}$/.test(txHash)) {
+    throw new Error(`LIVE ${direction}: no valid 64-hex tx hash, observed ${txHash}`);
+  }
+
+  const settleErrVisible = await page.locator('.settle__err').isVisible().catch(() => false);
+  if (settleErrVisible) {
+    const errText = await page.locator('.settle__err').innerText().catch(() => '(unreadable)');
+    throw new Error(`LIVE ${direction}: settled but .settle__err is present ("${errText}") — SwapExecuted event not confirmed`);
+  }
+
+  return {
+    direction, sellToken, buyToken, sellAmount: SELL_AMOUNT,
+    quotedReceiveAmount, txHash, attempts,
+    elapsedMs: Date.now() - startedAt,
+  };
 }
 
 /**
@@ -786,22 +998,45 @@ async function main() {
   log('opening taker USDC trustline...');
   await openTakerUsdcTrustline(takerKp);
 
-  log('starting stub maker...');
-  const maker = await spawnStubMaker();
-  activeStubMakerChild = maker.child; // arms the uncaughtException/unhandledRejection eject above
-  log(`stub maker ready: ${maker.url} (${maker.pubkey})`);
+  // LIVE mode (Task 2): one env var swaps the local stub for the real,
+  // deployed maker — resolveRealMaker() spawns no child process and learns
+  // the maker's url ONLY from a genuine on-chain get_maker read.
+  let maker;
+  let warmupMs = null;
+  if (LIVE_MODE) {
+    log(`LIVE mode: resolving maker ${REAL_MAKER_ADDRESS} from the registry...`);
+    maker = await resolveRealMaker();
+    log(`live maker resolved: ${maker.url} (${maker.pubkey}), staked=${maker.registryEntry.staked}`);
+    log('warming up the maker function (03-RESEARCH.md Pitfall 1: Vercel cold start vs the 3s fan-out timeout)...');
+    const warmupStart = Date.now();
+    try {
+      await fetch(maker.url, { method: 'OPTIONS' });
+    } catch (e) {
+      log(`warm-up OPTIONS request failed (non-fatal, recorded as-is): ${e?.message ?? e}`);
+    }
+    warmupMs = Date.now() - warmupStart;
+    log(`warmupMs=${warmupMs}`);
+  } else {
+    log('starting stub maker...');
+    maker = await spawnStubMaker();
+    activeStubMakerChild = maker.child; // arms the uncaughtException/unhandledRejection eject above
+    log(`stub maker ready: ${maker.url} (${maker.pubkey})`);
+  }
 
   const tally = new Tally();
   const stepRef = { current: 'boot' };
   const step = (label) => { stepRef.current = label; };
   const consoleLines = [];
   let settleTxHash = null;
+  const directionResults = [];
+  const cspViolations = [];
 
   const browser = await chromium.launch({ executablePath: CHROME, headless: !HEADED });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addInitScript(initScriptFor(takerKp.publicKey()));
   const handler = makeWalletHandler({ keypair: takerKp, tally, stepRef });
   await context.exposeBinding('__e2eWallet', (_source, msg) => handler(msg));
+  if (LIVE_MODE) await installCspCapture(context);
 
   const page = await context.newPage();
   page.on('console', (m) => consoleLines.push(`[${m.type()}] ${m.text()}`));
@@ -857,13 +1092,19 @@ async function main() {
   // history-free maker only.
   let blockPrimaryMakerActive = false;
   const setBlockPrimaryMaker = (active) => { blockPrimaryMakerActive = active; };
-  await page.route(maker.url, async (route) => {
-    if (blockPrimaryMakerActive) { await route.abort(); return; }
-    const headers = { ...route.request().headers() };
-    if (currentD12Mode) headers[MODE_HEADER] = currentD12Mode;
-    else delete headers[MODE_HEADER];
-    await route.continue({ headers });
-  });
+  // LIVE mode registers NO request interception at all (Task 2): the
+  // mode-header injection below is exactly the stub-shaped hole this phase
+  // closes — a real taker never has a harness rewriting its own outgoing
+  // headers.
+  if (!LIVE_MODE) {
+    await page.route(maker.url, async (route) => {
+      if (blockPrimaryMakerActive) { await route.abort(); return; }
+      const headers = { ...route.request().headers() };
+      if (currentD12Mode) headers[MODE_HEADER] = currentD12Mode;
+      else delete headers[MODE_HEADER];
+      await route.continue({ headers });
+    });
+  }
 
   // ZERO_MAKERS (Task 3): patch ONLY get_urls_for_token simulateTransaction
   // responses to an empty vector — see the header comment for why a real
@@ -925,37 +1166,44 @@ async function main() {
   // why this exists at all.
   let retryLedgerPatchActive = false;
   const setRetryLedgerPatch = (active) => { retryLedgerPatchActive = active; };
-  await page.route(RPC_URL, async (route) => {
-    let body;
-    try { body = route.request().postDataJSON(); } catch { await route.continue(); return; }
-    if (retryLedgerPatchActive && body?.method === 'getLatestLedger') {
+  // LIVE mode registers NO request interception at all (Task 2, see the
+  // maker.url route above): the dedup and allow-list filters below would
+  // themselves be a hardcoded-shaped hole in the flow, and the zero-makers
+  // patch would be a fabricated discovery result — exactly what this phase
+  // exists to remove.
+  if (!LIVE_MODE) {
+    await page.route(RPC_URL, async (route) => {
+      let body;
+      try { body = route.request().postDataJSON(); } catch { await route.continue(); return; }
+      if (retryLedgerPatchActive && body?.method === 'getLatestLedger') {
+        const response = await route.fetch();
+        const json = await response.json();
+        if (json?.result) json.result = { ...json.result, sequence: 1 };
+        await route.fulfill({ response, json });
+        return;
+      }
+      const txB64 = body?.method === 'simulateTransaction' ? body?.params?.transaction : null;
+      if (!txB64 || !Buffer.from(txB64, 'base64').includes(GET_URLS_FN_BYTES)) { await route.continue(); return; }
       const response = await route.fetch();
       const json = await response.json();
-      if (json?.result) json.result = { ...json.result, sequence: 1 };
-      await route.fulfill({ response, json });
-      return;
-    }
-    const txB64 = body?.method === 'simulateTransaction' ? body?.params?.transaction : null;
-    if (!txB64 || !Buffer.from(txB64, 'base64').includes(GET_URLS_FN_BYTES)) { await route.continue(); return; }
-    const response = await route.fetch();
-    const json = await response.json();
-    if (json?.result?.results?.[0]) {
-      if (zeroMakersPatchActive) {
-        json.result.results[0] = { ...json.result.results[0], xdr: EMPTY_STRING_VEC_XDR };
-      } else {
-        const rawXdr = json.result.results[0].xdr;
-        const urls = scValToNative(xdr.ScVal.fromXDR(rawXdr, 'base64'));
-        let filtered = Array.from(new Set(urls));
-        if (urlAllowlist) {
-          const allowed = new Set(urlAllowlist);
-          filtered = filtered.filter((u) => allowed.has(u));
+      if (json?.result?.results?.[0]) {
+        if (zeroMakersPatchActive) {
+          json.result.results[0] = { ...json.result.results[0], xdr: EMPTY_STRING_VEC_XDR };
+        } else {
+          const rawXdr = json.result.results[0].xdr;
+          const urls = scValToNative(xdr.ScVal.fromXDR(rawXdr, 'base64'));
+          let filtered = Array.from(new Set(urls));
+          if (urlAllowlist) {
+            const allowed = new Set(urlAllowlist);
+            filtered = filtered.filter((u) => allowed.has(u));
+          }
+          const filteredXdr = xdr.ScVal.scvVec(filtered.map((u) => xdr.ScVal.scvString(u))).toXDR('base64');
+          json.result.results[0] = { ...json.result.results[0], xdr: filteredXdr };
         }
-        const filteredXdr = xdr.ScVal.scvVec(filtered.map((u) => xdr.ScVal.scvString(u))).toXDR('base64');
-        json.result.results[0] = { ...json.result.results[0], xdr: filteredXdr };
       }
-    }
-    await route.fulfill({ response, json });
-  });
+      await route.fulfill({ response, json });
+    });
+  }
 
   const scenarioResults = [];
   const startedAt = new Date().toISOString();
@@ -963,6 +1211,15 @@ async function main() {
     runId: RUN_ID, role: 'taker', publicKey: takerKp.publicKey(), makerUrl: maker.url, makerPubkey: maker.pubkey,
     sellAmount: SELL_AMOUNT, baseUrl: BASE_URL, startedAt, finishedAt: new Date().toISOString(), settleTxHash,
     scenarios: scenarioResults,
+    mode: LIVE_MODE ? 'LIVE' : 'STUB',
+    ...(LIVE_MODE ? {
+      makerAddress: REAL_MAKER_ADDRESS,
+      makerUrlOnChain: maker.url,
+      registryEntry: maker.registryEntry,
+      directions: directionResults,
+      cspViolations,
+      warmupMs,
+    } : {}),
   });
 
   const consolePath = path.join(SCRATCH, `console-rfq-${Date.now()}.log`);
@@ -970,8 +1227,7 @@ async function main() {
     console.error('HARD CAP (10min) hit');
     writeFileSync(consolePath, consoleLines.join('\n'));
     tally.writeReport(REPORT, { ...meta(), status: 'failed', failedStep: stepRef.current, error: 'hard cap' });
-    await stopStubMaker(maker.child);
-    activeStubMakerChild = null;
+    if (activeStubMakerChild) { await stopStubMaker(activeStubMakerChild); activeStubMakerChild = null; }
     process.exit(1);
   }, 600000);
   hardCap.unref();
@@ -994,6 +1250,30 @@ async function main() {
     await click(tally, page.locator('.section-fab'), 'open-section-menu');
     await click(tally, page.locator('.sheet__option').filter({ hasText: 'RFQ' }), 'choose-rfq');
     await page.locator('div[data-panel="rfq"].is-active').waitFor({ state: 'visible', timeout: 20000 });
+
+    // LIVE mode (Task 2): the happy path only, against the real remote
+    // maker, for every direction in LIVE_DIRECTIONS — none of the D-12 /
+    // discovery / retry / trustline scenarios below run, since every one of
+    // them depends on a stub-maker knob or a route patch LIVE mode never
+    // installs.
+    if (LIVE_MODE) {
+      for (const direction of LIVE_DIRECTIONS) {
+        step(`live-direction-${direction}`);
+        const result = await runLiveDirection(page, tally, direction);
+        directionResults.push(result);
+        settleTxHash = result.txHash;
+        log(`LIVE ${direction}: txHash=${result.txHash} attempts=${result.attempts.length} elapsedMs=${result.elapsedMs}`);
+      }
+      cspViolations.push(...(await page.evaluate(() => window.__cspViolations || [])));
+
+      const body = tally.writeReport(REPORT, { ...meta(), status: 'ok', failedStep: null });
+      writeFileSync(consolePath, consoleLines.join('\n'));
+      console.log(`REPORT ${REPORT}`);
+      console.log(JSON.stringify(body.counts));
+      console.log(`LIVE directions=${directionResults.length} cspViolations=${cspViolations.length} warmupMs=${warmupMs}`);
+      await browser.close();
+      process.exit(0);
+    }
 
     // Defaults already are sellToken=XLM, buyToken=USDC (TOKENS[0]/[1]) — no
     // token clicks needed, mirroring driver.mjs's cross-asset zero-click case.
@@ -1074,8 +1354,7 @@ async function main() {
     console.log(JSON.stringify(body.counts));
     console.log(`SCENARIOS ${scenarioResults.length} (expected 12): ${scenarioResults.map((s) => s.mode).join(', ')}`);
     await browser.close();
-    await stopStubMaker(maker.child);
-    activeStubMakerChild = null;
+    if (activeStubMakerChild) { await stopStubMaker(activeStubMakerChild); activeStubMakerChild = null; }
     process.exit(0);
   } catch (err) {
     const shot = path.join(SCRATCH, `fail-rfq-${Date.now()}-${stepRef.current}.png`);
@@ -1088,8 +1367,7 @@ async function main() {
     console.error(`screenshot: ${shot}`);
     console.error(`console log: ${consolePath}`);
     await browser.close().catch(() => {});
-    await stopStubMaker(maker.child);
-    activeStubMakerChild = null;
+    if (activeStubMakerChild) { await stopStubMaker(activeStubMakerChild); activeStubMakerChild = null; }
     process.exit(1);
   }
 }
