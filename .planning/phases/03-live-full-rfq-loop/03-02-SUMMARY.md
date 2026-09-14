@@ -202,3 +202,11 @@ None - no external service configuration required. The plan pushed `feat/rfq-mil
 ---
 *Phase: 03-live-full-rfq-loop*
 *Completed: 2026-09-14*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/03-live-full-rfq-loop/03-02-SUMMARY.md`
+- FOUND: commit `035bc16` (Task 1)
+- FOUND: commit `38ff089` (Task 2)
+- FOUND: commit `e970f2c` (plan-completion metadata, this SUMMARY + deferred-items.md)
+- FOUND: `.planning/phases/03-live-full-rfq-loop/deferred-items.md`
