@@ -29,3 +29,22 @@ pre-existing, unrelated to the task that surfaced them).
   rate-limit condition on shared Testnet infrastructure, not a code defect in this repo.
 - **Status:** deferred, not fixed. `npm run e2e:rfq` should be re-run in isolation (its own
   session, no prior back-to-back Testnet-heavy runs) before this is treated as a real defect.
+
+## 03-02 Task 3: real-browser + real-Freighter manual verification deferred to 03-04
+
+- **Found during:** Task 3's checkpoint (`npm run e2e:rfq:live` against the Vercel branch
+  preview, human-approved 2026-09-14).
+- **What happened:** the automated evidence for Task 3 was gathered in full — CSP header
+  confirmed served on the preview (`connect-src` lists the maker origin), the mocked-Freighter
+  live driver settled a genuinely new Testnet tx
+  (`b3d35358ca0c671a7eab70e47d9746ded290d5869bb0bb8cb5b403a852cc1575`) against the deployed
+  preview, and `cspViolations` came back non-empty but exclusively against pre-existing
+  dead/orphaned registry entries, never the maker origin (see the SUMMARY's "Deviations from
+  Plan" for the full 6-entry list and interpretation). The one item Task 3's `how-to-verify`
+  asked for that automation cannot substitute for — opening the preview in an actual browser
+  with the real Freighter extension installed, connecting, and watching the DevTools console
+  live — was NOT performed in this session.
+- **Human decision (2026-09-14):** deferred to Plan 03-04, which already carries its own task
+  for a human-driven, recorded real-Freighter run. Not a gap in this plan's scope; it is simply
+  scheduled later in the phase rather than duplicated here.
+- **Status:** deferred, not skipped. Plan 03-04 owns closing this out.
