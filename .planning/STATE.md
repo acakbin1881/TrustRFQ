@@ -28,10 +28,17 @@ where a signature over the full economic terms is the integrity boundary.
 
 ## Current Position
 
-Phase: 03 (live-full-rfq-loop) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-09-13 — Phase 03 execution started
+Phase: 03 (live-full-rfq-loop) — EXECUTING (PAUSED at checkpoint)
+Plan: 4 of 4 (03-01, 03-02, 03-03 complete; 03-04 paused at Task 2 checkpoint)
+Status: Awaiting human-verify checkpoint — Plan 03-04 Task 2: the one human-driven run
+  (real Freighter wallet settles a live quote on the branch preview). Task 1 of 03-04 is
+  committed (c8b867f, docs/evidence/live-rfq-run.md with an explicit PENDING placeholder).
+  User answered "can't do it now — hold" (2026-09-14). Resume: perform the Freighter run,
+  then re-run /gsd-execute-phase 3 and supply
+  "approved: tx=<hash> wallet=<G...> direction=<xlm-usdc|usdc-xlm> console=<clean|details>".
+  Also pending in 03-04: Task 3 (fill manual run + maker runbook) and Task 4 (D-07 merge
+  decision — never auto-merged; a push to main deploys production).
+Last activity: 2026-09-14 — Waves 1-3 executed (5 live Testnet settlements recorded); paused at 03-04 Task 2
 ROADMAP.md created; 14 v1 requirements mapped across 4 phases)
 
 Progress: [█████████░] 93%
