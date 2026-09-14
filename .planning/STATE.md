@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: live-full-rfq-loop
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-09-14T10:54:48.723Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-09-14T11:42:35.790Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -29,12 +29,12 @@ where a signature over the full economic terms is the integrity boundary.
 ## Current Position
 
 Phase: 03 (live-full-rfq-loop) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 03 execution started
 ROADMAP.md created; 14 v1 requirements mapped across 4 phases)
 
-Progress: [████████░░] 79%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [████████░░] 79%
 | Phase 01 P02 | 1 session | 3 tasks | 2 files |
 | Phase 01 P04 | 1 session | 3 tasks | 4 files |
 | Phase 03 P01 | ~19h20m wall (active <1h) | 4 tasks | 17 files |
+| Phase 03 P02 | ~1h10m active | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,10 @@ Recent decisions affecting current work:
 - [Phase ?]: Preview Vercel env vars required alongside Production (non-first deploys target Preview even when later aliased onto the production domain)
 - [Phase ?]: tsconfig NodeNext + explicit .js import extensions required for Vercel's per-file (non-bundled) TS transpile to resolve at runtime
 - [Phase ?]: trustrfq-maker-server deployed at https://trustrfq-maker-server.vercel.app; maker GDUXGYZPDZVZI4LYPAPNGW3MHPBAQB7WBPPFPOP4HUQZDRFQ6FT2YWT3 registered on rfq_registry with 120 XLM stake; live settlement tx adc55ed59b1c10c54ce1f2f0f4cbfca010b69a0187e7eb71bef7fe6af92456a6
+- [Phase ?]: CSP-01 closed: vercel.json connect-src allow-lists the maker's exact origin (https://trustrfq-maker-server.vercel.app), no wildcard
+- [Phase ?]: rfq-driver.mjs LIVE mode (REAL_MAKER_ADDRESS-gated): learns the maker url only from an on-chain get_maker read, spawns no child process, registers zero page.route interception
+- [Phase ?]: Non-empty cspViolations from the Vercel branch-preview live run accepted as satisfying Task 3 (human-approved 2026-09-14): all 6 entries target pre-existing dead/orphaned rfq_registry entries, never the maker origin
+- [Phase ?]: Real-browser + real-Freighter-extension manual verification deferred to Plan 03-04 (human decision, 2026-09-14); E2E-02 left OPEN (requirements-completed: []) since 03-03/03-04 still carry open scope against it
 
 ### Pending Todos
 
@@ -98,6 +103,8 @@ None yet.
 - Standing repo guard: otc_swap wasm hash 83f60b85... must not move; CSP script-src never gains
   'unsafe-inline'; golden vectors are the signature-boundary tripwire.
 
+- npm run e2e:rfq (stub lane) failed at d12-slow with ERR_CONNECTION_REFUSED during 03-02's regression run; reproduced identically on unmodified HEAD, so environmental (likely Testnet/RPC rate exhaustion from repeated back-to-back runs), not a code defect. Re-run in isolation before treating as real. See .planning/phases/03-live-full-rfq-loop/deferred-items.md
+
 ## Deferred Items
 
 Items acknowledged and carried forward:
@@ -109,6 +116,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-09-14T10:54:48.717Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-09-14T11:42:14.885Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None

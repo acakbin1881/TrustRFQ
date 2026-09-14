@@ -149,7 +149,7 @@ on that repo, it does not pull server code into this one
 
   4. The run is recorded (maker address, registry entry, quote, tx hash) so it is reproducible
      after a quarterly Testnet reset
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 Plans:
 **Wave 1**
@@ -158,7 +158,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — CSP closure plus a live-maker driver mode that spawns nothing and patches nothing, settling one direction from the Vercel branch preview
+- [x] 03-02-PLAN.md — CSP closure plus a live-maker driver mode that spawns nothing and patches nothing, settling one direction from the Vercel branch preview
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -198,7 +198,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. On-Chain Maker Discovery | 4/4 | Complete    | 2026-08-26 |
 | 2. Desk RFQ Taker Path | 6/6 | Complete    | 2026-09-12 |
-| 3. Live Full RFQ Loop | 1/4 | In Progress|  |
+| 3. Live Full RFQ Loop | 2/4 | In Progress|  |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
 
 ## Non-Phase Requirement Dispositions
