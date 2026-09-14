@@ -104,9 +104,14 @@
 // (03-02-PLAN.md Task 3), which is the ONLY environment that can prove the
 // CSP-permits-this-origin claim end-to-end.
 //
-// LIVE_DIRECTIONS (comma-separated, default "xlm-usdc") lets a future run
-// cover more than one pair; this task implements only xlm-usdc, the second
-// direction is 03-03-PLAN.md's expansion. Every attempt (including one that
+// LIVE_DIRECTIONS (comma-separated, default "xlm-usdc,usdc-xlm" as of
+// 03-03-PLAN.md) drives every direction listed, sequentially, in ONE browser
+// session against ONE funded taker. usdc-xlm needs its own funding
+// (fundTakerUsdc, mirroring stub-maker.mjs's own USDC setup) since the
+// taker is now the SELLER of USDC rather than only its buyer, and its own
+// panel interaction (selectToken, driving the desk's real custom listbox —
+// never Playwright's selectOption against the hidden native <select>,
+// tabIndex -1, a path no person takes). Every attempt (including one that
 // finds no row on the first try) is recorded in each direction result's
 // `attempts` array — 03-RESEARCH.md Pitfall 1 flags Vercel cold starts
 // against the taker's fixed 3s per-request fan-out timeout
@@ -117,6 +122,11 @@
 // (`npm run e2e:rfq`) is completely unaffected — every route registration,
 // scenario function and D-12 loop below stays byte-for-byte what it was
 // before this mode existed, each simply skipped when LIVE_MODE is true.
+//
+// Between directions the page is RELOADED (never trusted to just re-render):
+// a stale settled row from the prior direction must never be mistaken for
+// this direction's own result. The reload costs a fresh connect + reopen of
+// the RFQ section, both tallied like every other click.
 //
 // 02-05-PLAN.md Task 1: tools/e2e/run-all.mjs's --lane rfq/all spawns this
 // file as a child process with RUN_ID and PAIR env vars, the same
@@ -174,8 +184,14 @@ const TRUST_LIMIT = '100000000';
 // and tools/e2e/stub-maker.mjs.
 const REAL_MAKER_ADDRESS = process.env.REAL_MAKER_ADDRESS || null;
 const LIVE_MODE = !!REAL_MAKER_ADDRESS;
-const LIVE_DIRECTIONS = (process.env.LIVE_DIRECTIONS || 'xlm-usdc')
+// D-09 (03-03-PLAN.md Task 1): both directions of the curated pair, by
+// default, in this order.
+const LIVE_DIRECTIONS = (process.env.LIVE_DIRECTIONS || 'xlm-usdc,usdc-xlm')
   .split(',').map((s) => s.trim()).filter(Boolean);
+// The usdc-xlm direction's sell amount (in USDC) — kept as its own env var
+// rather than reusing SELL_AMOUNT, since the two directions sell different
+// assets at different natural scales.
+const SELL_AMOUNT_USDC_XLM = process.env.SELL_AMOUNT_USDC_XLM || '5';
 const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
 // Mirrored from src/data/rfqNetwork.ts: the free read-only-simulation trick
 // — no signing, no fee, no network write. This is the ONLY source of the
@@ -241,6 +257,78 @@ function usdcSacId() {
   const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
   const issuerKp = Keypair.fromSecret(keys.issuer_secret);
   return new Asset('USDC', issuerKp.publicKey()).contractId(NETWORK);
+}
+
+/** The literal curated token value (src/core/tokens.ts's TOKENS[1].value),
+ *  `USDC:<issuer>` — never the bare code — so a report/record reader can
+ *  resolve exactly which on-chain asset moved without guessing an issuer. */
+function usdcTokenValue() {
+  const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
+  const issuerKp = Keypair.fromSecret(keys.issuer_secret);
+  return `USDC:${issuerKp.publicKey()}`;
+}
+
+/**
+ * Task 1 (D-09): the usdc-xlm direction needs the taker to SELL USDC, so it
+ * needs a USDC BALANCE, not only the trustline openTakerUsdcTrustline
+ * already opens. Mirrors tools/e2e/stub-maker.mjs's own setup (lines
+ * 559-574): a classic payment straight from the demo issuer.
+ */
+async function fundTakerUsdc(takerKp, amount) {
+  const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
+  const issuerKp = Keypair.fromSecret(keys.issuer_secret);
+  const USDC = new Asset('USDC', issuerKp.publicKey());
+  const issuerAccount = await horizon.loadAccount(issuerKp.publicKey());
+  const tx = new TransactionBuilder(issuerAccount, { fee: '10000', networkPassphrase: NETWORK })
+    .addOperation(Operation.payment({ destination: takerKp.publicKey(), asset: USDC, amount }))
+    .setTimeout(60)
+    .build();
+  tx.sign(issuerKp);
+  await horizon.submitTransaction(tx);
+}
+
+/**
+ * Task 1 (D-09): the two LIVE directions of the curated pair. `sellCode`/
+ * `buyCode` are the bare codes selectToken clicks by; `sellToken`/`buyToken`
+ * are the literal TOKENS values (src/core/tokens.ts) carried into the
+ * report/record so a reader can resolve the exact on-chain asset without
+ * guessing.
+ */
+function directionDescriptor(direction) {
+  const usdcValue = usdcTokenValue();
+  if (direction === 'xlm-usdc') {
+    return {
+      direction, sellCode: 'XLM', buyCode: 'USDC',
+      sellToken: 'XLM', buyToken: usdcValue,
+      sellAmount: SELL_AMOUNT,
+    };
+  }
+  if (direction === 'usdc-xlm') {
+    return {
+      direction, sellCode: 'USDC', buyCode: 'XLM',
+      sellToken: usdcValue, buyToken: 'XLM',
+      sellAmount: SELL_AMOUNT_USDC_XLM,
+    };
+  }
+  throw new Error(`directionDescriptor: unsupported LIVE direction "${direction}" (only xlm-usdc/usdc-xlm exist)`);
+}
+
+/**
+ * Task 1 (D-09): the desk's token pickers (src/ui/TokenSelect.tsx) are a
+ * custom listbox, not a native <select> a person can operate — the real
+ * <select> carrying `selectId` is rendered at tabIndex -1 behind the
+ * visible `.tok__trigger` button. Locate the `.tok` wrapper owning that
+ * hidden select, open it, then click the `.tok__opt` whose
+ * `.tok__opt-code` text equals `tokenCode` exactly (never Playwright's
+ * selectOption, which would target the hidden element directly — a path no
+ * person takes).
+ */
+async function selectToken(page, tally, selectId, tokenCode) {
+  const wrapper = page.locator('.tok').filter({ has: page.locator(`#${selectId}`) });
+  await click(tally, wrapper.locator('.tok__trigger'), `select-${selectId}-open-${tokenCode.toLowerCase()}`);
+  const opt = wrapper.locator('.tok__opt')
+    .filter({ has: page.locator('.tok__opt-code', { hasText: new RegExp(`^${tokenCode}$`) }) });
+  await click(tally, opt, `select-${selectId}-${tokenCode.toLowerCase()}`);
 }
 
 /**
@@ -320,27 +408,26 @@ async function installCspCapture(context) {
 }
 
 /**
- * LIVE mode (Task 2): drives one direction end-to-end against the REAL,
+ * LIVE mode (Task 1 & 2): drives one direction end-to-end against the REAL,
  * deployed maker — no route interception, no stub knobs, the desk's own
- * Refresh quotes button as the only retry mechanism. Handles xlm-usdc only
- * for this task (the second direction is 03-03-PLAN.md's expansion). Allows
- * up to two attempts because 03-RESEARCH.md Pitfall 1 flags Vercel cold
- * starts against the taker's fixed 3s per-request fan-out timeout
+ * Refresh quotes button as the only retry mechanism. `dir` is a
+ * `directionDescriptor` result: this function no longer assumes XLM is the
+ * sell side, it takes sellToken/buyToken/sellAmount straight off `dir` (the
+ * caller is responsible for having already clicked the two token pickers
+ * into the right pair via `selectToken`, if needed, before calling this).
+ * Allows up to two attempts because 03-RESEARCH.md Pitfall 1 flags Vercel
+ * cold starts against the taker's fixed 3s per-request fan-out timeout
  * (src/data/rfqNetwork.ts) as a real, not hypothetical, risk; every attempt
  * — including one that finds no row — is pushed into the returned
  * `attempts` array, so the run record can never be a hand-picked successful
  * attempt (T-03-10).
  */
-async function runLiveDirection(page, tally, direction) {
-  if (direction !== 'xlm-usdc') {
-    throw new Error(`runLiveDirection: unsupported direction "${direction}" (only xlm-usdc is implemented by this task)`);
-  }
-  const sellToken = 'XLM';
-  const buyToken = 'USDC';
+async function runLiveDirection(page, tally, dir) {
+  const { direction, sellToken, buyToken, sellAmount } = dir;
   const startedAt = Date.now();
   const attempts = [];
 
-  await fillField(tally, page.locator('#rfqAmount'), `fill-sell-amount-live-${direction}`, SELL_AMOUNT);
+  await fillField(tally, page.locator('#rfqAmount'), `fill-sell-amount-live-${direction}`, sellAmount);
 
   const rowLocator = page.locator('.rfq-quotes .order.rfq-row');
   let rowCount = 0;
@@ -388,8 +475,9 @@ async function runLiveDirection(page, tally, direction) {
   }
 
   return {
-    direction, sellToken, buyToken, sellAmount: SELL_AMOUNT,
+    direction, sellToken, buyToken, sellAmount,
     quotedReceiveAmount, txHash, attempts,
+    settleEventError: settleErrVisible, // always false here — the throw above already stops a true one
     elapsedMs: Date.now() - startedAt,
   };
 }
@@ -997,6 +1085,13 @@ async function main() {
   await friendbot(takerKp.publicKey());
   log('opening taker USDC trustline...');
   await openTakerUsdcTrustline(takerKp);
+  // Task 1 (D-09): usdc-xlm needs the taker to SELL USDC, so it needs a
+  // BALANCE too, not only the trustline above. Headroom is generous (demo
+  // USDC is minted freely by this same issuer) rather than tuned tight.
+  if (LIVE_MODE && LIVE_DIRECTIONS.includes('usdc-xlm')) {
+    log('funding taker with demo USDC (usdc-xlm direction)...');
+    await fundTakerUsdc(takerKp, (Number(SELL_AMOUNT_USDC_XLM) + 20).toFixed(7));
+  }
 
   // LIVE mode (Task 2): one env var swaps the local stub for the real,
   // deployed maker — resolveRealMaker() spawns no child process and learns
@@ -1251,20 +1346,62 @@ async function main() {
     await click(tally, page.locator('.sheet__option').filter({ hasText: 'RFQ' }), 'choose-rfq');
     await page.locator('div[data-panel="rfq"].is-active').waitFor({ state: 'visible', timeout: 20000 });
 
-    // LIVE mode (Task 2): the happy path only, against the real remote
+    // LIVE mode (Task 1 & 2): the happy path only, against the real remote
     // maker, for every direction in LIVE_DIRECTIONS — none of the D-12 /
     // discovery / retry / trustline scenarios below run, since every one of
     // them depends on a stub-maker knob or a route patch LIVE mode never
     // installs.
     if (LIVE_MODE) {
-      for (const direction of LIVE_DIRECTIONS) {
+      for (let i = 0; i < LIVE_DIRECTIONS.length; i++) {
+        const direction = LIVE_DIRECTIONS[i];
+        const dir = directionDescriptor(direction);
         step(`live-direction-${direction}`);
-        const result = await runLiveDirection(page, tally, direction);
+
+        if (i > 0) {
+          // Task 1 (D-09): reset the panel state by reloading — a stale
+          // settled row from the prior direction must never be mistaken for
+          // this direction's own result. src/wallet/WalletContext.tsx
+          // restores the connection straight off localStorage on mount
+          // (verified live: #connectBtn stayed HIDDEN 34 straight polls after
+          // a reload), so there is no fresh Connect click to make in the
+          // normal case — wait for the wallet chip directly, and only fall
+          // back to the connect+pick-Freighter sequence if the gate is ever
+          // slow enough that #connectBtn is what actually renders first.
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          const chip = page.locator('#walletChip .wallet-chip__addr')
+            .filter({ hasText: takerKp.publicKey().slice(0, 5) });
+          const connectBtn = page.locator('#connectBtn');
+          await Promise.race([
+            chip.waitFor({ state: 'visible', timeout: 15000 }),
+            connectBtn.waitFor({ state: 'visible', timeout: 15000 }),
+          ]).catch(() => {});
+          if (await connectBtn.isVisible().catch(() => false)) {
+            await click(tally, connectBtn, `connect-button-live-${direction}`);
+            await click(tally,
+              page.locator('stellar-wallets-modal li').filter({ hasText: 'Freighter' }).first(),
+              `modal-pick-freighter-live-${direction}`, { timeout: 10000 });
+          }
+          await chip.waitFor({ state: 'visible', timeout: 20000 });
+          await click(tally, page.locator('.section-fab'), `open-section-menu-live-${direction}`);
+          await click(tally, page.locator('.sheet__option').filter({ hasText: 'RFQ' }), `choose-rfq-live-${direction}`);
+          await page.locator('div[data-panel="rfq"].is-active').waitFor({ state: 'visible', timeout: 20000 });
+        }
+
+        // Ordering matters (RfqPanel.tsx's noPair guard): change BOTH
+        // selects before touching amount/refresh. The default panel state is
+        // already sellToken=XLM/buyToken=USDC, so xlm-usdc needs no clicks.
+        const isDefaultPair = dir.sellCode === 'XLM' && dir.buyCode === 'USDC';
+        if (!isDefaultPair) {
+          await selectToken(page, tally, 'rfqBuyToken', dir.buyCode);
+          await selectToken(page, tally, 'rfqSellToken', dir.sellCode);
+        }
+
+        const result = await runLiveDirection(page, tally, dir);
         directionResults.push(result);
         settleTxHash = result.txHash;
+        cspViolations.push(...(await page.evaluate(() => window.__cspViolations || [])));
         log(`LIVE ${direction}: txHash=${result.txHash} attempts=${result.attempts.length} elapsedMs=${result.elapsedMs}`);
       }
-      cspViolations.push(...(await page.evaluate(() => window.__cspViolations || [])));
 
       const body = tally.writeReport(REPORT, { ...meta(), status: 'ok', failedStep: null });
       writeFileSync(consolePath, consoleLines.join('\n'));
