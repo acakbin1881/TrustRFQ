@@ -60,4 +60,14 @@ window.RFQ_SWAP_CONTRACT_ID = 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6
 // and confirm `admin` reads back as the intended deployer address BEFORE
 // publishing the id here. If it doesn't match, the instance is compromised
 // and unrecoverable (no `upgrade` entry point by design) -- redeploy fresh.
+//
+// D-12 (Phase 3, 03-02): the reset does NOT end here. The reference maker
+// (trustrfq-maker-server, a SEPARATE sibling repo) is registered against
+// THIS registry id with a real stake, and a fresh registry id orphans that
+// registration. After pasting the new id above, re-bootstrap the maker
+// against it:
+//   cd ../trustrfq-maker-server
+//   RFQ_REGISTRY_ID=<NEW ID> npm run bootstrap
+// which re-funds the maker, re-opens its USDC trustline and inventory, and
+// re-registers it on the new registry instance via set_url + add_tokens.
 window.RFQ_REGISTRY_ID = 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
