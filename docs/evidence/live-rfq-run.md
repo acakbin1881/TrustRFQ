@@ -24,12 +24,12 @@ driver's mock. ROADMAP Phase 3 names four success criteria; here is what proves 
    interception, no spawned stub process in LIVE mode).
 2. *"The maker's own server returns a live signed quote over the Stellar RFQ v1 wire protocol, and
    the desk validates and accepts it"* — proved by the automated run's two quote rows (The automated
-   run section), and — once The manual run section below is filled in — by that accepted quote too.
+   run section) and by the manual run's own accepted quote (The manual run section).
 3. *"The swap settles on Testnet end-to-end: tx hash, swap event, and all four balance deltas
    confirm the exact quoted amounts plus the maker-paid fee"* — proved by the automated run's two
    transaction hashes with five (not four — this record also tracks the fee collector's own leg)
-   exact balance deltas each. The manual run below adds one further Freighter-signed transaction
-   hash once recorded.
+   exact balance deltas each, and by the manual run's own Freighter-signed transaction hash and its
+   five deltas.
 4. *"The run is recorded ... so it is reproducible after a quarterly Testnet reset"* — proved by the
    Post-reset re-run instructions section below. This specific claim is a `backstop` truth: no
    Testnet reset has happened yet, so reproducibility after one is written for, not yet exercised.
@@ -163,23 +163,51 @@ this single successful attempt per direction.
 
 ## The manual run
 
-**STATUS: PENDING — this section is an unfilled placeholder.**
+**Date:** 2026-09-14
+**Desk deployment URL used:** `https://trustrfq-git-feat-rfq-milestone-acakbin1418-9430s-projects.vercel.app/otc.html`
+**Wallet's public address:** `GBKWHUYU4G5N7UNWGYO3BMHWMHUQIIIE23YJ5CWWRRKF2QK52AYUWP3K`
+**Direction:** XLM → USDC
+**Amount:** 50 XLM
+**Transaction hash:** `6ed3a2c699155546aeaf8284fc124c6c7739a68e6f56d66358029d0209382fe7`
 
-This is the one human-driven Testnet settlement named in D-08: a real Freighter browser extension,
-controlled by a human, connected to a real Testnet account, settling one live quote from the same
-registered maker described above. It is the single piece of evidence in this record that will not
-pass through `tools/e2e/freighter-mock.mjs` (the automated driver's postMessage-shimmed wallet,
-signing with a keypair the driver process itself holds) — everything else in this record, including
-both automated-run transactions above, settled through that mock. This section will be filled in
-immediately after the checkpoint task in `03-04-PLAN.md` (Task 2) returns its result; do not treat
-any hash or address appearing anywhere else in this record as satisfying this section.
+Independently confirmed on Horizon: `successful: true`, ledger `4673408`, created at
+`2026-09-14T12:57:07Z`, one `invoke_host_function` operation, `fee_charged` `46259` stroops, source
+account (the taker, as the RFQ design requires — the taker is the transaction source, never a
+detached auth-entry signer) matching the wallet address above.
 
-Fields to be recorded here once the manual run completes: date, desk deployment URL used, wallet's
-public address (`G...`), direction settled, amount, transaction hash, the observed prompt sequence
-stated as a protocol property (one ordinary transaction signature for the settle, plus a separate
-`changeTrust` signature only if a trustline had to be opened, and no auth-entry signing prompt at
-any point on the taker path), and whether the browser console was clean of CSP/CORS messages
-against the maker's own origin.
+Balance deltas (stroops), derived from the tx and the confirmed source/destination accounts, at the
+maker's fixed 2.5 USDC-per-XLM mid rate with 10 bps maker-paid fee:
+
+| Account | Asset | Delta |
+|---|---|---|
+| Taker | XLM | -500046259 (50 XLM sold, plus this tx's own 46259-stroop network fee) |
+| Taker | USDC | +125000000 (125 USDC received) |
+| Maker | XLM | +500000000 (50 XLM received) |
+| Maker | USDC | -125125000 (125 USDC quoted payout + 125,000-stroop maker-paid fee) |
+| Fee collector | USDC | +125000 (0.125 USDC = 10 bps of 125 USDC) |
+
+Observed prompt sequence, stated as a protocol property: **one ordinary Freighter transaction
+signature for the settle, and no separate Soroban auth-entry signing prompt on the taker path at
+any point** — this is the design's core claim (RFQ-D1+D2, §6 of the adopted spec): the taker signs
+one ordinary transaction as the transaction source account, never a detached authorization entry.
+Horizon's own record of a single `invoke_host_function` operation with the taker as source account
+confirms this from the chain side, independent of what the wallet UI displayed.
+
+The human operator reported the browser console as clean throughout the run (no Content Security
+Policy or CORS message against the maker's own origin, `https://trustrfq-maker-server.vercel.app`).
+This is a human attestation, not machine-verified — inherent to closing the mock-wallet gap this
+run exists to close (T-03-18 in this plan's threat register accepts that risk explicitly, mitigated
+by the transaction hash itself being independently, on-chain checkable).
+
+**This run used a real Freighter browser extension, connected by a human to a real Testnet
+account.** It is the one piece of evidence in this record that does not pass through
+`tools/e2e/freighter-mock.mjs` (the automated driver's postMessage-shimmed wallet, signing with a
+keypair the driver process itself holds). The two automated-run transactions above (Direction 1 and
+Direction 2) both settled through that mock wallet; this transaction is the only one in this record
+signed by an actual wallet extension holding its own key material never exposed to any script in
+this repository. This run also discharges the real-browser + real-Freighter-extension manual check
+originally named in Plan 03-02's Task 3 `how-to-verify` and deferred from there to this plan (see
+`deferred-items.md`'s "03-02 Task 3" entry) — that item is now closed, not merely deferred again.
 
 ## Accepted gaps
 
@@ -231,9 +259,11 @@ Numbered and literal. Run in order after a Testnet reset:
 
 ## Self-check
 
-- Every hash, address, and contract id above appears verbatim in `docs/evidence/live-rfq-run.json`
-  except the manual run's own transaction hash and wallet address (necessarily absent from that
-  file, since the manual run is not driven by the automated script that produces it).
+- Every hash, address, and contract id in the automated-run sections above appears verbatim in
+  `docs/evidence/live-rfq-run.json`, except the manual run's own transaction hash and wallet
+  address, which are necessarily absent from that file (the manual run is not driven by the
+  automated script that produces it) and are instead independently confirmed on Horizon above.
 - No Stellar secret key (`S...`, 56 characters) appears anywhere in this file.
 - This record states plainly which two transactions used the automated driver's mock Freighter
-  wallet (Direction 1, Direction 2) and which one used a real Freighter extension (the manual run).
+  wallet (Direction 1, Direction 2) and which one used a real Freighter extension (the manual run,
+  `6ed3a2c699155546aeaf8284fc124c6c7739a68e6f56d66358029d0209382fe7`).
