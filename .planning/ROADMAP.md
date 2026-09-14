@@ -149,7 +149,7 @@ on that repo, it does not pull server code into this one
 
   4. The run is recorded (maker address, registry entry, quote, tx hash) so it is reproducible
      after a quarterly Testnet reset
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -166,7 +166,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 03-04-PLAN.md — The milestone evidence record, the one real-Freighter run, the post-reset runbook, and the D-07 merge gate
+- [x] 03-04-PLAN.md — The milestone evidence record, the one real-Freighter run, the post-reset runbook, and the D-07 merge gate
 
 ### Phase 4: Interim Fan-Out Retirement
 
@@ -198,7 +198,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. On-Chain Maker Discovery | 4/4 | Complete    | 2026-08-26 |
 | 2. Desk RFQ Taker Path | 6/6 | Complete    | 2026-09-12 |
-| 3. Live Full RFQ Loop | 3/4 | In Progress|  |
+| 3. Live Full RFQ Loop | 4/4 | In Progress|  |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
 
 ## Non-Phase Requirement Dispositions

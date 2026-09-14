@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 03
 current_phase_name: live-full-rfq-loop
-status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-09-14T12:17:03.595Z"
-last_activity: 2026-09-13
-last_activity_desc: Phase 03 execution started
+status: complete
+stopped_at: Completed 03-04-PLAN.md - Phase 03 fully executed; D-07 merge AUTHORISED (merge-after-production-check), pending human/gsd-ship action
+last_updated: "2026-09-14T14:08:21.736Z"
+last_activity: 2026-09-14
+last_activity_desc: Phase 03 fully executed (03-01..03-04); E2E-02 complete; D-07 merge authorised, awaiting human/gsd-ship action
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -28,20 +28,21 @@ where a signature over the full economic terms is the integrity boundary.
 
 ## Current Position
 
-Phase: 03 (live-full-rfq-loop) — EXECUTING (PAUSED at checkpoint)
-Plan: 4 of 4 (03-01, 03-02, 03-03 complete; 03-04 paused at Task 2 checkpoint)
-Status: Awaiting human-verify checkpoint — Plan 03-04 Task 2: the one human-driven run
-  (real Freighter wallet settles a live quote on the branch preview). Task 1 of 03-04 is
-  committed (c8b867f, docs/evidence/live-rfq-run.md with an explicit PENDING placeholder).
-  User answered "can't do it now — hold" (2026-09-14). Resume: perform the Freighter run,
-  then re-run /gsd-execute-phase 3 and supply
-  "approved: tx=<hash> wallet=<G...> direction=<xlm-usdc|usdc-xlm> console=<clean|details>".
-  Also pending in 03-04: Task 3 (fill manual run + maker runbook) and Task 4 (D-07 merge
-  decision — never auto-merged; a push to main deploys production).
-Last activity: 2026-09-14 — Waves 1-3 executed (5 live Testnet settlements recorded); paused at 03-04 Task 2
+Phase: 03 (live-full-rfq-loop) — COMPLETE (all 4 plans executed, E2E-02 requirement complete)
+Plan: 4 of 4 — 03-01, 03-02, 03-03, 03-04 all complete
+Status: Milestone 1 (Full RFQ Loop on Testnet) fully evidenced. D-07 gate AUTHORISED
+  (merge-after-production-check, human decision 2026-09-14): `feat/rfq-milestone` -> `main`
+  merge is authorised, conditional on one live settle against the production URL
+  post-merge with its tx hash appended to `docs/evidence/live-rfq-run.md` as a third
+  recorded transaction. The merge/push and that post-merge settle are external actions
+  (human or `/gsd-ship`), not part of any further phase execution. Remaining open items:
+  RETIRE-01 (Phase 4, gated on the merge landing) and the two carried-forward
+  deferred-items.md entries (stub-lane `d12-slow` environmental flake, unconfirmed in
+  isolation).
+Last activity: 2026-09-14 — Phase 03 fully executed (03-01..03-04); D-07 merge authorised
 ROADMAP.md created; 14 v1 requirements mapped across 4 phases)
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -67,6 +68,7 @@ Progress: [█████████░] 93%
 | Phase 03 P01 | ~19h20m wall (active <1h) | 4 tasks | 17 files |
 | Phase 03 P02 | ~1h10m active | 3 tasks | 5 files |
 | Phase 03 P03 | ~50min active | 3 tasks | 3 files |
+| Phase 03 P04 | ~35min active | 4 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -96,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Real-browser + real-Freighter-extension manual verification deferred to Plan 03-04 (human decision, 2026-09-14); E2E-02 left OPEN (requirements-completed: []) since 03-03/03-04 still carry open scope against it
 - [Phase ?]: 03-03: LIVE mode settles both curated-pair directions (xlm-usdc, usdc-xlm) in one run, each proved by five exact stroop-level balance deltas derived from rfq_swap's live get_config + Horizon fee_charged
 - [Phase ?]: 03-03: docs/evidence/live-rfq-run.json committed as the D-11 E2E-02 evidence artifact, produced by a canonical run against the Vercel branch preview (tx 257fbc16..., b0d6b9df...); applies 03-02's human-approved cspViolations interpretation to the same recurring dead/orphaned-registry-entry pattern
+- [Phase ?]: D-07 gate: merge-after-production-check AUTHORISED (human, 2026-09-14) - feat/rfq-milestone -> main merge authorised, conditional on a post-merge production settle + third tx hash appended to live-rfq-run.md; merge/push itself performed by the human or /gsd-ship, not the executor
+- [Phase ?]: Manual Freighter run (tx 6ed3a2c699155546aeaf8284fc124c6c7739a68e6f56d66358029d0209382fe7) closes D-08's mock-wallet gap and discharges the real-browser+real-Freighter check deferred from Plan 03-02
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-09-14T12:17:03.589Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-09-14T14:08:21.726Z
+Stopped at: Completed 03-04-PLAN.md - Phase 03 fully executed; D-07 merge AUTHORISED (merge-after-production-check), pending human/gsd-ship action
 Resume file: None

@@ -93,7 +93,7 @@ minimal desk shell; the logic itself is SDK-shaped `src/` modules (see Positioni
   auth entries) and a taker driver covering the full RFQ quote flow through the mock Freighter,
   settling for real on Testnet (intermediate verification while the real maker server is absent)
 
-- [ ] **E2E-02**: LIVE FULL LOOP (milestone gate): the desk taker discovers a registered maker via
+- [x] **E2E-02**: LIVE FULL LOOP (milestone gate): the desk taker discovers a registered maker via
   `rfq_registry`, receives a live quote from the maker's own server (separate repo), and settles
   it on Testnet end-to-end, with the run recorded (maker address, registry entry, tx hash)
 
@@ -156,7 +156,7 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | TAKER-06 | Phase 2 | Complete |
 | CSP-01 | Phase 2 | Complete |
 | E2E-01 | Phase 2 | Complete |
-| E2E-02 | Phase 3 | Pending |
+| E2E-02 | Phase 3 | Complete |
 | RETIRE-01 | Phase 4 | Pending |
 | SWAP-01 | (none: pre-satisfied) | Complete (2026-08-18) |
 
