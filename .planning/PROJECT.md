@@ -49,11 +49,14 @@ Testnet end-to-end. Full detail in .planning/REQUIREMENTS.md.
 - [x] Desk taker path: registry discovery, parallel quote fan-out, local validation,
       one-signature settlement, trustline pre-flight, golden-vector-pinned encoding (TAKER-01..06)
       — validated in Phase 2
-- [ ] CSP `connect-src` gains maker-server origins, zero violations (CSP-01; maker-origin clause
-      deferred to Phase 3 by D-11 — no real maker origin exists yet)
+- [x] CSP `connect-src` gains maker-server origins, zero violations for the maker origin (CSP-01)
+      — validated in Phase 3 (literal origin allow-listed, no wildcard)
 - [x] E2E census extended with a local stub maker, settling for real on Testnet (E2E-01) —
       validated in Phase 2
-- [ ] Live full loop against a real maker server from the separate repo (E2E-02, the milestone gate)
+- [x] Live full loop against a real maker server from the separate repo (E2E-02, the milestone
+      gate) — validated in Phase 3: discovery via on-chain registry, live signed quotes from
+      https://trustrfq-maker-server.vercel.app, both directions settled with exact balance deltas,
+      one human Freighter-signed run (evidence: docs/evidence/live-rfq-run.md)
 - [ ] Broadcast/intent fan-out retired only after the RFQ protocol ships (RETIRE-01)
 
 ### Out of Scope
@@ -137,4 +140,4 @@ ADR-locked decisions exist). They are treated as settled direction unless delibe
 | UI-D1: Phase 2 desk taker path is a MINIMAL REFERENCE SURFACE over an SDK-shaped taker core: discovery/quote/validation/settlement land as pure `src/` modules the separate-repo taker SDK can extract; desk components stay a thin shell | Follows POS-D1; locked 2026-08-26 during Phase 2 context gathering | Pending (Phase 2) |
 
 ---
-*Last updated: 2026-09-12 after Phase 2 (Desk RFQ Taker Path) completed: TAKER-01..06 + E2E-01 validated, fan-out isolation gap closed (02-06)*
+*Last updated: 2026-09-14 after Phase 3 (Live Full RFQ Loop) completed: E2E-02 + CSP-01 validated 4/4; D-07 merge authorised (merge-after-production-check), merge + production settle pending human action*
