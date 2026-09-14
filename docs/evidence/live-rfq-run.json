@@ -1,0 +1,132 @@
+{
+  "recordedAt": "2026-09-14T12:08:59.017Z",
+  "network": "testnet",
+  "deskUrl": "http://localhost:4173/otc.html",
+  "makerAddress": "GDUXGYZPDZVZI4LYPAPNGW3MHPBAQB7WBPPFPOP4HUQZDRFQ6FT2YWT3",
+  "makerUrlOnChain": "https://trustrfq-maker-server.vercel.app/api/rpc",
+  "registryEntry": {
+    "url": "https://trustrfq-maker-server.vercel.app/api/rpc",
+    "tokens": [
+      "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      "CDKTFWDMHMWLVWG53XVUZS2KDTDCUDLYXOSFGDFYN5ZUS2GFVWUUAARY"
+    ],
+    "staked": "1200000000"
+  },
+  "rfqSwapContractId": "CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT",
+  "rfqRegistryId": "CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G",
+  "feeBps": 10,
+  "feeCollector": "GB3WSGXR5GBMJ7HSBWTBWSWGI3A5AJGD4Y254XBI2P6AKS5N2VIXV7HI",
+  "warmupMs": 433,
+  "directions": [
+    {
+      "direction": "xlm-usdc",
+      "sellToken": "XLM",
+      "buyToken": "USDC:GBJH2XCGKRMFKCBYPFJHHGISZGLOYZ3TM3IMFQPQSK7NT2L7JUARLC26",
+      "sellAmount": "1",
+      "quotedReceiveAmount": "2.5\nUSDC",
+      "txHash": "76a1a290aeb7d5b7742ffa3698cca2eb8288cb8ad6e82b75335247a255d107f7",
+      "attempts": [
+        {
+          "attemptIndex": 0,
+          "elapsedMs": 1838,
+          "makersFound": 7,
+          "rowCount": 1
+        }
+      ],
+      "settleEventError": false,
+      "elapsedMs": 11754,
+      "orderId": 1789387713704123,
+      "expiry": 1789387803,
+      "feeCharged": "46259",
+      "deltas": [
+        {
+          "account": "taker",
+          "asset": "XLM",
+          "expected": "-10046259",
+          "measured": "-10046259"
+        },
+        {
+          "account": "taker",
+          "asset": "USDC",
+          "expected": "25000000",
+          "measured": "25000000"
+        },
+        {
+          "account": "maker",
+          "asset": "XLM",
+          "expected": "10000000",
+          "measured": "10000000"
+        },
+        {
+          "account": "maker",
+          "asset": "USDC",
+          "expected": "-25025000",
+          "measured": "-25025000"
+        },
+        {
+          "account": "feeCollector",
+          "asset": "USDC",
+          "expected": "25000",
+          "measured": "25000"
+        }
+      ]
+    },
+    {
+      "direction": "usdc-xlm",
+      "sellToken": "USDC:GBJH2XCGKRMFKCBYPFJHHGISZGLOYZ3TM3IMFQPQSK7NT2L7JUARLC26",
+      "buyToken": "XLM",
+      "sellAmount": "5",
+      "quotedReceiveAmount": "2\nXLM",
+      "txHash": "76a52dfc256d7b508bc473667f660e844761610fc6c68816966c255f4ad7f577",
+      "attempts": [
+        {
+          "attemptIndex": 0,
+          "elapsedMs": 1834,
+          "makersFound": 7,
+          "rowCount": 1
+        }
+      ],
+      "settleEventError": false,
+      "elapsedMs": 9745,
+      "orderId": 1789387729154695,
+      "expiry": 1789387819,
+      "feeCharged": "45808",
+      "deltas": [
+        {
+          "account": "taker",
+          "asset": "USDC",
+          "expected": "-50000000",
+          "measured": "-50000000"
+        },
+        {
+          "account": "taker",
+          "asset": "XLM",
+          "expected": "19954192",
+          "measured": "19954192"
+        },
+        {
+          "account": "maker",
+          "asset": "USDC",
+          "expected": "50000000",
+          "measured": "50000000"
+        },
+        {
+          "account": "maker",
+          "asset": "XLM",
+          "expected": "-20020000",
+          "measured": "-20020000"
+        },
+        {
+          "account": "feeCollector",
+          "asset": "XLM",
+          "expected": "20000",
+          "measured": "20000"
+        }
+      ]
+    }
+  ],
+  "reproduce": {
+    "command": "REAL_MAKER_ADDRESS=GDUXGYZPDZVZI4LYPAPNGW3MHPBAQB7WBPPFPOP4HUQZDRFQ6FT2YWT3 BASE_URL=http://localhost:4173/otc.html LIVE_DIRECTIONS=xlm-usdc,usdc-xlm npm run e2e:rfq:live",
+    "makerBootstrap": "trustrfq-maker-server repo: npm run bootstrap (re-registers the maker on rfq_registry after a Testnet reset — see public/otc-config.js's RFQ_REGISTRY_ID comment)"
+  }
+}

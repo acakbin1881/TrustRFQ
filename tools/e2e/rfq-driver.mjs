@@ -128,6 +128,24 @@
 // this direction's own result. The reload costs a fresh connect + reopen of
 // the RFQ section, both tallied like every other click.
 //
+// 03-03-PLAN.md Task 2 (D-11): every settlement is additionally proved by
+// FIVE exact stroop-level balance deltas (snapshotBalances before/after,
+// expectedDeltasFor derived from the maker's own quoted order plus
+// rfq_swap's live `get_config` and the settlement's own Horizon
+// `fee_charged`, assertDeltas comparing exactly, never a tolerance) and the
+// whole run is written to a COMMITTED, secret-free JSON artifact
+// (writeLiveRecord, LIVE_RECORD env var, default
+// docs/evidence/live-rfq-run.json) — unlike REPORT above, which lands in
+// the gitignored tools/e2e/out. The maker's own order fields (feeBps,
+// makerAmount, takerAmount) are read by PASSIVELY observing the browser's
+// own `response` event for the maker's URL (page.on('response'), never
+// page.route()) — reading a JSON body already buffered by the browser's own
+// network stack, exactly like the pre-existing request/requestfinished
+// counters below already observe traffic without altering it. This is
+// deliberately not the same thing as the D-12/ZERO_MAKERS route
+// interception LIVE mode already forgoes: nothing here can change what the
+// browser sends or receives.
+//
 // 02-05-PLAN.md Task 1: tools/e2e/run-all.mjs's --lane rfq/all spawns this
 // file as a child process with RUN_ID and PAIR env vars, the same
 // convention run-all.mjs's OTC driver() helper already uses, plus a
@@ -193,6 +211,13 @@ const LIVE_DIRECTIONS = (process.env.LIVE_DIRECTIONS || 'xlm-usdc,usdc-xlm')
 // assets at different natural scales.
 const SELL_AMOUNT_USDC_XLM = process.env.SELL_AMOUNT_USDC_XLM || '5';
 const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
+// Matches public/otc-config.js's window.RFQ_SWAP_CONTRACT_ID — the ONE
+// settlement contract every LIVE-mode swap below settles through, and the
+// ONLY source of the live fee_bps/fee_collector Task 2's delta math trusts.
+const RFQ_SWAP_CONTRACT_ID = process.env.RFQ_SWAP_CONTRACT_ID || 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT';
+// D-11 (03-03-PLAN.md Task 2): the COMMITTED evidence artifact — unlike
+// REPORT above (tools/e2e/out, gitignored), this file ships in the repo.
+const LIVE_RECORD = process.env.LIVE_RECORD || path.join(REPO_ROOT, 'docs', 'evidence', 'live-rfq-run.json');
 // Mirrored from src/data/rfqNetwork.ts: the free read-only-simulation trick
 // — no signing, no fee, no network write. This is the ONLY source of the
 // maker's URL in LIVE mode; see readRegisteredMaker below.
@@ -260,7 +285,7 @@ function usdcSacId() {
 }
 
 /** The literal curated token value (src/core/tokens.ts's TOKENS[1].value),
- *  `USDC:<issuer>` — never the bare code — so a report/record reader can
+ *  `USDC:<issuer>` — never the bare code — so a LIVE_RECORD reader can
  *  resolve exactly which on-chain asset moved without guessing an issuer. */
 function usdcTokenValue() {
   const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
@@ -329,6 +354,140 @@ async function selectToken(page, tally, selectId, tokenCode) {
   const opt = wrapper.locator('.tok__opt')
     .filter({ has: page.locator('.tok__opt-code', { hasText: new RegExp(`^${tokenCode}$`) }) });
   await click(tally, opt, `select-${selectId}-${tokenCode.toLowerCase()}`);
+}
+
+/**
+ * Task 2 (D-11): raw stroop balances for `native` and the demo-issuer USDC,
+ * matched on asset_code PLUS asset_issuer — never code alone, a look-alike
+ * issuer is exactly the risk src/core/tokens.ts's allow-list exists to
+ * close. A missing USDC line (no trustline yet) returns 0n rather than
+ * throwing, so a pre-trustline snapshot is still usable.
+ */
+async function snapshotBalances(addresses) {
+  const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
+  const usdcIssuer = Keypair.fromSecret(keys.issuer_secret).publicKey();
+  const out = {};
+  for (const addr of addresses) {
+    const account = await horizon.loadAccount(addr);
+    const nativeLine = account.balances.find((b) => b.asset_type === 'native');
+    const usdcLine = account.balances.find((b) => b.asset_code === 'USDC' && b.asset_issuer === usdcIssuer);
+    out[addr] = {
+      native: nativeLine ? BigInt(nativeLine.balance.replace('.', '')) : 0n,
+      usdc: usdcLine ? BigInt(usdcLine.balance.replace('.', '')) : 0n,
+    };
+  }
+  return out;
+}
+
+/**
+ * Task 2 (D-11): mirrors src/data/rfqNetwork.ts's readSwapConfig /
+ * simulateRead exactly — the settlement parameters (fee_bps, fee_collector)
+ * come from the chain, never from a constant, so the expected-delta math
+ * below stays honest across a redeploy.
+ */
+async function readSwapConfig() {
+  const src = new Account(ZERO_BALANCE_SOURCE, '0');
+  const contract = new Contract(RFQ_SWAP_CONTRACT_ID);
+  const tx = new TransactionBuilder(src, { fee: '100', networkPassphrase: NETWORK })
+    .addOperation(contract.call('get_config'))
+    .setTimeout(30)
+    .build();
+  const sim = await rpcServer.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) {
+    throw new Error(`readSwapConfig: get_config simulation failed: ${sim.error}`);
+  }
+  return scValToNative(sim.result.retval); // { admin, fee_bps, fee_collector, paused }
+}
+
+/** Task 2 (D-11): the taker is the transaction source and pays the network
+ *  fee out of native XLM — without reconciling it against Horizon's own
+ *  `fee_charged` the taker's native delta is off by a few hundred stroops,
+ *  and the only way to make the assertion pass would be to loosen it, which
+ *  would destroy the evidence. */
+async function fetchFeeCharged(txHash) {
+  const tx = await horizon.transactions().transaction(txHash).call();
+  return BigInt(tx.fee_charged);
+}
+
+/** Mirrors src/core/rfq/order.ts's toAtomic exactly: decimal string (up to
+ *  7dp) -> atomic BigInt units. Duplicated rather than imported — this is a
+ *  plain Node script with no TS loader — and pinned identical to the
+ *  golden-vector-tested original by inspection (order.test.ts covers the
+ *  source of truth; this copy is load-bearing only for this driver's own
+ *  arithmetic, never for anything that gets signed or submitted). */
+function toAtomic(s) {
+  const [whole, frac = ''] = String(s).split('.');
+  return BigInt(whole || '0') * 10000000n + BigInt((frac + '0000000').slice(0, 7));
+}
+
+/**
+ * Task 2 (D-11): the five expected stroop deltas for one settlement,
+ * matching `rfq_swap::swap` exactly (`mul_bps`'s floor division, never a
+ * tolerance): fee = floor(makerAmountAtomic * feeBps / 10000); taker's
+ * sell-side asset falls by takerAmountAtomic; taker's buy-side asset rises
+ * by makerAmountAtomic; maker's sell-side-asset (= taker's sell asset)
+ * rises by takerAmountAtomic; maker's buy-side asset falls by
+ * makerAmountAtomic PLUS the fee; the fee collector's buy-side asset rises
+ * by the fee. The taker's own network fee (`feeCharged`, in stroops) then
+ * debits whichever of the taker's two rows happens to be native XLM,
+ * because that is the asset every Stellar transaction fee is paid in
+ * regardless of which side of the trade it sits on. `quote` is the maker's
+ * own order as it came back over the wire (RfqOrder shape, decimal-string
+ * amounts) — never the panel's rendered/rounded text.
+ */
+function expectedDeltasFor(direction, quote, feeBps, feeCharged) {
+  const takerAmountAtomic = toAtomic(quote.takerAmount);
+  const makerAmountAtomic = toAtomic(quote.makerAmount);
+  const fee = (makerAmountAtomic * BigInt(feeBps)) / 10000n; // floor, matches mul_bps
+  const sellIsNative = direction.sellCode === 'XLM';
+  const buyIsNative = direction.buyCode === 'XLM';
+  return [
+    {
+      account: 'taker', asset: direction.sellCode,
+      expected: (sellIsNative ? -(takerAmountAtomic + feeCharged) : -takerAmountAtomic).toString(),
+    },
+    {
+      account: 'taker', asset: direction.buyCode,
+      expected: (buyIsNative ? makerAmountAtomic - feeCharged : makerAmountAtomic).toString(),
+    },
+    { account: 'maker', asset: direction.sellCode, expected: takerAmountAtomic.toString() },
+    { account: 'maker', asset: direction.buyCode, expected: (-(makerAmountAtomic + fee)).toString() },
+    { account: 'feeCollector', asset: direction.buyCode, expected: fee.toString() },
+  ];
+}
+
+/**
+ * Task 2 (D-11): exact equality only, never a tolerance — an approximate
+ * assertion cannot distinguish a correct settlement from a maker that
+ * shaved a stroop. `measured`/`expected` are parallel arrays (same order,
+ * same length, produced from the same `expectedDeltasFor` rows). Throws
+ * with a readable table on any mismatch; returns the joined
+ * {account, asset, measured, expected}[] rows for the LIVE_RECORD on
+ * success.
+ */
+function assertDeltas(measured, expected) {
+  const rows = expected.map((exp, i) => ({ ...exp, measured: measured[i] }));
+  const lines = rows.map((r) => {
+    const ok = String(r.measured) === String(r.expected);
+    return `  ${ok ? 'PASS' : 'FAIL'}  ${r.account.padEnd(12)} ${r.asset.padEnd(5)} measured=${r.measured} expected=${r.expected}`;
+  });
+  const firstFail = rows.find((r) => String(r.measured) !== String(r.expected));
+  if (firstFail) {
+    throw new Error(
+      `assertDeltas: delta mismatch (first: ${firstFail.account}/${firstFail.asset} ` +
+      `measured=${firstFail.measured} expected=${firstFail.expected})\n${lines.join('\n')}`,
+    );
+  }
+  return rows;
+}
+
+/** Task 2 (D-11): the COMMITTED, secret-free evidence artifact. Unlike
+ *  REPORT (tools/e2e/out, gitignored), this file ships in the repo — kept
+ *  small and free of anything secret: no keys, no signed entry blobs, no
+ *  raw XDR. */
+function writeLiveRecord(record) {
+  mkdirSync(path.dirname(LIVE_RECORD), { recursive: true });
+  writeFileSync(LIVE_RECORD, JSON.stringify(record, null, 2));
 }
 
 /**
@@ -1352,6 +1511,33 @@ async function main() {
     // them depends on a stub-maker knob or a route patch LIVE mode never
     // installs.
     if (LIVE_MODE) {
+      step('live-read-config');
+      const rfqSwapConfig = await readSwapConfig();
+      log(`rfq_swap get_config: fee_bps=${rfqSwapConfig.fee_bps} fee_collector=${rfqSwapConfig.fee_collector}`);
+      // T-03-14: a collision here would silently merge two of the five
+      // deltas below and weaken the proof without any visible failure — fail
+      // loudly instead of ever computing against it.
+      if (rfqSwapConfig.fee_collector === maker.pubkey || rfqSwapConfig.fee_collector === takerKp.publicKey()) {
+        throw new Error(
+          `LIVE: rfq_swap's fee_collector (${rfqSwapConfig.fee_collector}) collides with the maker or ` +
+          'the taker — the five-way delta split would silently merge two deltas',
+        );
+      }
+
+      // Task 2 (D-11): passively observe (never intercept) every response
+      // from the maker's URL, capturing the LAST `result.order` seen — the
+      // maker's own quoted order, exact decimal-string amounts, never the
+      // panel's rendered/rounded text. Reset to null before each direction
+      // so a captured order can only ever belong to THAT direction's own
+      // accepted quote.
+      let lastCapturedOrder = null;
+      page.on('response', (res) => {
+        if (!isMakerUrl(res.url())) return;
+        res.json().then((json) => {
+          if (json?.result?.order) lastCapturedOrder = json.result.order;
+        }).catch(() => {}); // not JSON, or an error body — ignored, matched by TASK 2's own timeout below
+      });
+
       for (let i = 0; i < LIVE_DIRECTIONS.length; i++) {
         const direction = LIVE_DIRECTIONS[i];
         const dir = directionDescriptor(direction);
@@ -1396,13 +1582,80 @@ async function main() {
           await selectToken(page, tally, 'rfqSellToken', dir.sellCode);
         }
 
+        const addrs = [takerKp.publicKey(), maker.pubkey, rfqSwapConfig.fee_collector];
+        const before = await snapshotBalances(addrs);
+        lastCapturedOrder = null;
+
         const result = await runLiveDirection(page, tally, dir);
         directionResults.push(result);
         settleTxHash = result.txHash;
         cspViolations.push(...(await page.evaluate(() => window.__cspViolations || [])));
+
+        // The passive response listener's res.json() resolves asynchronously
+        // — by now it has certainly fired (the settle link only appears well
+        // after the maker's response landed), but poll briefly rather than
+        // assume, so a genuine miss fails loudly instead of racing.
+        for (let tries = 0; tries < 25 && !lastCapturedOrder; tries++) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        if (!lastCapturedOrder) {
+          throw new Error(`LIVE ${direction}: no maker order response was captured for the delta assertions`);
+        }
+
+        const after = await snapshotBalances(addrs);
+        const feeCharged = await fetchFeeCharged(result.txHash);
+        const expectedRows = expectedDeltasFor(dir, lastCapturedOrder, rfqSwapConfig.fee_bps, feeCharged);
+        const roleAddr = { taker: takerKp.publicKey(), maker: maker.pubkey, feeCollector: rfqSwapConfig.fee_collector };
+        const assetKey = { XLM: 'native', USDC: 'usdc' };
+        const measuredValues = expectedRows.map((r) => {
+          const addr = roleAddr[r.account];
+          const k = assetKey[r.asset];
+          return (after[addr][k] - before[addr][k]).toString();
+        });
+        const deltaRows = assertDeltas(measuredValues, expectedRows);
+        log(`LIVE ${direction}: five deltas matched exactly (feeCharged=${feeCharged})`);
+
+        result.orderId = lastCapturedOrder.orderId;
+        result.expiry = lastCapturedOrder.expiry;
+        result.feeCharged = feeCharged.toString();
+        result.deltas = deltaRows;
+
         log(`LIVE ${direction}: txHash=${result.txHash} attempts=${result.attempts.length} elapsedMs=${result.elapsedMs}`);
       }
 
+      // Task 2 (D-11): the COMMITTED, machine-readable E2E-02 evidence.
+      const liveRecord = {
+        recordedAt: new Date().toISOString(),
+        network: 'testnet',
+        deskUrl: BASE_URL,
+        makerAddress: REAL_MAKER_ADDRESS,
+        makerUrlOnChain: maker.url,
+        registryEntry: {
+          url: maker.registryEntry.url,
+          tokens: maker.registryEntry.tokens,
+          staked: maker.registryEntry.staked,
+        },
+        rfqSwapContractId: RFQ_SWAP_CONTRACT_ID,
+        rfqRegistryId: RFQ_REGISTRY_ID,
+        feeBps: rfqSwapConfig.fee_bps,
+        feeCollector: rfqSwapConfig.fee_collector,
+        warmupMs,
+        directions: directionResults,
+        reproduce: {
+          command: `REAL_MAKER_ADDRESS=${REAL_MAKER_ADDRESS} BASE_URL=${BASE_URL} ` +
+            `LIVE_DIRECTIONS=${LIVE_DIRECTIONS.join(',')} npm run e2e:rfq:live`,
+          makerBootstrap: 'trustrfq-maker-server repo: npm run bootstrap (re-registers the maker on ' +
+            'rfq_registry after a Testnet reset — see public/otc-config.js\'s RFQ_REGISTRY_ID comment)',
+        },
+      };
+      writeLiveRecord(liveRecord);
+      log(`LIVE_RECORD written: ${LIVE_RECORD}`);
+      console.log(JSON.stringify(liveRecord, null, 2));
+
+      // cspViolations is already fully populated (captured once per
+      // direction, right after each settle, before that direction's own
+      // reload would reset window.__cspViolations) — no second read here,
+      // which would otherwise double-count the last direction's entries.
       const body = tally.writeReport(REPORT, { ...meta(), status: 'ok', failedStep: null });
       writeFileSync(consolePath, consoleLines.join('\n'));
       console.log(`REPORT ${REPORT}`);
