@@ -149,12 +149,12 @@ on that repo, it does not pull server code into this one
 
   4. The run is recorded (maker address, registry entry, quote, tx hash) so it is reproducible
      after a quarterly Testnet reset
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Tracer: the reference maker server built in its sibling repo, deployed to a real https origin, registered on the live registry, and proven by settling one of its own signed quotes
+- [x] 03-01-PLAN.md — Tracer: the reference maker server built in its sibling repo, deployed to a real https origin, registered on the live registry, and proven by settling one of its own signed quotes
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -198,7 +198,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. On-Chain Maker Discovery | 4/4 | Complete    | 2026-08-26 |
 | 2. Desk RFQ Taker Path | 6/6 | Complete    | 2026-09-12 |
-| 3. Live Full RFQ Loop | 0/4 | Not started | - |
+| 3. Live Full RFQ Loop | 1/4 | In Progress|  |
 | 4. Interim Fan-Out Retirement | 0/TBD | Not started | - |
 
 ## Non-Phase Requirement Dispositions
