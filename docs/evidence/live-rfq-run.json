@@ -1,7 +1,7 @@
 {
-  "recordedAt": "2026-09-14T12:08:59.017Z",
+  "recordedAt": "2026-09-14T12:10:24.424Z",
   "network": "testnet",
-  "deskUrl": "http://localhost:4173/otc.html",
+  "deskUrl": "https://trustrfq-git-feat-rfq-milestone-acakbin1418-9430s-projects.vercel.app/otc.html",
   "makerAddress": "GDUXGYZPDZVZI4LYPAPNGW3MHPBAQB7WBPPFPOP4HUQZDRFQ6FT2YWT3",
   "makerUrlOnChain": "https://trustrfq-maker-server.vercel.app/api/rpc",
   "registryEntry": {
@@ -16,7 +16,7 @@
   "rfqRegistryId": "CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G",
   "feeBps": 10,
   "feeCollector": "GB3WSGXR5GBMJ7HSBWTBWSWGI3A5AJGD4Y254XBI2P6AKS5N2VIXV7HI",
-  "warmupMs": 433,
+  "warmupMs": 373,
   "directions": [
     {
       "direction": "xlm-usdc",
@@ -24,26 +24,26 @@
       "buyToken": "USDC:GBJH2XCGKRMFKCBYPFJHHGISZGLOYZ3TM3IMFQPQSK7NT2L7JUARLC26",
       "sellAmount": "1",
       "quotedReceiveAmount": "2.5\nUSDC",
-      "txHash": "76a1a290aeb7d5b7742ffa3698cca2eb8288cb8ad6e82b75335247a255d107f7",
+      "txHash": "257fbc16d8efca857704e86bc8b7514c4a02472075a5befd8b44bc80bf5cfb0a",
       "attempts": [
         {
           "attemptIndex": 0,
-          "elapsedMs": 1838,
+          "elapsedMs": 1331,
           "makersFound": 7,
           "rowCount": 1
         }
       ],
       "settleEventError": false,
-      "elapsedMs": 11754,
-      "orderId": 1789387713704123,
-      "expiry": 1789387803,
-      "feeCharged": "46259",
+      "elapsedMs": 5692,
+      "orderId": 1789387809039105,
+      "expiry": 1789387899,
+      "feeCharged": "46257",
       "deltas": [
         {
           "account": "taker",
           "asset": "XLM",
-          "expected": "-10046259",
-          "measured": "-10046259"
+          "expected": "-10046257",
+          "measured": "-10046257"
         },
         {
           "account": "taker",
@@ -77,19 +77,19 @@
       "buyToken": "XLM",
       "sellAmount": "5",
       "quotedReceiveAmount": "2\nXLM",
-      "txHash": "76a52dfc256d7b508bc473667f660e844761610fc6c68816966c255f4ad7f577",
+      "txHash": "b0d6b9dfe09c9b0cdd5d9943373994365dd7bef5bc23ac32ee60353c555dd0aa",
       "attempts": [
         {
           "attemptIndex": 0,
-          "elapsedMs": 1834,
+          "elapsedMs": 1328,
           "makersFound": 7,
           "rowCount": 1
         }
       ],
       "settleEventError": false,
-      "elapsedMs": 9745,
-      "orderId": 1789387729154695,
-      "expiry": 1789387819,
+      "elapsedMs": 5714,
+      "orderId": 1789387818450813,
+      "expiry": 1789387908,
       "feeCharged": "45808",
       "deltas": [
         {
@@ -126,7 +126,7 @@
     }
   ],
   "reproduce": {
-    "command": "REAL_MAKER_ADDRESS=GDUXGYZPDZVZI4LYPAPNGW3MHPBAQB7WBPPFPOP4HUQZDRFQ6FT2YWT3 BASE_URL=http://localhost:4173/otc.html LIVE_DIRECTIONS=xlm-usdc,usdc-xlm npm run e2e:rfq:live",
+    "command": "REAL_MAKER_ADDRESS=GDUXGYZPDZVZI4LYPAPNGW3MHPBAQB7WBPPFPOP4HUQZDRFQ6FT2YWT3 BASE_URL=https://trustrfq-git-feat-rfq-milestone-acakbin1418-9430s-projects.vercel.app/otc.html LIVE_DIRECTIONS=xlm-usdc,usdc-xlm npm run e2e:rfq:live",
     "makerBootstrap": "trustrfq-maker-server repo: npm run bootstrap (re-registers the maker on rfq_registry after a Testnet reset — see public/otc-config.js's RFQ_REGISTRY_ID comment)"
   }
 }
