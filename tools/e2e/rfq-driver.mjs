@@ -260,7 +260,7 @@ async function friendbot(pub) {
 /** Pre-open the taker's USDC trustline (D-08's changeTrust becomes a no-op
  *  in-browser this run, keeping the settled report at exactly one prompt). */
 async function openTakerUsdcTrustline(takerKp) {
-  const keys = JSON.parse(readFileSync('/Users/acakbin1881/Projects/TrustRFQ/demo-keys.json', 'utf8'));
+  const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
   const issuerKp = Keypair.fromSecret(keys.issuer_secret);
   const USDC = new Asset('USDC', issuerKp.publicKey());
   const account = await horizon.loadAccount(takerKp.publicKey());
