@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: live-full-rfq-loop
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-09-14T11:42:35.790Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-09-14T12:17:03.595Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -29,12 +29,12 @@ where a signature over the full economic terms is the integrity boundary.
 ## Current Position
 
 Phase: 03 (live-full-rfq-loop) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 03 execution started
 ROADMAP.md created; 14 v1 requirements mapped across 4 phases)
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 86%
 | Phase 01 P04 | 1 session | 3 tasks | 4 files |
 | Phase 03 P01 | ~19h20m wall (active <1h) | 4 tasks | 17 files |
 | Phase 03 P02 | ~1h10m active | 3 tasks | 5 files |
+| Phase 03 P03 | ~50min active | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase ?]: rfq-driver.mjs LIVE mode (REAL_MAKER_ADDRESS-gated): learns the maker url only from an on-chain get_maker read, spawns no child process, registers zero page.route interception
 - [Phase ?]: Non-empty cspViolations from the Vercel branch-preview live run accepted as satisfying Task 3 (human-approved 2026-09-14): all 6 entries target pre-existing dead/orphaned rfq_registry entries, never the maker origin
 - [Phase ?]: Real-browser + real-Freighter-extension manual verification deferred to Plan 03-04 (human decision, 2026-09-14); E2E-02 left OPEN (requirements-completed: []) since 03-03/03-04 still carry open scope against it
+- [Phase ?]: 03-03: LIVE mode settles both curated-pair directions (xlm-usdc, usdc-xlm) in one run, each proved by five exact stroop-level balance deltas derived from rfq_swap's live get_config + Horizon fee_charged
+- [Phase ?]: 03-03: docs/evidence/live-rfq-run.json committed as the D-11 E2E-02 evidence artifact, produced by a canonical run against the Vercel branch preview (tx 257fbc16..., b0d6b9df...); applies 03-02's human-approved cspViolations interpretation to the same recurring dead/orphaned-registry-entry pattern
 
 ### Pending Todos
 
@@ -104,6 +107,7 @@ None yet.
   'unsafe-inline'; golden vectors are the signature-boundary tripwire.
 
 - npm run e2e:rfq (stub lane) failed at d12-slow with ERR_CONNECTION_REFUSED during 03-02's regression run; reproduced identically on unmodified HEAD, so environmental (likely Testnet/RPC rate exhaustion from repeated back-to-back runs), not a code defect. Re-run in isolation before treating as real. See .planning/phases/03-live-full-rfq-loop/deferred-items.md
+- npm run e2e:rfq (stub lane) fails deterministically at d12-slow in this session; confirmed pre-existing/environmental via diff-equivalence against unmodified HEAD (03-02 and 03-03 both); still not tested in a genuinely isolated session
 
 ## Deferred Items
 
@@ -116,6 +120,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-09-14T11:42:14.885Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-09-14T12:17:03.589Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None

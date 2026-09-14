@@ -30,6 +30,28 @@ pre-existing, unrelated to the task that surfaced them).
 - **Status:** deferred, not fixed. `npm run e2e:rfq` should be re-run in isolation (its own
   session, no prior back-to-back Testnet-heavy runs) before this is treated as a real defect.
 
+### 03-03 follow-up: reproduced identically three more times, still HEAD-equivalent
+
+- **Found during:** Plan 03-03's own required regression runs (`npm run e2e:rfq`), both against
+  the working-tree LIVE-mode changes and against the unmodified pre-03-03 `HEAD` (same
+  diff-equivalence technique as above: the working file was backed up, replaced with
+  `git show HEAD:tools/e2e/rfq-driver.mjs`, run, restored).
+- **Symptom:** byte-for-byte identical — `FAILED at step "d12-slow": locator.waitFor: Timeout
+  20000ms exceeded` waiting for `.empty` with "No quotes available", with `net::ERR_CONNECTION_
+  REFUSED` (or, in this session's second attempt, a bare timeout with no console errors) at the
+  same step every time. Confirmed on THREE separate `npm run e2e:rfq` invocations this session
+  (one against unmodified `HEAD`, two against the working tree after 03-03's Task 1/2/3 commits),
+  all in the same step, none reached any D-12 scenario past the happy path.
+- **Still out of scope for 03-03:** this task's changes touch only the `LIVE_MODE` branches
+  (guarded by `if (LIVE_MODE) { ... }`/`if (!LIVE_MODE) { ... }`); the stub lane's D-12 loop body
+  is untouched. The diff-equivalence proof from 03-02 was re-run and still holds.
+- **Not yet tried:** a genuinely isolated session (fresh shell, zero prior Testnet-heavy runs in
+  the preceding minutes) has still not been attempted — every run so far, in both 03-02 and
+  03-03, followed at least one LIVE-mode run in the same session. This remains the next step
+  before treating the pattern as anything other than shared-Testnet-infrastructure contention.
+- **Status:** still deferred. Carried forward to whichever plan next needs a clean stub-lane
+  regression signal.
+
 ## 03-02 Task 3: real-browser + real-Freighter manual verification deferred to 03-04
 
 - **Found during:** Task 3's checkpoint (`npm run e2e:rfq:live` against the Vercel branch
