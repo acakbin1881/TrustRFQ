@@ -159,7 +159,7 @@
 // the try/catch in main() — the third of the three exit paths (success,
 // scenario failure, uncaught exception) T-02-25 requires.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
@@ -167,7 +167,6 @@ import {
   Horizon, Keypair, Networks, Operation, TransactionBuilder, Asset, xdr, scValToNative,
   Account, Address, Contract, rpc,
 } from '@stellar/stellar-sdk';
-import { readFileSync } from 'node:fs';
 import { CHROME, REPO_ROOT, Tally, click, fillField } from './lib.mjs';
 import { initScriptFor, makeWalletHandler } from './freighter-mock.mjs';
 

@@ -159,6 +159,7 @@ Deferred to a future milestone. Tracked but not in the current roadmap.
 | E2E-02 | Phase 3 | Complete |
 | RETIRE-01 | Phase 4 | Pending |
 | SWAP-01 | (none: pre-satisfied) | Complete (2026-08-18) |
+| IDX-01 | (none: open question, unscheduled) | Open (revisit at milestone close) |
 
 **Coverage:**
 

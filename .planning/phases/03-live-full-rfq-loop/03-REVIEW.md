@@ -26,7 +26,7 @@ findings:
   warning: 6
   info: 3
   total: 10
-status: issues_found
+status: fixed
 ---
 
 # Phase 03: Code Review Report
@@ -298,3 +298,24 @@ import { readFileSync } from 'node:fs';
 _Reviewed: 2026-09-14T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+---
+
+## Fix Log (2026-09-15)
+
+All 10 findings closed after review:
+
+| Finding | Fix | Commit |
+|---------|-----|--------|
+| CR-01 hardcoded demo-keys.json path | REPO_ROOT-relative path | TrustRFQ `ad3d10c` (2026-09-14, closed the VERIFICATION gap) |
+| WR-01 non-idempotent USDC mint | mint gated on current atomic balance | maker-server `74f10c2` |
+| WR-02 SPREAD_BPS unbounded | module-load bounds check (0..10000) | maker-server `74f10c2` |
+| WR-03 raw error text on the wire | generic message + server-side console.error | maker-server `74f10c2` |
+| WR-04 fragile error-wording regex | classifySimError exported + 3 wording-pin tests | maker-server `74f10c2` |
+| WR-05 float money math in live-proof | toAtomic string parsing | maker-server `74f10c2` |
+| WR-06 unpinned orderScVal copy | startup golden-vector self-check (verified MATCH on both vectors) | maker-server `74f10c2` |
+| IN-01 dead MAKER_PUBLIC_URL re-export | removed | maker-server `74f10c2` |
+| IN-02 duplicate SignedQuote shape | aliased to wire.ts MakerSideOrderResult | maker-server `74f10c2` |
+| IN-03 duplicate node:fs imports | merged into one import | TrustRFQ (this commit) |
+
+Verification after fixes: maker-server `npm test` 23/23 (tsc build included); `node --check` clean on both scripts and rfq-driver.mjs. NOTE: the deployed Vercel function still runs pre-fix code; WR-01..WR-04 land on the next `vercel deploy` of the maker (deliberately deferred until after the D-07 production check runs against the proven deployment).
