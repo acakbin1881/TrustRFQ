@@ -124,11 +124,11 @@ measured against public mainnet endpoints by tools in this repo, not asserted:
 | | |
 |---|---|
 | **Desk** | https://trustrfq.vercel.app |
-| **Video** | [Walkthrough of a negotiated trade settling on Testnet](https://drive.google.com/file/d/1vho_-MLwHPmhuG_rzhkRNgtZAbzydyuG/view?usp=sharing) |
+| **Video** | [Walkthrough of a trade settling on Testnet](https://drive.google.com/file/d/1vho_-MLwHPmhuG_rzhkRNgtZAbzydyuG/view?usp=sharing) |
 | **Network** | Stellar Testnet only. Connect [Freighter](https://freighter.app) with a funded Testnet account. |
 
-The hosted build currently serves the directed OTC lane. The RFQ section runs locally against a
-maker server; the deployed site cannot reach one yet because maker origins are not in its CSP.
+The RFQ section runs locally against a maker server. The deployed site cannot reach one yet,
+because maker origins are not in its CSP.
 
 ---
 
@@ -172,7 +172,7 @@ The desk is a client-only React + TypeScript SPA. Its RFQ taker logic lives in p
 
 ## How it works
 
-### The RFQ lane
+### From request to settlement
 
 ```
   Taker                        rfq_registry                  Maker quote server
@@ -208,32 +208,13 @@ same quote cannot settle twice (proven live: the replay was rejected with
 `Error(Auth, ExistingValue)`). `expiry` and `signature_expiration_ledger` bound a quote to its 30
 to 90 second window, and a maker can `cancel` order ids early.
 
-### The directed OTC lane
-
-For two parties who already know each other and negotiate in-app. Every offer is a thread with
-Accept, Decline and Counter, coordinated live over Supabase Realtime, and settles on the separate
-`otc_swap` contract as a **two-signature symmetric swap**: both parties sign detached authorization
-entries over the exact `fill` arguments, so anyone may submit the transaction and no term can be
-altered in flight.
-
-This is a deliberate deviation from AirSwap, which signs once because one side is always a server
-holding the quote. The directed lane has no such server, so neither party is the natural signer.
-Decided 2026-08-19: the lane moves onto `rfq_swap` as a mode, where the taker supplies a detached
-entry instead of being the source and the order carries a signed `require_fill_guard` flag, and
-`otc_swap` retires. Until that cut-over `otc_swap` stays deployed and fee-free.
-
-**Broadcast** offers (no counterparty, fanned out to takers subscribed to the pair) are an interim
-mode that predates the protocol. They stay live until a real maker server closes the RFQ loop.
-
 ### The desk
 
-| Section | Lane | What happens |
-|---------|------|--------------|
-| **RFQ** | RFQ protocol | Pick a pair and a sell amount, refresh quotes, accept one. Ranked rows, live countdowns, single wallet prompt, nothing written off-chain. |
-| **New order** | Directed OTC | Compose an offer for one `G…` address. An empty counterparty broadcasts it instead. |
-| **Incoming** / **Sent** | Directed OTC | Negotiation threads: Accept, Decline, Counter. Accepted terms settle through `otc_swap`. |
+The desk is the reference client, not the product. Its **RFQ** section is the whole protocol in one
+screen: pick a pair and a sell amount, refresh quotes, accept one. Ranked rows, live countdowns, a
+single wallet prompt, and nothing written off-chain.
 
-The compose ticket also shows an advisory fair-price hint read from the
+It also shows an advisory fair-price hint read from the
 [Reflector](https://reflector.network) oracle by read-only simulation. It is never signed and never
 on the settlement path.
 
@@ -269,7 +250,7 @@ on the settlement path.
 | **Wallet** | Freighter via [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit) |
 | **Chain access** | `@stellar/stellar-sdk` against Stellar RPC and Horizon |
 | **Wire format** | JSON-RPC 2.0, maker/taker naming, AirSwap error vocabulary |
-| **Directed-lane coordination** | Supabase (Postgres + Realtime), anon key, no authority |
+| **Off-chain coordination** | Supabase (Postgres + Realtime), anon key, no authority |
 | **Tests** | Vitest (167) and Rust unit tests (83), plus headless Playwright drivers that settle for real |
 | **Hosting** | Vercel static build, strict allow-list CSP |
 
@@ -287,7 +268,7 @@ typed in [`src/config.ts`](src/config.ts).
 |---|---|---|
 | **`rfq_swap`** | `CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT` | Settlement, fee 10 bps maker-paid. Deployed 2026-08-18. |
 | **`rfq_registry`** | `CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G` | Maker discovery. Deployed and initialized 2026-08-26. |
-| **`otc_swap`** | `CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ` | Directed lane. Deployed bytecode matches source (wasm `83f60b85…`). |
+| **`otc_swap`** | `CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ` | Earlier settlement contract, retiring into `rfq_swap`. Deployed bytecode matches source (wasm `83f60b85…`). |
 | **Reflector oracle** | `CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63` | Advisory fair price only, never on the signed path. |
 
 `rfq_swap`'s id will change once the single-contract consolidation reshapes the `Order` struct.
@@ -302,13 +283,13 @@ TrustRFQ/
 ├── contracts/                  # Cargo workspace (profile.release lives here; members inherit it)
 │   ├── rfq_swap/               # Settlement: swap / cancel / is_cancelled / get_config + admin
 │   ├── rfq_registry/           # Stake-gated maker discovery
-│   └── otc_swap/               # Two-signature symmetric fill, directed lane
+│   └── otc_swap/               # Earlier settlement contract, retiring into rfq_swap
 ├── otc.html                    # The single Vite entry
 ├── src/
 │   ├── core/rfq/               # Taker core, SDK-shaped: wire, order, validate, discover, settle
-│   ├── core/                   # Directed lane: canonical args, fill, tokens, pairs, oracle
+│   ├── core/                   # Shared core: canonical args, fill, tokens, pairs, oracle
 │   ├── data/                   # Supabase queries + realtime; rfqNetwork.ts is the one RFQ call site
-│   ├── ui/                     # RfqPanel, Ticket, ThreadView, OrderCard, SettlementStrip, ...
+│   ├── ui/                     # RfqPanel, Ticket, OrderCard, SettlementStrip, ...
 │   ├── wallet/                 # Wallets Kit singleton + signAuthEntry encoding normaliser
 │   └── config.ts               # The only reader of window.* runtime config
 ├── public/                     # Landing page, stylesheets, otc-config.js, supabase-config.js
@@ -354,8 +335,8 @@ npm run build                                     # tsc --noEmit && vite build �
 ```
 
 The TypeScript suite includes three golden-vector fixtures pinning byte-exact encodings: the
-directed lane's `fill` arguments, the RFQ `Order` (Soroban encodes struct fields as a sorted symbol
-map, not in declaration order), and the decoded invocation tree of a real maker signature. If one
+`fill` arguments, the RFQ `Order` (Soroban encodes struct fields as a sorted symbol map, not in
+declaration order), and the decoded invocation tree of a real maker signature. If one
 drifts, the maker's signature stops matching and settlement reverts, so trust the red test.
 
 ### Configure
@@ -363,8 +344,8 @@ drifts, the maker's signature stops matching and settlement reverts, so trust th
 - [`public/otc-config.js`](public/otc-config.js): `RPC_URL`, `HORIZON_URL`, `NETWORK_PASSPHRASE`,
   `RFQ_SWAP_CONTRACT_ID`, `RFQ_REGISTRY_ID`, `OTC_CONTRACT_ID`, `REFLECTOR_ORACLE_ID`. An empty id
   silently disables the feature that needs it.
-- [`public/supabase-config.js`](public/supabase-config.js): Supabase URL and anon key. Used by the
-  directed lane and broadcasts only; the RFQ lane touches no database.
+- [`public/supabase-config.js`](public/supabase-config.js): Supabase URL and anon key. Used only
+  by the desk's off-chain order coordination; the RFQ path touches no database.
 
 For a fresh Supabase project, run in the SQL Editor first
 [`docs/migrations/00-base-schema.sql`](docs/migrations/00-base-schema.sql), then
@@ -391,7 +372,7 @@ stellar contract invoke --id <NEW_ID> --source-account <identity> --network test
   --base-cost 1000000000 --per-token-cost 100000000 --max-makers-per-token 100
 stellar contract invoke --id <NEW_ID> --source-account <identity> --network testnet -- get_config
 
-# otc_swap (directed lane)
+# otc_swap (earlier settlement contract, still deployed)
 stellar contract deploy \
   --wasm target/wasm32v1-none/release/otc_swap.wasm \
   --source-account <identity> --network testnet
@@ -420,16 +401,15 @@ Both scripts create throwaway actors through Friendbot and need no key file.
 ```bash
 npm run build && npm run preview -- --port 4173     # terminal 1
 
-npm run e2e:census                                  # directed lane only (default): two browsers, click census
+npm run e2e:census                                  # default lane: two browsers, click census
 npm run e2e:rfq                                      # RFQ lane only: spawns the stub maker, 12 scenarios,
                                                       # settles for real, report in tools/e2e/out/
-node tools/e2e/run-all.mjs --lane all                # both lanes in one run, OTC first
+node tools/e2e/run-all.mjs --lane all                # both censuses in one run
 ```
 
-`tools/e2e/run-all.mjs --lane otc|rfq|all` (`otc` is the default, so the plain `npm run e2e:census`
-invocation above is unchanged from before the RFQ lane existed) is the one documented entry point
-for both censuses; `npm run e2e:rfq` is a shorthand for `--lane rfq`. The RFQ lane funds and manages
-its own taker actor and stub maker internally (no `prepare-keys.mjs` step), registers the stub on
+`tools/e2e/run-all.mjs --lane otc|rfq|all` is the one documented entry point for both censuses,
+with `otc` as the default lane value; `npm run e2e:rfq` is a shorthand for `--lane rfq`. The RFQ
+lane funds and manages its own taker actor and stub maker internally (no `prepare-keys.mjs` step), registers the stub on
 the live `rfq_registry` with a real XLM stake, and always ejects it for a full refund — on a clean
 run, a scenario failure, or an uncaught exception — so a failed run never leaves a staked,
 unreachable maker listed for a later run to discover.
@@ -451,15 +431,12 @@ allow-list.
 
 ### Try the desk by hand
 
-Two funded Testnet wallets in two browsers. Start with XLM ↔ XLM to avoid trustlines.
+One funded Testnet wallet. Start with XLM ↔ XLM to avoid trustlines.
 
-- **Directed OTC.** Wallet A composes a New order to wallet B's address. B sees it live in Incoming
-  and Accepts or Counters. Both press **Sign order**, then either presses **Settle now**: one `fill`
-  moves both legs. On a cross-asset order the taker cannot sign until the maker's trustline exists,
-  so the maker signs first.
-- **RFQ.** Open the RFQ section, choose a pair and amount, **Refresh quotes**. You need a maker
-  registered for both tokens: `STUB_MAKER_PORT=4174 node tools/e2e/stub-maker.mjs` gives you one and
-  prints `STUB_MAKER_READY` once registered. Accept a row and confirm the single wallet prompt.
+Open the RFQ section, choose a pair and an amount, then **Refresh quotes**. You need a maker
+registered for both tokens: `STUB_MAKER_PORT=4174 node tools/e2e/stub-maker.mjs` gives you one and
+prints `STUB_MAKER_READY` once registered. Accept a row and confirm that it costs a single wallet
+prompt.
 
 ---
 
@@ -487,11 +464,6 @@ Everything listed as proven moved real value on Stellar Testnet and can be re-ru
   and must cost zero wallet prompts, and three discovery cases (zero makers, two makers ranked by
   price, a quote dropping off the list when its countdown ends).
   Re-run with `node tools/e2e/rfq-driver.mjs`.
-- **Directed OTC with two real wallets.** A cross-asset 10 XLM ↔ 1 USDC trade negotiated and settled
-  through two Freighter wallets
-  ([tx `af0392ff…`](https://stellar.expert/explorer/testnet/tx/af0392ff49ac9478a95fd8059bc64f62fd715d1de84d16d4acd912c5268a63aa),
-  2026-07-14), and the same flow automated with a mock Freighter counting every click and prompt
-  (maker 11 clicks / 4 prompts, taker 7 / 3). Re-run with `npm run e2e:census`.
 
 ### Not yet
 
@@ -520,13 +492,12 @@ maker's own server, and settles it.
       settlement all proven against the stub maker (2026-09-09). Remaining: trustline pre-flight,
       expired-entry retry, maker origins in the CSP, RFQ driver folded into `npm run e2e:census`
 - [ ] **Phase 3: live full loop** against a real maker server from the separate repo. Milestone gate
-- [ ] **Phase 4: retire the interim broadcast fan-out.** The directed lane is untouched
 
 ### After the milestone
 
-- [ ] **One settlement contract.** `rfq_swap` serves both lanes through a signed
-      `require_fill_guard` flag: a persistent filled key for long-lived directed offers, host nonce
-      only for short-lived quotes. `otc_swap` retires. New wasm, new id
+- [ ] **One settlement contract.** `rfq_swap` absorbs `otc_swap` through a signed
+      `require_fill_guard` flag: a persistent filled key for long-lived offers, host nonce only for
+      short-lived quotes. `otc_swap` retires. New wasm, new id
 - [ ] **Taker SDK** extracted from `src/core/rfq/`, plus a reference maker server (separate repo)
 - [ ] **Aggregator integrations**, the distribution path for a protocol with no end-user acquisition
 - [ ] `swap_any` open orders, an events indexer, Sign-In-With-Stellar for per-wallet RLS
@@ -542,8 +513,7 @@ historical.
 
 **The signature over the full terms is the integrity boundary.** In `rfq_swap` the maker's entry is
 scoped with `require_auth_for_args` over the whole `Order` and the taker is the source account. A
-changed amount, token, counterparty or fee has no valid signature, so `swap` reverts. `otc_swap`
-gets the same property from two `require_auth()` calls over the `fill` arguments.
+changed amount, token, counterparty or fee has no valid signature, so `swap` reverts.
 
 - **The taker never trusts the maker server.** Quotes are validated fail-closed against the taker's
   own request, the contract's live config and the maker's own signed invocation tree, before a
@@ -551,9 +521,9 @@ gets the same property from two `require_auth()` calls over the `fill` arguments
 - **The fee cap is a code constant.** Nobody, admin included, can charge more than 30 bps.
 - **The registry cannot spend stake.** `eject` refunds exactly what was recorded, there is no admin
   path to staked funds, and the contract deliberately has no `upgrade` entry point.
-- **The database is untrusted.** Supabase coordinates the directed lane's UI state with the anon
-  key and holds no authority; a column-scoped grant freezes an order's addresses, tokens,
-  expiration and nonce after insert. Public reads are an accepted Testnet-MVP risk.
+- **The database is untrusted.** Supabase coordinates off-chain UI state with the anon key and
+  holds no authority; a column-scoped grant freezes an order's addresses, tokens, expiration and
+  nonce after insert. The RFQ path never touches it. Public reads are an accepted Testnet-MVP risk.
 - **Token quarantine.** Only allow-listed assets render or sign, so a look-alike asset with an
   attacker-controlled issuer is blocked.
 - **Strict headers.** Allow-list CSP with no inline or CDN scripts, HSTS,
