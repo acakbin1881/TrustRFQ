@@ -1,39 +1,31 @@
-# Claude Code — machine-specific local permissions (do not commit)
-.claude/settings.local.json
-
-# Claude Code — MCP config contains a live Supabase access token (do not commit)
-.mcp.json
-
-.vercel
-
-# Rust / Soroban build artifacts
-target/
-node_modules
-
-# Vite build output
-dist/
-.env*
-
-# Claude Design exports (source lives in src/ui/Ticket.tsx + public/styles.css)
-*.zip
-
-# Testnet demo funding secrets — NEVER commit
-demo-keys.json
-
-# Click-census E2E keypairs (tools/e2e/) — NEVER commit
-e2e-keys.json
-
-# Click-census run artifacts (console logs, reports, failure screenshots)
-tools/e2e/out/
-
-# Local guidance for Claude Code sessions (do not commit)
+# Local development harness: editor/agent configuration, vendored tooling copies and the
+# internal planning workspace. Workflow scaffolding, not part of the product.
+.claude/
+.agents/
+.planning/
+.gsd/
+skills-lock.json
 CLAUDE.md
 
-# Slippage scheduler log (machine-local; the JSONL runs are the record)
+# Local MCP / tooling config. Holds a live service access token, never commit.
+.mcp.json
+
+# Dependencies and build output
+node_modules
+dist/
+target/
+.vercel
+.env*
+*.zip
+
+# Secrets: Testnet demo funding keys and E2E keypairs. NEVER commit.
+demo-keys.json
+e2e-keys.json
+
+# E2E run artifacts (console logs, reports, failure screenshots)
+tools/e2e/out/
+
+# Measurement-tool scratch state. The committed JSONL + summary files are the record.
 tools/slippage/runs/launchd.log
-
-# Trade-size sweep checkpoints (resume state only; the JSONL + summary are the record)
 tools/tradesize/runs/.checkpoint-*.json
-
-# Trade-size resolution cache (resume speed-up only; per the tool README, summary + ops are the record)
 tools/tradesize/runs/*-resolved.json
