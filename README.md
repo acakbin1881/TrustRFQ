@@ -20,6 +20,7 @@
 ---
 
 ## Overview
+Firm, signed quotes on Stellar. Zero slippage at sizes the pools cannot serve
 
 ### The Problem
 
