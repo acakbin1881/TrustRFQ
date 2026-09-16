@@ -37,3 +37,6 @@ tools/tradesize/runs/.checkpoint-*.json
 
 # Trade-size resolution cache (resume speed-up only; per the tool README, summary + ops are the record)
 tools/tradesize/runs/*-resolved.json
+
+# Standalone RFQ demo build output (rebuild with: npm run build:rfq-demo)
+dist-rfq/

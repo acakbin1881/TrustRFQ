@@ -2,7 +2,16 @@
 // styles.css (.gate, .eyebrow, .gate__trust, …). Hidden (not unmounted) when a
 // wallet is connected, mirroring vanilla's display toggle.
 
-export function Gate({ onConnect, hidden }: { onConnect: () => void; hidden: boolean }) {
+export function Gate({ onConnect, hidden, eyebrow, heading, blurb }: {
+  onConnect: () => void;
+  hidden: boolean;
+  // Copy overrides for a build that gates a different lane (the RFQ-only demo
+  // in src/RfqDemo.tsx). Omitted everywhere else, so the desk's own wording
+  // below stays the default and App.tsx is untouched.
+  eyebrow?: string;
+  heading?: string;
+  blurb?: string;
+}) {
   return (
     <section className="gate" id="gate" style={hidden ? { display: 'none' } : undefined}>
       <div className="gate__mark">
@@ -13,11 +22,11 @@ export function Gate({ onConnect, hidden }: { onConnect: () => void; hidden: boo
           <circle cx="49" cy="32" r="7.5" stroke="currentColor" strokeWidth="3.5" />
         </svg>
       </div>
-      <div className="eyebrow"><span className="eyebrow__dot" />Peer-to-peer OTC · Stellar Testnet</div>
-      <h1>Your wallet is your desk.</h1>
+      <div className="eyebrow"><span className="eyebrow__dot" />{eyebrow ?? 'Peer-to-peer OTC · Stellar Testnet'}</div>
+      <h1>{heading ?? 'Your wallet is your desk.'}</h1>
       <p>
-        No sign-up, nothing custodied. Connect a Stellar wallet to send a directed order
-        to your counterparty — or to see orders addressed to you.
+        {blurb ?? `No sign-up, nothing custodied. Connect a Stellar wallet to send a directed order
+        to your counterparty — or to see orders addressed to you.`}
       </p>
       <button className="btn btn--gold" id="connectBtn" onClick={onConnect}>Connect wallet</button>
       <div className="gate__trust">
