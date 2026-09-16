@@ -31,3 +31,9 @@ CLAUDE.md
 
 # Slippage scheduler log (machine-local; the JSONL runs are the record)
 tools/slippage/runs/launchd.log
+
+# Trade-size sweep checkpoints (resume state only; the JSONL + summary are the record)
+tools/tradesize/runs/.checkpoint-*.json
+
+# Trade-size resolution cache (resume speed-up only; per the tool README, summary + ops are the record)
+tools/tradesize/runs/*-resolved.json
