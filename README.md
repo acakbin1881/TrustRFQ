@@ -22,13 +22,12 @@ Makers run their own quote servers; takers settle on-chain with a single signatu
 5. [Built with](#built-with)
 6. [Contract addresses](#contract-addresses)
 7. [Project structure](#project-structure)
-8. [Getting started](#getting-started)
-9. [What is proven, and what is not](#what-is-proven-and-what-is-not)
-10. [Roadmap](#roadmap)
-11. [Security](#security)
-12. [License](#license)
-13. [Acknowledgments](#acknowledgments)
-14. [Why RFQ](#why-rfq)
+8. [What is proven, and what is not](#what-is-proven-and-what-is-not)
+9. [Roadmap](#roadmap)
+10. [Security](#security)
+11. [License](#license)
+12. [Acknowledgments](#acknowledgments)
+13. [Why RFQ](#why-rfq)
 
 </details>
 
@@ -262,138 +261,6 @@ TrustRFQ/
 │   └── superpowers/specs/      # Dated design specs; 2026-08-17 is the adopted RFQ architecture
 └── vercel.json                 # Build, rewrites, CSP + security headers
 ```
-
----
-
-## Getting started
-
-### Prerequisites
-
-- **Node** ≥ 20.19
-- For contracts: **Rust** with the `wasm32v1-none` target and the
-  [Stellar CLI](https://developers.stellar.org/docs/tools/cli) v27
-- A [Freighter](https://freighter.app) wallet funded on Testnet
-
-### Install
-
-```bash
-git clone https://github.com/acakbin1881/TrustRFQ.git
-cd TrustRFQ
-npm install
-npm run dev          # http://localhost:5173/otc.html
-```
-
-### Test
-
-```bash
-npm test                                          # vitest: 13 files, 192 tests
-cargo test --manifest-path contracts/Cargo.toml   # 83 tests: rfq_swap 17 + rfq_registry 60 + otc_swap 6
-npm run build                                     # tsc --noEmit && vite build → dist/
-```
-
-The TypeScript suite includes three golden-vector fixtures pinning byte-exact encodings: the
-`fill` arguments, the RFQ `Order` (Soroban encodes struct fields as a sorted symbol map, not in
-declaration order), and the decoded invocation tree of a real maker signature. If one
-drifts, the maker's signature stops matching and settlement reverts, so trust the red test.
-
-### Configure
-
-- [`public/otc-config.js`](public/otc-config.js): `RPC_URL`, `HORIZON_URL`, `NETWORK_PASSPHRASE`,
-  `RFQ_SWAP_CONTRACT_ID`, `RFQ_REGISTRY_ID`, `OTC_CONTRACT_ID`, `REFLECTOR_ORACLE_ID`. An empty id
-  silently disables the feature that needs it.
-- [`public/supabase-config.js`](public/supabase-config.js): Supabase URL and anon key. Used only
-  by the desk's off-chain order coordination; the RFQ path touches no database.
-
-For a fresh Supabase project, run in the SQL Editor first
-[`docs/migrations/00-base-schema.sql`](docs/migrations/00-base-schema.sql), then
-[`docs/migrations/2026-07-10-intent-layer.sql`](docs/migrations/2026-07-10-intent-layer.sql).
-
-### Deploy the contracts
-
-```bash
-rustup target add wasm32v1-none
-cd contracts && stellar contract build          # → target/wasm32v1-none/release/*.wasm
-
-# rfq_swap: constructor args are required
-stellar contract deploy \
-  --wasm target/wasm32v1-none/release/rfq_swap.wasm \
-  --source-account <identity> --network testnet \
-  -- --admin <G…> --fee-bps 10 --fee-collector <G…>
-
-# rfq_registry: NO constructor. Deploy, then initialize in a second call.
-stellar contract deploy \
-  --wasm target/wasm32v1-none/release/rfq_registry.wasm \
-  --source-account <identity> --network testnet
-stellar contract invoke --id <NEW_ID> --source-account <identity> --network testnet -- \
-  initialize --admin <G…> --stake-token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC \
-  --base-cost 1000000000 --per-token-cost 100000000 --max-makers-per-token 100
-stellar contract invoke --id <NEW_ID> --source-account <identity> --network testnet -- get_config
-
-# otc_swap (earlier settlement contract, still deployed)
-stellar contract deploy \
-  --wasm target/wasm32v1-none/release/otc_swap.wasm \
-  --source-account <identity> --network testnet
-```
-
-Paste the printed `C…` ids into `public/otc-config.js`. Two things to know first:
-
-- `rfq_registry` has a re-init guard and, by design, no `upgrade`. An `initialize` that lands with
-  the wrong admin is permanent, so read `get_config` back and confirm the admin before publishing
-  the id.
-- The `rfq_swap` fee collector needs a trustline for every non-native token a fee can be charged in,
-  because the fee is paid in `maker_token`. On this deployment that meant opening a USDC trustline
-  for the collector once.
-
-### Prove it on Testnet
-
-```bash
-node tools/rfq-live-swap.mjs        # one RFQ swap with mixed credentials, then a replay that must fail
-node tools/rfq-registry-live.mjs    # register → discover → eject, exact refund, read-cost probe
-```
-
-Both scripts create throwaway actors through Friendbot and need no key file.
-
-### Run the headless end-to-end
-
-```bash
-npm run build && npm run preview -- --port 4173     # terminal 1
-
-npm run e2e:census                                  # default lane: two browsers, click census
-npm run e2e:rfq                                      # RFQ lane only: spawns the stub maker, 12 scenarios,
-                                                      # settles for real, report in tools/e2e/out/
-node tools/e2e/run-all.mjs --lane all                # both censuses in one run
-```
-
-`tools/e2e/run-all.mjs --lane otc|rfq|all` is the one documented entry point for both censuses,
-with `otc` as the default lane value; `npm run e2e:rfq` is a shorthand for `--lane rfq`. The RFQ
-lane funds and manages its own taker actor and stub maker internally (no `prepare-keys.mjs` step), registers the stub on
-the live `rfq_registry` with a real XLM stake, and always ejects it for a full refund — on a clean
-run, a scenario failure, or an uncaught exception — so a failed run never leaves a staked,
-unreachable maker listed for a later run to discover.
-
-The harness drives the built app through a mock Freighter (a postMessage shim, no extension), so
-every wallet prompt is counted rather than assumed. Two things the RFQ run needs that a fresh clone
-does not have: the gitignored `demo-keys.json` (the stub maker sells the demo USDC issuer's asset
-and reads the issuer secret from it; see `tools/derive-keys.mjs` and `tools/mint-usdc.mjs`), and
-Testnet XLM, because the stub maker stakes real XLM to register. It ejects for a full refund on
-SIGINT or SIGTERM; a hard kill leaves a staked, dead entry behind.
-
-**The deployed CSP gains no maker origin from this harness.** The stub maker is served from a
-loopback address by a process the deployed edge configuration never sees, and the local `vite
-preview` server applies no policy headers at all — the two environments stay genuinely separate.
-A real maker's origin joins `vercel.json`'s `connect-src` by hand at deploy time, one origin at a
-time, the same curation discipline the token allow-list already uses; see
-[What is proven, and what is not](#what-is-proven-and-what-is-not) for the current state of that
-allow-list.
-
-### Try the desk by hand
-
-One funded Testnet wallet. Start with XLM ↔ XLM to avoid trustlines.
-
-Open the RFQ section, choose a pair and an amount, then **Refresh quotes**. You need a maker
-registered for both tokens: `STUB_MAKER_PORT=4174 node tools/e2e/stub-maker.mjs` gives you one and
-prints `STUB_MAKER_READY` once registered. Accept a row and confirm that it costs a single wallet
-prompt.
 
 ---
 
