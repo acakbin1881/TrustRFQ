@@ -19,17 +19,16 @@ Makers run their own quote servers; takers settle on-chain with a single signatu
 2. [Features](#features)
 3. [Architecture](#architecture)
 4. [How it works](#how-it-works)
-5. [Protocol parameters](#protocol-parameters)
-6. [Built with](#built-with)
-7. [Contract addresses](#contract-addresses)
-8. [Project structure](#project-structure)
-9. [Getting started](#getting-started)
-10. [What is proven, and what is not](#what-is-proven-and-what-is-not)
-11. [Roadmap](#roadmap)
-12. [Security](#security)
-13. [License](#license)
-14. [Acknowledgments](#acknowledgments)
-15. [Why RFQ](#why-rfq)
+5. [Built with](#built-with)
+6. [Contract addresses](#contract-addresses)
+7. [Project structure](#project-structure)
+8. [Getting started](#getting-started)
+9. [What is proven, and what is not](#what-is-proven-and-what-is-not)
+10. [Roadmap](#roadmap)
+11. [Security](#security)
+12. [License](#license)
+13. [Acknowledgments](#acknowledgments)
+14. [Why RFQ](#why-rfq)
 
 </details>
 
@@ -196,27 +195,6 @@ single wallet prompt, and nothing written off-chain.
 It also shows an advisory fair-price hint read from the
 [Reflector](https://reflector.network) oracle by read-only simulation. It is never signed and never
 on the settlement path.
-
----
-
-## Protocol parameters
-
-| | |
-|---|---|
-| **Protocol fee** | 10 bps, paid by the maker. The taker receives the full quoted amount. |
-| **Fee cap** | 30 bps, a code constant. No admin key can exceed it. |
-| **Quote lifetime** | 30 to 90 seconds, bounded by both `expiry` and `signature_expiration_ledger`. |
-| **Fan-out timeout** | 3 seconds per maker, in parallel. |
-| **Registration stake** | 100 XLM base, plus 10 XLM per token. Fully refunded by `eject`. |
-| **Registry bounds** | 32 tokens and 8 protocols per maker; 100 makers per token (admin-tunable); URLs at most 256 bytes. |
-| **Amount precision** | 7 decimals, matching Stellar Asset Contract atomic units. |
-| **Assets** | XLM (native, no trustline) and USDC (classic asset via its SAC; the receiver needs a trustline). Only allow-listed assets can be rendered, signed or settled. |
-| **Network** | Stellar Testnet only. |
-
-> **Demo-only issuer.** The USDC entry currently points at a self-issued Testnet asset so
-> block-size demos can be minted freely. Restore Circle's Testnet issuer in
-> [`src/core/tokens.ts`](src/core/tokens.ts) (both ids sit in the comment above the allow-list, and
-> two tests pin it) before any other use.
 
 ---
 
@@ -453,6 +431,10 @@ Everything listed as proven moved real value on Stellar Testnet and can be re-ru
 - **Trustline pre-flight and the expired-entry retry** on the RFQ accept path are in progress.
 - **Single-contract consolidation** is decided but not built. `swap_any` open orders and an events
   indexer are deferred.
+- **The USDC entry points at a demo issuer.** It is a self-issued Testnet asset, so block-size
+  demos can be minted freely. Restore Circle's Testnet issuer in
+  [`src/core/tokens.ts`](src/core/tokens.ts) (both ids sit in the comment above the allow-list, and
+  two tests pin it) before any other use.
 - **Testnet only, unaudited.** Do not use with real funds.
 
 ---
