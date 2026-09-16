@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">TrustRFQ</h1>
   <p align="center">
-    <strong>Peer-to-Peer OTC Trading on Stellar</strong>
+    <strong> RFQ protocol on Stellar</strong>
   </p>
   <p align="center">
     Negotiate block-size swaps privately off-chain, then settle atomically on-chain in a single signed transaction
