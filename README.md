@@ -22,7 +22,7 @@ Makers run their own quote servers; takers settle on-chain with a single signatu
 5. [Built with](#built-with)
 6. [Contract addresses](#contract-addresses)
 7. [Project structure](#project-structure)
-8. [What is proven, and what is not](#what-is-proven-and-what-is-not)
+8. [What is proven](#what-is-proven)
 9. [Roadmap](#roadmap)
 10. [Security](#security)
 11. [License](#license)
@@ -48,7 +48,7 @@ in this repository exists to prove the protocol works end to end, not to acquire
 **Where it stands.** The settlement contract and the maker registry are deployed and proven on
 Stellar Testnet, and the desk's taker path settles a discovered quote with a single wallet prompt.
 What is missing is a production maker server, which lives in a separate repository and is the
-milestone gate. Full detail in [What is proven, and what is not](#what-is-proven-and-what-is-not).
+milestone gate. Full detail in [What is proven](#what-is-proven).
 
 ### Why this exists
 
@@ -264,11 +264,9 @@ TrustRFQ/
 
 ---
 
-## What is proven, and what is not
+## What is proven
 
-Everything listed as proven moved real value on Stellar Testnet and can be re-run from this repo.
-
-### Proven
+Everything here moved real value on Stellar Testnet and can be re-run from this repo.
 
 - **The asymmetric authorization model.** A maker's detached `Address`-credential entry and a
   taker's `SourceAccount` credential settle in one transaction, with no taker auth entry at all
@@ -280,29 +278,14 @@ Everything listed as proven moved real value on Stellar Testnet and can be re-ru
   about 2.6% of Testnet's per-transaction instruction budget.
   Re-run with `node tools/rfq-registry-live.mjs`.
 - **The full taker path, one signature.** A headless taker discovers a maker through the live
-  registry, receives a signed quote, validates it and settles with exactly one `signTransaction`
-  prompt, measured as `promptsByType { REQUEST_ACCESS: 1, SUBMIT_TRANSACTION: 1 }`
+  registry, receives a signed quote from the stub maker, validates it and settles with exactly one
+  `signTransaction` prompt, measured as `promptsByType { REQUEST_ACCESS: 1, SUBMIT_TRANSACTION: 1 }`
   ([tx `90cd51d6…`](https://stellar.expert/explorer/testnet/tx/90cd51d6307fe407c629aff051cd3e556be4e37233109d727783f2461fa491cc),
   2026-09-09). The same run covers nine scenarios: the happy path, five really-signed bad quotes
   (slow, malformed, refused, drifted economics, wrong fee) that must never become a selectable row
   and must cost zero wallet prompts, and three discovery cases (zero makers, two makers ranked by
   price, a quote dropping off the list when its countdown ends).
   Re-run with `node tools/e2e/rfq-driver.mjs`.
-
-### Not yet
-
-- **No production maker server exists.** Every RFQ proof above ran against the stub maker. A live
-  quote from a real maker server, settled on Testnet, is the milestone gate.
-- **The deployed site cannot reach maker servers.** `connect-src` in [`vercel.json`](vercel.json)
-  allows only RPC, Horizon and Supabase; maker origins are not in the CSP yet.
-- **Trustline pre-flight and the expired-entry retry** on the RFQ accept path are in progress.
-- **Single-contract consolidation** is decided but not built. `swap_any` open orders and an events
-  indexer are deferred.
-- **The USDC entry points at a demo issuer.** It is a self-issued Testnet asset, so block-size
-  demos can be minted freely. Restore Circle's Testnet issuer in
-  [`src/core/tokens.ts`](src/core/tokens.ts) (both ids sit in the comment above the allow-list, and
-  two tests pin it) before any other use.
-- **Testnet only, unaudited.** Do not use with real funds.
 
 ---
 
@@ -353,7 +336,9 @@ changed amount, token, counterparty or fee has no valid signature, so `swap` rev
   holds no authority; a column-scoped grant freezes an order's addresses, tokens, expiration and
   nonce after insert. The RFQ path never touches it. Public reads are an accepted Testnet-MVP risk.
 - **Token quarantine.** Only allow-listed assets render or sign, so a look-alike asset with an
-  attacker-controlled issuer is blocked.
+  attacker-controlled issuer is blocked. The USDC entry currently points at a self-issued Testnet
+  asset so demos can be minted freely; restore Circle's Testnet issuer in
+  [`src/core/tokens.ts`](src/core/tokens.ts) before any other use.
 - **Strict headers.** Allow-list CSP with no inline or CDN scripts, HSTS,
   `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`.
 - **A known wallet-kit quirk is contained.** `@creit.tech/stellar-wallets-kit` 1.9.5 double-encodes
