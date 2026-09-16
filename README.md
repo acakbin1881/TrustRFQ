@@ -251,7 +251,7 @@ on the settlement path.
 | **Chain access** | `@stellar/stellar-sdk` against Stellar RPC and Horizon |
 | **Wire format** | JSON-RPC 2.0, maker/taker naming, AirSwap error vocabulary |
 | **Off-chain coordination** | Supabase (Postgres + Realtime), anon key, no authority |
-| **Tests** | Vitest (167) and Rust unit tests (83), plus headless Playwright drivers that settle for real |
+| **Tests** | Vitest (192) and Rust unit tests (83), plus headless Playwright drivers that settle for real |
 | **Hosting** | Vercel static build, strict allow-list CSP |
 
 Runtime config is deliberately un-bundled: two plain `window.*` scripts, so a Testnet reset is a
@@ -329,7 +329,7 @@ npm run dev          # http://localhost:5173/otc.html
 ### Test
 
 ```bash
-npm test                                          # vitest: 12 files, 167 tests
+npm test                                          # vitest: 13 files, 192 tests
 cargo test --manifest-path contracts/Cargo.toml   # 83 tests: rfq_swap 17 + rfq_registry 60 + otc_swap 6
 npm run build                                     # tsc --noEmit && vite build → dist/
 ```
