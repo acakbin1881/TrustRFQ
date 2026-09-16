@@ -128,4 +128,14 @@ const totalKb = Math.round(
 );
 log(`OK — ${files.length} files, ${totalKb} KB, one page (index.html)`);
 log(`refs verified: ${refs.join(' ')}`);
-log('deploy with: vercel deploy dist-rfq');
+// --local-config is NOT optional and its absence fails SILENTLY. The repo root
+// is itself linked to the desk's Vercel project and carries its own
+// vercel.json; without this flag the CLI applies THAT file to this deployment,
+// which shipped the demo with the desk's Supabase-bearing CSP and the desk's
+// /intent redirect — a 200 the whole way, just wrong. Caught only by reading
+// the served headers back.
+log('deploy with:');
+log('  vercel deploy --cwd dist-rfq \\');
+log(`    --local-config ${path.join(OUT, 'vercel.json')} \\`);
+log('    --project trustrfqdemo --yes --prod');
+log('then verify the served CSP: curl -sI https://trustrfqdemo.vercel.app/ | grep -i content-security');
