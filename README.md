@@ -291,26 +291,48 @@ Everything here moved real value on Stellar Testnet and can be re-run from this 
 
 ## Roadmap
 
-### Milestone 1: the full RFQ loop on Testnet
+### Shipped
 
-Done when a desk taker discovers a real maker through the registry, receives a live quote from that
-maker's own server, and settles it.
+- [x] **The demand measured, not asserted.** Slippage at size sampled from Horizon's own path
+      finder across hours and weekdays, and a 14-day mainnet trade-size distribution folded into
+      1.25M taker operations, cross-checked against `/trade_aggregations` at 0.00% delta
+      (2026-09-03)
+- [x] **Settlement contract.** `rfq_swap` built, deployed and proven on Testnet: a live swap
+      settling a maker's detached authorization entry against a taker's source-account credential,
+      and a replay of that entry the host rejected (2026-08-18)
+- [x] **On-chain maker discovery.** `rfq_registry` built, deployed and live-proven end to end,
+      register through discover by token to eject with an exact full refund, plus a read-cost probe
+      at the 100-maker cap, and wired into the runtime config (2026-08-26)
+- [x] **Taker path, one signature.** Discovery, validated fan-out, ranked quotes and one-signature
+      settlement proven end to end across nine scenarios, including five really-signed bad quotes
+      that must cost zero wallet prompts (2026-09-09)
 
-- [x] **`rfq_swap`** built, deployed and proven on Testnet (2026-08-18)
-- [x] **Phase 1: on-chain maker discovery.** `rfq_registry` built, deployed, live-proven, wired into
-      the runtime config (2026-08-26)
-- [ ] **Phase 2: desk taker path.** Discovery, validated fan-out, ranked quotes and one-signature
-      settlement all proven against the stub maker (2026-09-09). Remaining: trustline pre-flight,
-      expired-entry retry, maker origins in the CSP, RFQ driver folded into `npm run e2e:census`
-- [ ] **Phase 3: live full loop** against a real maker server from the separate repo. Milestone gate
+### Next: aggregator integration
 
-### After the milestone
+Aggregators are the distribution path for a protocol that does not acquire end users. Most of what
+an integration needs already exists and is tested:
+
+- **The taker logic is SDK-shaped.** Discovery, order encoding, validation and settlement are pure
+  modules in [`src/core/rfq/`](src/core/rfq/) with no wallet, network or browser dependency, behind
+  a single network call site.
+- **The encodings are pinned.** Golden-vector fixtures lock the wire format and the on-chain
+  `Order` bytes, so a drift fails a test instead of a settlement.
+- **Nothing in the middle is trusted.** Quotes are verified client-side against the contract's live
+  config, the token allow-list, expiry and the maker's own decoded invocation tree, before a wallet
+  prompt exists. There is no relayer and no custody.
+- **Discovery is free.** `get_urls_for_token` is a read-only simulation: no key, no account, no fee,
+  about 2.6% of Testnet's per-transaction instruction budget at the full 100-maker cap.
+
+Being built for it, in order: the taker SDK extracted from those modules, a reference maker server
+in its own repository, and the first live maker quoting real size on Testnet.
+
+### After that
 
 - [ ] **One settlement contract.** `rfq_swap` absorbs `otc_swap` through a signed
       `require_fill_guard` flag: a persistent filled key for long-lived offers, host nonce only for
       short-lived quotes. `otc_swap` retires. New wasm, new id
-- [ ] **Taker SDK** extracted from `src/core/rfq/`, plus a reference maker server (separate repo)
-- [ ] **Aggregator integrations**, the distribution path for a protocol with no end-user acquisition
+- [ ] Trustline pre-flight and the expired-entry retry on the accept path, maker origins in the
+      deployed CSP
 - [ ] `swap_any` open orders, an events indexer, Sign-In-With-Stellar for per-wallet RLS
 - [ ] External audit, then Mainnet
 
