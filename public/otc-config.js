@@ -35,8 +35,16 @@ window.REFLECTOR_ORACLE_ID = 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKO
 window.RFQ_SWAP_CONTRACT_ID = 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT';
 
 // RFQ maker/discovery registry (rfq_registry). Deployed and initialized
-// 2026-08-26; no UI reads it yet (the desk's taker path is Phase 2). Joins
-// the Testnet-reset checklist alongside the three ids above.
+// 2026-08-26, REDEPLOYED 2026-09-16 on the identical wasm. Joins the
+// Testnet-reset checklist alongside the three ids above.
+//
+// Why the 2026-09-16 redeploy: the previous instance
+// (CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G) held six dead
+// localhost maker registrations left by throwaway stub-maker keys. `eject`
+// requires the maker's own signature and there is no admin-side removal, so
+// those entries are unremovable forever -- a fresh instance was the only way
+// back to a single live maker. Registering with a key you do not persist is
+// therefore permanent litter; treat it as a rule, not a preference.
 //
 // IMPORTANT: this contract has no constructor, so a reset is a TWO-STEP
 // deploy -- `initialize` must be invoked separately after `deploy`, or the
@@ -70,4 +78,4 @@ window.RFQ_SWAP_CONTRACT_ID = 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6
 //   RFQ_REGISTRY_ID=<NEW ID> npm run bootstrap
 // which re-funds the maker, re-opens its USDC trustline and inventory, and
 // re-registers it on the new registry instance via set_url + add_tokens.
-window.RFQ_REGISTRY_ID = 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
+window.RFQ_REGISTRY_ID = 'CBEFE7JY3PT5XF6CT3BMWF5RGPNUBGHKWPUDD3KLFZBLXFE3RPIDRLL3';

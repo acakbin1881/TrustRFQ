@@ -223,7 +223,7 @@ typed in [`src/config.ts`](src/config.ts).
 | Contract | Address | Notes |
 |---|---|---|
 | **`rfq_swap`** | `CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT` | Settlement, fee 10 bps maker-paid. Deployed 2026-08-18. |
-| **`rfq_registry`** | `CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G` | Maker discovery. Deployed and initialized 2026-08-26. |
+| **`rfq_registry`** | `CBEFE7JY3PT5XF6CT3BMWF5RGPNUBGHKWPUDD3KLFZBLXFE3RPIDRLL3` | Maker discovery. Redeployed and re-initialized 2026-09-16 (same wasm `3450546a…`), carrying exactly one registered maker. |
 | **`otc_swap`** | `CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ` | Earlier settlement contract, retiring into `rfq_swap`. Deployed bytecode matches source (wasm `83f60b85…`). |
 | **Reflector oracle** | `CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63` | Advisory fair price only, never on the signed path. |
 

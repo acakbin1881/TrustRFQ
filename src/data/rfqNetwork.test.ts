@@ -17,7 +17,7 @@ import type { GetMakerSideOrderParams, RfqOrder } from '../core/rfq/wire';
 
 const PASSPHRASE = 'Test SDF Network ; September 2015';
 const RFQ_SWAP_CONTRACT_ID = authTreeFixture.tree.args.source;
-const RFQ_REGISTRY_ID = 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
+const RFQ_REGISTRY_ID = 'CBEFE7JY3PT5XF6CT3BMWF5RGPNUBGHKWPUDD3KLFZBLXFE3RPIDRLL3';
 
 vi.stubGlobal('window', {
   RFQ_SWAP_CONTRACT_ID,
