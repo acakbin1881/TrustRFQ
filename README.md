@@ -5,7 +5,8 @@
 <h1>TrustRFQ</h1>
 
 <p><strong>A signed-quote RFQ protocol for Stellar</strong><br>
-Makers run their own quote servers. Takers pull firm, pre-signed quotes and settle on-chain with a single signature.</p>
+Firm, signed quotes. Zero slippage at sizes the pools cannot serve.<br>
+Makers run their own quote servers; takers settle on-chain with a single signature.</p>
 
 <p>
 <a href="https://trustrfq.vercel.app"><strong>Live desk »</strong></a>
