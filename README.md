@@ -4,7 +4,7 @@
     <strong> RFQ protocol on Stellar</strong>
   </p>
   <p align="center">
-    Negotiate block-size swaps privately off-chain, then settle atomically on-chain in a single signed transaction
+   
   </p>
 </p>
 
@@ -23,8 +23,7 @@
 
 ### The Problem
 
-Stellar has no venue for **block trades**, large OTC swaps like 570000 USDC ↔ 3000000 XLM. A trade
-that size has nowhere good to go:
+Stellar has no venue for **block trades**. A trade that moves a large size has nowhere good to go:
 
 - **On the DEX / AMMs, size means slippage.** Sweeping the order book or a liquidity pool for a
   large amount walks the price against you; the fill you get is far worse than the quote you saw.
