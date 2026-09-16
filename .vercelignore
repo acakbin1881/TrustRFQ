@@ -6,17 +6,18 @@ contracts/
 target/
 .claude/
 .agents/
+.planning/
+.gsd/
 skills-lock.json
 *.log
 dist/
 
-# Dev-only: vector-capture harness, specs, vanilla reference implementation.
+# Dev-only: measurement tools, E2E drivers, vector-capture harness, vanilla
+# reference implementation, design specs.
 tools/
 docs/
-otc.js
-canonical.js
 
-# Belt-and-braces: .mcp.json holds a live Supabase access token. It is gitignored,
-# so a Git-based deploy never sees it — but a `vercel` CLI deploy from this
-# directory is governed by THIS file, not .gitignore.
+# Belt-and-braces: local tooling config, gitignored, so a Git-based deploy never
+# sees it. A `vercel` CLI deploy from this directory is governed by THIS file
+# rather than .gitignore, so it is listed here too.
 .mcp.json
