@@ -8,14 +8,6 @@
 Firm, signed quotes. Zero slippage at sizes the pools cannot serve.<br>
 Makers run their own quote servers; takers settle on-chain with a single signature.</p>
 
-<p>
-<a href="https://trustrfq.vercel.app"><strong>Live desk »</strong></a>
-&nbsp;·&nbsp;
-<a href="https://drive.google.com/file/d/1vho_-MLwHPmhuG_rzhkRNgtZAbzydyuG/view?usp=sharing"><strong>Demo video »</strong></a>
-&nbsp;·&nbsp;
-<a href="docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md"><strong>Protocol spec »</strong></a>
-</p>
-
 </div>
 
 ---
@@ -25,20 +17,19 @@ Makers run their own quote servers; takers settle on-chain with a single signatu
 
 1. [About the project](#about-the-project)
 2. [Features](#features)
-3. [Live demo](#live-demo)
-4. [Architecture](#architecture)
-5. [How it works](#how-it-works)
-6. [Protocol parameters](#protocol-parameters)
-7. [Built with](#built-with)
-8. [Contract addresses](#contract-addresses)
-9. [Project structure](#project-structure)
-10. [Getting started](#getting-started)
-11. [What is proven, and what is not](#what-is-proven-and-what-is-not)
-12. [Roadmap](#roadmap)
-13. [Security](#security)
-14. [License](#license)
-15. [Acknowledgments](#acknowledgments)
-16. [Why RFQ](#why-rfq)
+3. [Architecture](#architecture)
+4. [How it works](#how-it-works)
+5. [Protocol parameters](#protocol-parameters)
+6. [Built with](#built-with)
+7. [Contract addresses](#contract-addresses)
+8. [Project structure](#project-structure)
+9. [Getting started](#getting-started)
+10. [What is proven, and what is not](#what-is-proven-and-what-is-not)
+11. [Roadmap](#roadmap)
+12. [Security](#security)
+13. [License](#license)
+14. [Acknowledgments](#acknowledgments)
+15. [Why RFQ](#why-rfq)
 
 </details>
 
@@ -117,19 +108,6 @@ measured against public mainnet endpoints by tools in this repo, not asserted:
   formats so a drift fails a test instead of a settlement.
 - **Everything is re-runnable.** Each claim in this README names the command that reproduces it
   against live Testnet.
-
----
-
-## Live demo
-
-| | |
-|---|---|
-| **Desk** | https://trustrfq.vercel.app |
-| **Video** | [Walkthrough of a trade settling on Testnet](https://drive.google.com/file/d/1vho_-MLwHPmhuG_rzhkRNgtZAbzydyuG/view?usp=sharing) |
-| **Network** | Stellar Testnet only. Connect [Freighter](https://freighter.app) with a funded Testnet account. |
-
-The RFQ section runs locally against a maker server. The deployed site cannot reach one yet,
-because maker origins are not in its CSP.
 
 ---
 
