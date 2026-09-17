@@ -224,6 +224,11 @@ attribute and comment edits, each gated on its hash):
   trapping.
 - `bump_instance` runs from `swap`, `set_url`, `add_tokens`, `remove_tokens`,
   `add_protocols`, `remove_protocols` (threshold-gated).
+- `rfq_registry`'s persistent `Maker` and `Token` entries get a longer TTL (threshold
+  518,400 ledgers, extend to 2,073,600, about 120 days), so a maker that is silent for a
+  month is not archived out of `get_urls_for_token`; the doc comment that called an archived
+  key "missing" is corrected. `rfq_swap::is_paused` reads its key the way the sibling getters
+  do.
 - `swap` rejects `order.expiry` more than `MAX_QUOTE_LIFETIME` (one hour) in the future, well
   inside `CANCEL_TTL`, so a cancelled order id cannot outlive its cancellation flag; the header
   states why. The planned directed-offer mode (`require_fill_guard`, separate milestone) will
