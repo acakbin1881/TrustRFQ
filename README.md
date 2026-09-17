@@ -258,7 +258,7 @@ TrustRFQ/
 │   └── tradesize/              # Mainnet trade-size distribution
 ├── docs/
 │   ├── migrations/             # Supabase SQL: base schema, then intent layer
-│   └── superpowers/specs/      # Dated design specs; 2026-08-17 is the adopted RFQ architecture
+│   └── specs/                  # Dated design specs; 2026-08-17 is the adopted RFQ architecture
 └── vercel.json                 # Build, rewrites, CSP + security headers
 ```
 
@@ -336,7 +336,7 @@ in its own repository, and the first live maker quoting real size on Testnet.
 - [ ] `swap_any` open orders, an events indexer, Sign-In-With-Stellar for per-wallet RLS
 - [ ] External audit, then Mainnet
 
-Design record: [`docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md`](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md),
+Design record: [`docs/specs/2026-08-17-rfq-protocol-architecture-design.md`](docs/specs/2026-08-17-rfq-protocol-architecture-design.md),
 with the 2026-08-19 single-contract amendment at the top. Earlier specs in the same folder are
 historical.
 

@@ -2,7 +2,7 @@
 // Stellar RFQ v1 wire — pure types + error-code constants.
 // ---------------------------------------------------------------------------
 // No network, no wallet, no window: this module only describes the JSON-RPC
-// 2.0 shapes the spec defines (docs/superpowers/specs/2026-08-17-rfq-protocol-
+// 2.0 shapes the spec defines (docs/specs/2026-08-17-rfq-protocol-
 // architecture-design.md §6). The one network call site lives in
 // src/data/rfqNetwork.ts.
 

@@ -1,6 +1,6 @@
 -- ============================================================
 -- Intent / private-offer layer (Feature 1, Phase 2) schema
--- Spec: docs/superpowers/specs/2026-07-10-intent-private-offer-layer-design.md
+-- Spec: docs/specs/2026-07-10-intent-private-offer-layer-design.md
 -- APPLIED to live project zaflldqvenbgfaxtzbjc on 2026-07-10 via
 -- supabase MCP apply_migration (name: intent_layer_schema).
 -- Mirrors the anon-grant hardening pattern documented in README.md.
