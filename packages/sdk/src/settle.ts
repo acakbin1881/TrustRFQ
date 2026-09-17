@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// RFQ settlement — chain operations only.
+// RFQ settlement: chain operations only.
 // ---------------------------------------------------------------------------
 // Mirrors trustline.ts's isolation boundary: the wallet is INJECTED as a
 // TransactionSigner instead of importing a kit, so this module never touches
@@ -58,7 +58,7 @@ function buildSwapOp(config: RfqClientConfig, order: RfqOrder, auth?: Stellar.xd
     contract: config.swapContractId,
     function: 'swap',
     args: [orderToScVal(order)],
-    auth, // pre-attached BEFORE simulate — the attach-before-simulate rule
+    auth, // attached BEFORE simulate (the attach-before-simulate rule)
   });
 }
 
