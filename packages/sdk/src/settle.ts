@@ -1,71 +1,73 @@
 // ---------------------------------------------------------------------------
-// RFQ settlement — chain operations only (TAKER-04).
+// RFQ settlement — chain operations only.
 // ---------------------------------------------------------------------------
-// Mirrors src/core/fill.ts's isolation boundary: the wallet is INJECTED as an
-// RfqWalletSigner instead of importing the kit, so this module never touches
-// UI state; no off-chain writes, no toasts (D-03 — the RFQ lane persists
-// nothing).
+// Mirrors trustline.ts's isolation boundary: the wallet is INJECTED as a
+// TransactionSigner instead of importing a kit, so this module never touches
+// UI state; no off-chain writes, no toasts.
 //
 // The taker is the transaction source, so the taker's ordinary envelope
 // signature IS their authorization — this module never asks for a detached
 // off-chain-signed authorization. RfqWalletSigner exposes exactly ONE signing
 // method so that guarantee is structural, not just a convention.
 //
-// Load-bearing ordering (RESEARCH.md Pitfall 2): the maker's pre-signed auth
-// entry is attached to the `invokeContractFunction` operation BEFORE the
-// enforcing-mode `simulateTransaction` call. `assembleTransaction` only
-// injects simulation-produced auth onto an operation that carries none, so
-// attaching after simulation would silently drop the maker's signature.
-// Proven live: tools/rfq-live-swap.mjs's `settle()`, tx 49fa69b2258d5....
+// Load-bearing ordering: the maker's pre-signed auth entry is attached to the
+// `invokeContractFunction` operation BEFORE the enforcing-mode
+// `simulateTransaction` call. `assembleTransaction` only injects
+// simulation-produced auth onto an operation that carries none, so attaching
+// after simulation would silently drop the maker's signature.
 
 import * as Stellar from '@stellar/stellar-sdk';
-import { ensureTrustline } from '../fill';
-import { orderToScVal, tokenForSac, type RfqOrder } from '@trustrfq/sdk';
-import { TOKENS } from '../tokens';
+import { orderToScVal, tokenForSac } from './order';
+import { ensureTrustline, type TransactionSigner } from './trustline';
+import type { RfqOrder } from './wire';
 
-/** The one-method taker-side signer slice — nothing else can be requested. */
-export interface RfqWalletSigner {
-  address: string;
-  signTransaction(
-    xdr: string,
-    opts: { address: string; networkPassphrase: string },
-  ): Promise<{ signedTxXdr: string }>;
-}
+/** Kept for callers that used the previous name. */
+export type RfqWalletSigner = TransactionSigner;
 
-export interface RfqChainConfig {
+/** Everything a taker-side client needs to know about the network and the protocol deployment. */
+export interface RfqClientConfig {
   rpcUrl: string;
   horizonUrl: string;
   passphrase: string;
-  /** RFQ_SWAP_CONTRACT_ID */
-  contractId: string;
+  /** rfq_registry contract id */
+  registryId: string;
+  /** rfq_swap contract id */
+  swapContractId: string;
+  /** Curated token strings ('XLM' or 'CODE:ISSUER'); a quote whose legs are not both on it is rejected. */
+  allowedTokens: readonly string[];
 }
 
-const rpcServer = (c: RfqChainConfig) => new Stellar.rpc.Server(c.rpcUrl);
+const TX_POLL_ATTEMPTS = 30;
+const TX_POLL_INTERVAL_MS = 1500;
+const EVENT_POLL_ATTEMPTS = 6;
+const EVENT_POLL_INTERVAL_MS = 1000;
+
+const rpcServer = (c: RfqClientConfig) => new Stellar.rpc.Server(c.rpcUrl);
 
 /**
  * The one `swap` invocation, shared by the recording-mode probe and the
  * final enforcing-mode call below — `auth` pre-attached BEFORE simulate is
- * Pitfall 2's whole point: `assembleTransaction` only injects
- * simulation-produced auth onto an operation that carries none, so a signed
- * entry attached after the fact never survives assembly. Omitting `auth`
- * (the probe call) puts the operation in RECORDING mode; passing it puts the
- * operation in ENFORCING mode, validating every entry right there.
+ * the attach-before-simulate rule's whole point: `assembleTransaction` only
+ * injects simulation-produced auth onto an operation that carries none, so a
+ * signed entry attached after the fact never survives assembly. Omitting
+ * `auth` (the probe call) puts the operation in RECORDING mode; passing it
+ * puts the operation in ENFORCING mode, validating every entry right there.
  */
-function buildSwapOp(config: RfqChainConfig, order: RfqOrder, auth?: Stellar.xdr.SorobanAuthorizationEntry[]) {
+function buildSwapOp(config: RfqClientConfig, order: RfqOrder, auth?: Stellar.xdr.SorobanAuthorizationEntry[]) {
   return Stellar.Operation.invokeContractFunction({
-    contract: config.contractId,
+    contract: config.swapContractId,
     function: 'swap',
     args: [orderToScVal(order)],
-    auth, // pre-attached BEFORE simulate — Pitfall 2
+    auth, // pre-attached BEFORE simulate — the attach-before-simulate rule
   });
 }
 
 export async function waitForTx(server: Stellar.rpc.Server, hash: string): Promise<string> {
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < TX_POLL_ATTEMPTS; i++) {
     const r = await server.getTransaction(hash);
     if (r.status === Stellar.rpc.Api.GetTransactionStatus.SUCCESS) return hash;
     if (r.status === Stellar.rpc.Api.GetTransactionStatus.FAILED) throw new Error('Transaction failed on-chain.');
-    await new Promise((res) => setTimeout(res, 1500));
+    await new Promise((res) => setTimeout(res, TX_POLL_INTERVAL_MS));
   }
   throw new Error('Timed out waiting for confirmation.');
 }
@@ -88,21 +90,30 @@ export interface SettleResult {
   event: SwapExecutedEvent | null;
 }
 
-/** Poll getEvents for the SwapExecuted event this settlement produced. */
-async function readSwapEvent(
+/**
+ * Poll getEvents for the `SwapExecuted` event of the transaction `txHash`.
+ * Filtering by hash is what makes the result THIS settlement's event: another
+ * taker's swap can land in the same ledger window and must never be reported
+ * as ours. Resolves null when the event is not seen within the attempts.
+ */
+export async function readSwapEvent(
   server: Stellar.rpc.Server,
   contractId: string,
   startLedger: number,
+  txHash: string,
+  opts: { attempts?: number; intervalMs?: number } = {},
 ): Promise<SwapExecutedEvent | null> {
+  const attempts = opts.attempts ?? EVENT_POLL_ATTEMPTS;
+  const intervalMs = opts.intervalMs ?? EVENT_POLL_INTERVAL_MS;
   const swapTopic = Stellar.xdr.ScVal.scvSymbol('swap').toXDR('base64');
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < attempts; i++) {
     const resp = await server.getEvents({
       startLedger,
       filters: [{ type: 'contract', contractIds: [contractId], topics: [[swapTopic, '*', '*']] }],
       limit: 20,
     });
-    if (resp.events.length) {
-      const ev = resp.events[resp.events.length - 1];
+    const ev = resp.events.find((e) => e.txHash === txHash);
+    if (ev) {
       const maker = Stellar.Address.fromScVal(ev.topic[1]).toString();
       const taker = Stellar.Address.fromScVal(ev.topic[2]).toString();
       const [orderId, makerToken, makerAmount, takerToken, takerAmount, fee] = Stellar.scValToNative(
@@ -119,7 +130,7 @@ async function readSwapEvent(
         fee: String(fee),
       };
     }
-    await new Promise((res) => setTimeout(res, 1000));
+    if (i + 1 < attempts) await new Promise((res) => setTimeout(res, intervalMs));
   }
   return null;
 }
@@ -172,16 +183,12 @@ function isMakerAddressEntry(entry: Stellar.xdr.SorobanAuthorizationEntry, maker
  *      exact host-level failure.
  */
 export async function settleQuote(
-  config: RfqChainConfig,
+  config: RfqClientConfig,
   order: RfqOrder,
   authEntryBase64: string,
   signer: RfqWalletSigner,
 ): Promise<SettleResult> {
-  const makerTokenStr = tokenForSac(
-    order.makerToken,
-    config.passphrase,
-    TOKENS.map((t) => t.value),
-  );
+  const makerTokenStr = tokenForSac(order.makerToken, config.passphrase, config.allowedTokens);
   if (!makerTokenStr) throw new Error('Maker token is not on the curated allow-list.');
   await ensureTrustline(config, makerTokenStr, signer);
 
@@ -225,6 +232,6 @@ export async function settleQuote(
     throw new Error('Submit rejected: ' + JSON.stringify(sent.errorResult ?? sent.status));
   }
   const hash = await waitForTx(server, sent.hash);
-  const event = await readSwapEvent(server, config.contractId, startLedger);
+  const event = await readSwapEvent(server, config.swapContractId, startLedger, hash);
   return { hash, event };
 }

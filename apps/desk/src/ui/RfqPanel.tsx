@@ -19,22 +19,25 @@ import { Address } from '@stellar/stellar-sdk';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { EXPLORER, HORIZON_URL, PASSPHRASE, RFQ_REGISTRY_ID, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
 import type { BalanceMap } from '../core/balances';
-import { ensureTrustline } from '../core/fill';
 import { amountTooLarge } from '../core/negotiation';
-import { settleQuote, type RfqChainConfig, type RfqWalletSigner, type SwapExecutedEvent } from '../core/rfq/settle';
 import { TOKENS, tokenLabel, trunc, validAmount } from '../core/tokens';
 import { discoverMakerUrls, fanOutMakerSideOrder, simulateRead } from '../data/rfqNetwork';
 import {
   bestQuote,
   dropExpired,
+  ensureTrustline,
   fmtCountdown,
   needsTrustline,
   quotePrice,
   rankQuotes,
   retryDecision,
   sacIdFor,
+  settleQuote,
   type MakerSideOrderResult,
+  type RfqClientConfig,
   type RfqOrder,
+  type RfqWalletSigner,
+  type SwapExecutedEvent,
 } from '@trustrfq/sdk';
 import { kit } from '../wallet/kit';
 import { TokenSelect } from './TokenSelect';
@@ -50,11 +53,13 @@ type Phase = 'idle' | 'discovering' | 'quoting' | 'quoted' | 'empty-makers' | 'e
 
 const MAX_VISIBLE_ROWS = 6;
 
-const rfqChain: RfqChainConfig = {
+const rfqChain: RfqClientConfig = {
   rpcUrl: RPC_URL,
   horizonUrl: HORIZON_URL,
   passphrase: PASSPHRASE,
-  contractId: RFQ_SWAP_CONTRACT_ID,
+  registryId: RFQ_REGISTRY_ID,
+  swapContractId: RFQ_SWAP_CONTRACT_ID,
+  allowedTokens: TOKENS.map((t) => t.value),
 };
 
 const signerFor = (address: string): RfqWalletSigner => ({

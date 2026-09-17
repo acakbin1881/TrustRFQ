@@ -15,8 +15,11 @@
 // so tampered terms surface as a simulation error, never a signed tx.
 
 import * as Stellar from '@stellar/stellar-sdk';
-import { assetFor, fillCanonicalArgs } from './canonical';
+import { ensureTrustline, waitForTx } from '@trustrfq/sdk';
+import { fillCanonicalArgs } from './canonical';
 import type { Order, Side } from './types';
+
+export { ensureTrustline, waitForTx };
 
 /** The slice of SEP-43 these flows need; stellar-wallets-kit satisfies it. */
 export interface WalletSigner {
@@ -45,7 +48,6 @@ export interface ChainConfig {
 }
 
 const rpc = (c: ChainConfig) => new Stellar.rpc.Server(c.rpcUrl);
-const horizon = (c: ChainConfig) => new Stellar.Horizon.Server(c.horizonUrl);
 
 /** address ('G…'/'C…') behind an address-credential auth entry, else null */
 export function entryAddr(e: Stellar.xdr.SorobanAuthorizationEntry): string | null {
@@ -58,41 +60,6 @@ export function entryAddr(e: Stellar.xdr.SorobanAuthorizationEntry): string | nu
 
 const fillHostFn = (c: ChainConfig, args: Stellar.xdr.ScVal[]) =>
   new Stellar.Contract(c.contractId).call('fill', ...args).body().invokeHostFunctionOp().hostFunction();
-
-export async function waitForTx(server: Stellar.rpc.Server, hash: string): Promise<string> {
-  for (let i = 0; i < 30; i++) {
-    const r = await server.getTransaction(hash);
-    if (r.status === Stellar.rpc.Api.GetTransactionStatus.SUCCESS) return hash;
-    if (r.status === Stellar.rpc.Api.GetTransactionStatus.FAILED) throw new Error('Transaction failed on-chain.');
-    await new Promise((res) => setTimeout(res, 1500));
-  }
-  throw new Error('Timed out waiting for confirmation.');
-}
-
-/**
- * Make sure the signer can receive the (non-native) asset they're owed.
- * Only needs `address` + `signTransaction` from the signer — the narrower
- * `Pick` (rather than the full `WalletSigner`) is what lets the RFQ lane's
- * one-method `RfqWalletSigner` (src/core/rfq/settle.ts) satisfy this call
- * without ever even TYPING a `signAuthEntry` method.
- */
-export async function ensureTrustline(
-  c: ChainConfig,
-  tokenStr: string,
-  signer: Pick<WalletSigner, 'address' | 'signTransaction'>,
-): Promise<void> {
-  const { asset, native } = assetFor(tokenStr);
-  if (native) return;
-  const h = horizon(c);
-  const acct = await h.loadAccount(signer.address);
-  if (acct.balances.some((b) => 'asset_code' in b && b.asset_code === asset.code && b.asset_issuer === asset.issuer)) return;
-  const tx = new Stellar.TransactionBuilder(acct, { fee: Stellar.BASE_FEE, networkPassphrase: c.passphrase })
-    .addOperation(Stellar.Operation.changeTrust({ asset })).setTimeout(180).build();
-  const { signedTxXdr } = await signer.signTransaction(tx.toXDR(), {
-    address: signer.address, networkPassphrase: c.passphrase,
-  });
-  await h.submitTransaction(Stellar.TransactionBuilder.fromXDR(signedTxXdr, c.passphrase) as Stellar.Transaction);
-}
 
 /** ledger until which a signed auth entry stays valid (≈ order expiry + buffer) */
 export async function authValidUntil(c: ChainConfig, order: Pick<Order, 'expiration'>): Promise<number> {
