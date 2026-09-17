@@ -21,14 +21,14 @@
 // expiry -> entry expiration -> only then the authorization-tree decode.
 
 import { Address, buildInvocationTree, xdr, type ExecuteInvocation, type InvocationTree } from '@stellar/stellar-sdk';
-import { toAtomic, tokenForSac } from './order';
-import type { GetMakerSideOrderParams, MakerSideOrderResult } from './wire';
+import { toAtomic, tokenForSac, type GetMakerSideOrderParams, type MakerSideOrderResult } from '@trustrfq/sdk';
+import { TOKENS } from '../tokens';
 
 // Anchored to the captured real maker auth-entry tree (fixtures/rfq-auth-tree.json,
 // captured by tools/e2e/stub-maker.mjs CAPTURE_AUTH_TREE=1 against a live
 // Testnet simulation) rather than reasoned independently from the contract
 // source — every tree-shape assertion below traces back to this fixture.
-import authTreeFixture from '../../../fixtures/rfq-auth-tree.json';
+import authTreeFixture from '../../../../../packages/sdk/fixtures/rfq-auth-tree.json';
 
 /** rfq_swap::get_config's return shape, snake_case field names as decoded by
  *  scValToNative (the same map keys the contract's #[contracttype] derive
@@ -211,10 +211,11 @@ export function validateQuote(result: MakerSideOrderResult, ctx: ValidateContext
   // maker's response (TAKER-05). Both legs must resolve through the curated
   // allow-list, the same quarantine boundary orderTokensKnown enforces for
   // the OTC lane. ---
-  if (tokenForSac(order.makerToken, ctx.passphrase) === null) {
+  const allowedTokens = TOKENS.map((t) => t.value);
+  if (tokenForSac(order.makerToken, ctx.passphrase, allowedTokens) === null) {
     return reject('token_not_allowed', `makerToken ${order.makerToken} is not on the curated allow-list`);
   }
-  if (tokenForSac(order.takerToken, ctx.passphrase) === null) {
+  if (tokenForSac(order.takerToken, ctx.passphrase, allowedTokens) === null) {
     return reject('token_not_allowed', `takerToken ${order.takerToken} is not on the curated allow-list`);
   }
 

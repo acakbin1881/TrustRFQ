@@ -31,7 +31,7 @@
 import { assetFor } from '../canonical';
 import type { BalanceMap } from '../balances';
 import { quotePrice } from './discover';
-import type { MakerSideOrderResult } from './wire';
+import type { MakerSideOrderResult } from '@trustrfq/sdk';
 
 /**
  * D-08's trustline predicate over an already-fetched balance map. Three

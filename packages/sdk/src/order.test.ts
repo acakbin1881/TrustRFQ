@@ -1,12 +1,10 @@
-// Golden-vector regression for the RFQ signature boundary (TAKER-06).
+// Golden-vector regression for the RFQ signature boundary.
 //
 // fixtures/rfq-order-vectors.json pins orderScVal's encoded output byte for
-// byte; if the sorted-key encoding ever drifts (Pitfall 1), this suite goes
-// red first, exactly like fixtures/canonical-args.json does for the OTC
-// lane's fillCanonicalArgs.
+// byte; if the sorted-key encoding ever drifts, this suite goes red first.
 
 import { describe, expect, it } from 'vitest';
-import fixtures from '../../../fixtures/rfq-order-vectors.json';
+import fixtures from '../fixtures/rfq-order-vectors.json';
 import { orderScValBase64, orderToScVal, toAtomic } from './order';
 import type { RfqOrder } from './wire';
 

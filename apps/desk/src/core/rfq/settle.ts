@@ -20,8 +20,8 @@
 
 import * as Stellar from '@stellar/stellar-sdk';
 import { ensureTrustline } from '../fill';
-import { orderToScVal, tokenForSac } from './order';
-import type { RfqOrder } from './wire';
+import { orderToScVal, tokenForSac, type RfqOrder } from '@trustrfq/sdk';
+import { TOKENS } from '../tokens';
 
 /** The one-method taker-side signer slice — nothing else can be requested. */
 export interface RfqWalletSigner {
@@ -177,7 +177,11 @@ export async function settleQuote(
   authEntryBase64: string,
   signer: RfqWalletSigner,
 ): Promise<SettleResult> {
-  const makerTokenStr = tokenForSac(order.makerToken, config.passphrase);
+  const makerTokenStr = tokenForSac(
+    order.makerToken,
+    config.passphrase,
+    TOKENS.map((t) => t.value),
+  );
   if (!makerTokenStr) throw new Error('Maker token is not on the curated allow-list.');
   await ensureTrustline(config, makerTokenStr, signer);
 

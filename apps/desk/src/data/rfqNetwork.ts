@@ -18,7 +18,7 @@ import { Account, Address, Contract, TransactionBuilder, rpc, scValToNative, xdr
 import { PASSPHRASE, RFQ_REGISTRY_ID, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
 import type { SwapConfig, QuoteRejection } from '../core/rfq/validate';
 import { validateQuote } from '../core/rfq/validate';
-import type { GetMakerSideOrderParams, MakerSideOrderResult } from '../core/rfq/wire';
+import type { GetMakerSideOrderParams, MakerSideOrderResult } from '@trustrfq/sdk';
 
 const { Server, Api } = rpc;
 const server = new Server(RPC_URL);

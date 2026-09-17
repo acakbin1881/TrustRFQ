@@ -14,8 +14,7 @@
 // silently merge two endpoints a maker registered as genuinely distinct on
 // the registry. This was a decision, not an oversight.
 
-import { toAtomic } from './order';
-import type { MakerSideOrderResult } from './wire';
+import { toAtomic, type MakerSideOrderResult } from '@trustrfq/sdk';
 
 /**
  * Plain set intersection preserving the FIRST array's order. Defensive

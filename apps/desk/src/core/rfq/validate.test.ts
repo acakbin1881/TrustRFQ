@@ -5,8 +5,8 @@
 // validateQuote defends against.
 
 import { describe, expect, it } from 'vitest';
-import authTreeFixture from '../../../fixtures/rfq-auth-tree.json';
-import type { GetMakerSideOrderParams, MakerSideOrderResult, RfqOrder } from './wire';
+import authTreeFixture from '../../../../../packages/sdk/fixtures/rfq-auth-tree.json';
+import type { GetMakerSideOrderParams, MakerSideOrderResult, RfqOrder } from '@trustrfq/sdk';
 import { validateQuote, type SwapConfig, type ValidateContext } from './validate';
 
 const PASSPHRASE = 'Test SDF Network ; September 2015';

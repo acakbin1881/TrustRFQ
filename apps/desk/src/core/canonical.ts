@@ -19,8 +19,10 @@
 // that file running against esm.sh, and this port must reproduce them exactly.
 // ---------------------------------------------------------------------------
 
-import { Address, Asset, StrKey, nativeToScVal, xdr } from '@stellar/stellar-sdk';
+import { Address, nativeToScVal, xdr } from '@stellar/stellar-sdk';
 import { Buffer } from 'buffer';
+export { assetFor, sacIdFor, toStroops } from '@trustrfq/sdk';
+import { sacIdFor, toStroops } from '@trustrfq/sdk';
 
 /** The fields hashed into both parties' auth entries. */
 export interface FillTerms {
@@ -44,27 +46,6 @@ export interface SignedTerms {
   taker_token: string;
   expiration: string;
   nonce: string;
-}
-
-/** token string ('XLM' | 'CODE:ISSUER') -> Asset */
-export function assetFor(tokenStr: string): { asset: Asset; native: boolean } {
-  if (!tokenStr || tokenStr.toUpperCase() === 'XLM') return { asset: Asset.native(), native: true };
-  const [code, issuer] = tokenStr.split(':');
-  return { asset: new Asset(code, issuer), native: false };
-}
-
-/** Asset -> Stellar Asset Contract id ('C...'), normalising older return shapes */
-export function sacIdFor(tokenStr: string, passphrase: string): string {
-  let id: unknown = assetFor(tokenStr).asset.contractId(passphrase);
-  if (id instanceof Uint8Array) id = StrKey.encodeContract(Buffer.from(id));
-  else if (typeof id === 'string' && !id.startsWith('C')) id = StrKey.encodeContract(Buffer.from(id, 'hex'));
-  return id as string;
-}
-
-/** decimal string -> i128 stroops (7 dp) as BigInt */
-export function toStroops(s: string): bigint {
-  const [whole, frac = ''] = String(s).split('.');
-  return BigInt(whole || '0') * 10000000n + BigInt((frac + '0000000').slice(0, 7));
 }
 
 export async function sha256Bytes(str: string): Promise<Uint8Array> {

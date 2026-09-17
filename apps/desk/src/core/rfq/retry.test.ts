@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { quotePrice } from './discover';
 import { isExpiredAuthFailure, needsTrustline, retryDecision } from './retry';
-import type { MakerSideOrderResult } from './wire';
+import type { MakerSideOrderResult } from '@trustrfq/sdk';
 import type { BalanceMap } from '../balances';
 
 /** A minimal, valid-shaped quote — only makerAmount/takerAmount vary between

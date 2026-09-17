@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { bestQuote, dropExpired, fmtCountdown, intersectUrls, quotePrice, rankQuotes } from './discover';
-import type { MakerSideOrderResult } from './wire';
+import type { MakerSideOrderResult } from '@trustrfq/sdk';
 
 /** A minimal, valid-shaped quote for ranking/expiry tests — only the fields
  *  these pure functions actually read vary between calls. */
