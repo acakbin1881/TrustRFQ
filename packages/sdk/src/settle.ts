@@ -178,9 +178,9 @@ function isMakerAddressEntry(entry: Stellar.xdr.SorobanAuthorizationEntry, maker
  *      BEFORE an ENFORCING-mode simulation that actually validates it. A
  *      maker entry whose signature_expiration_ledger has already passed is
  *      rejected RIGHT HERE (verified live: host text "signature has
- *      expired") — before the taker's wallet is ever prompted to sign
- *      anything; src/core/rfq/retry.ts's isExpiredAuthFailure matches this
- *      exact host-level failure.
+ *      expired"), before the taker's wallet is ever prompted to sign
+ *      anything; retry.ts's isExpiredAuthFailure matches this exact
+ *      host-level failure.
  */
 export async function settleQuote(
   config: RfqClientConfig,

@@ -36,8 +36,8 @@ export const AUTH_TREE_SHAPE = { rootArgCount: 8, feePositiveSubInvocations: 2 }
 
 /** rfq_swap::get_config's return shape, snake_case field names as decoded by
  *  scValToNative (the same map keys the contract's #[contracttype] derive
- *  produces — see src/core/rfq/order.ts's header comment on Soroban's
- *  sorted-symbol-key encoding for the sibling case). */
+ *  produces; see order.ts's header comment on Soroban's sorted-symbol-key
+ *  encoding for the sibling case). */
 export interface SwapConfig {
   admin: string;
   fee_bps: number;
@@ -134,7 +134,7 @@ function asBigInt(v: unknown): bigint {
 /** The Address-credential's authorized address, or null for anything else
  *  (source-account credential, decode failure, unrecognised shape) — fails
  *  closed, mirroring tools/e2e/stub-maker.mjs's isAddressCredential /
- *  src/core/rfq/settle.ts's isMakerAddressEntry. */
+ *  settle.ts's isMakerAddressEntry. */
 function credentialAddress(entry: xdr.SorobanAuthorizationEntry): string | null {
   try {
     const c = entry.credentials();

@@ -6,3 +6,4 @@ export * from './discover';
 export * from './retry';
 export * from './trustline';
 export * from './settle';
+export * from './network';

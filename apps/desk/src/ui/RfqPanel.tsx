@@ -1,9 +1,9 @@
-// The RFQ desk panel — the fourth section (D-01). A minimal reference
-// surface over the SDK-shaped taker core in src/core/rfq/* and
-// src/data/rfqNetwork.ts (UI-D1): this component only orchestrates state and
-// composes existing primitives (TokenSelect, Toast, the .order/.legbox/
-// .settle/.stepper design-system classes) — no new persistence, no new
-// wallet flow shape.
+// The RFQ desk panel: the fourth section. A minimal reference surface over
+// the SDK-shaped taker core in @trustrfq/sdk and the desk's binding in
+// src/data/rfq.ts: this component only orchestrates state and composes
+// existing primitives (TokenSelect, Toast, the .order/.legbox/.settle/
+// .stepper design-system classes), no new persistence, no new wallet flow
+// shape.
 //
 // D-03: this module writes to no off-chain store, ever. It never imports a
 // database client.
@@ -15,13 +15,12 @@
 // under the taker (countdown hitting zero, D-05) can never silently
 // re-point the preselected action at a different quote.
 
-import { Address } from '@stellar/stellar-sdk';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { EXPLORER, HORIZON_URL, PASSPHRASE, RFQ_REGISTRY_ID, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
+import { EXPLORER, PASSPHRASE } from '../config';
 import type { BalanceMap } from '../core/balances';
 import { amountTooLarge } from '../core/negotiation';
 import { TOKENS, tokenLabel, trunc, validAmount } from '../core/tokens';
-import { discoverMakerUrls, fanOutMakerSideOrder, simulateRead } from '../data/rfqNetwork';
+import { discoverMakerUrls, fanOutMakerSideOrder, readMakerConfig, rfqClient, settleQuote } from '../data/rfq';
 import {
   bestQuote,
   dropExpired,
@@ -32,9 +31,7 @@ import {
   rankQuotes,
   retryDecision,
   sacIdFor,
-  settleQuote,
   type MakerSideOrderResult,
-  type RfqClientConfig,
   type RfqOrder,
   type RfqWalletSigner,
   type SwapExecutedEvent,
@@ -53,42 +50,30 @@ type Phase = 'idle' | 'discovering' | 'quoting' | 'quoted' | 'empty-makers' | 'e
 
 const MAX_VISIBLE_ROWS = 6;
 
-const rfqChain: RfqClientConfig = {
-  rpcUrl: RPC_URL,
-  horizonUrl: HORIZON_URL,
-  passphrase: PASSPHRASE,
-  registryId: RFQ_REGISTRY_ID,
-  swapContractId: RFQ_SWAP_CONTRACT_ID,
-  allowedTokens: TOKENS.map((t) => t.value),
-};
-
 const signerFor = (address: string): RfqWalletSigner => ({
   address,
   signTransaction: (xdr, opts) => kit.signTransaction(xdr, opts),
 });
 
 /**
- * D-09's "fetch exactly one fresh quote" — from the SAME maker whose entry
- * just failed, never a full re-fan-out to every discovered maker (that would
- * be a second uninvited network burst on a path the taker did not ask to
- * refresh). The maker's own URL is looked up by their address via the
- * registry's `get_maker` read (simulateRead is already exported generically
- * by src/data/rfqNetwork.ts, so this needs no change there); the re-quote
- * itself still goes through `fanOutMakerSideOrder`'s TAKER-03 validation
- * gate — a retry never trusts an unvalidated re-quote either. Every field
- * (token pair, amount) is read off the FAILED order itself rather than
- * live component state, so the re-quote is for the exact trade the taker
- * actually agreed to. Returns null (never throws) on any failure — that is
- * retryDecision's own "no fresh quote" stop condition, not a crash.
+ * Fetch exactly one fresh quote from the SAME maker whose entry just failed,
+ * never a full re-fan-out to every discovered maker (that would be a second
+ * uninvited network burst on a path the taker did not ask to refresh). The
+ * maker's own URL is looked up by their address via `readMakerConfig` (the
+ * registry's `get_maker` read); the re-quote itself still goes through
+ * `fanOutMakerSideOrder`'s validation gate — a retry never trusts an
+ * unvalidated re-quote either. Every field (token pair, amount) is read off
+ * the FAILED order itself rather than live component state, so the re-quote
+ * is for the exact trade the taker actually agreed to. Returns null (never
+ * throws) on any failure — that is retryDecision's own "no fresh quote" stop
+ * condition, not a crash.
  */
 async function fetchOneFreshQuote(order: RfqOrder, takerWallet: string): Promise<MakerSideOrderResult | null> {
   try {
-    const makerConfig = (await simulateRead(RFQ_REGISTRY_ID, 'get_maker', [
-      new Address(order.maker).toScVal(),
-    ])) as { url: string };
+    const makerConfig = await readMakerConfig(order.maker);
     const { accepted } = await fanOutMakerSideOrder([makerConfig.url], {
       network: PASSPHRASE,
-      swapContract: RFQ_SWAP_CONTRACT_ID,
+      swapContract: rfqClient.swapContractId,
       makerToken: order.makerToken,
       takerToken: order.takerToken,
       takerAmount: order.takerAmount,
@@ -177,11 +162,11 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       // behind an explicit taker action" principle intact — Refresh quotes
       // is still the taker's own click, not a background prompt — while
       // actually letting a first-time taker get a quote at all. settleQuote
-      // keeps its own ensureTrustline front-step too (src/core/rfq/settle.ts,
-      // Task 2, unchanged): a harmless no-op in the normal case, and a
-      // fail-safe if this step is ever bypassed.
+      // keeps its own ensureTrustline front-step too (the SDK's settle.ts,
+      // unchanged): a harmless no-op in the normal case, and a fail-safe if
+      // this step is ever bypassed.
       if (needsTrustline(balances, buyToken)) {
-        await ensureTrustline(rfqChain, buyToken, signerFor(address));
+        await ensureTrustline(rfqClient, buyToken, signerFor(address));
       }
       const sellSac = sacIdFor(sellToken, PASSPHRASE);
       const buySac = sacIdFor(buyToken, PASSPHRASE);
@@ -203,7 +188,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       // as absent.
       const { accepted, rejections } = await fanOutMakerSideOrder(urls, {
         network: PASSPHRASE,
-        swapContract: RFQ_SWAP_CONTRACT_ID,
+        swapContract: rfqClient.swapContractId,
         makerToken: buySac,
         takerToken: sellSac,
         takerAmount: amount,
@@ -258,7 +243,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       for (;;) {
         try {
           toast('Submitting settlement — check your wallet…');
-          const result = await settleQuote(rfqChain, attemptQuote.order, attemptQuote.authEntry, signer);
+          const result = await settleQuote(attemptQuote.order, attemptQuote.authEntry, signer);
           setSettled({ hash: result.hash, event: result.event });
           setPhase('settled');
           toast('Settled on-chain 🎉', 'ok');
