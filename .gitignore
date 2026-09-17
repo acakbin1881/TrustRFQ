@@ -4,6 +4,7 @@
 .agents/
 .planning/
 .gsd/
+.superpowers/
 skills-lock.json
 CLAUDE.md
 
@@ -18,6 +19,7 @@ target/
 .vercel
 .env*
 *.zip
+.DS_Store
 
 # Secrets: Testnet demo funding keys and E2E keypairs. NEVER commit.
 demo-keys.json
@@ -27,6 +29,6 @@ e2e-keys.json
 tools/e2e/out/
 
 # Measurement-tool scratch state. The committed JSONL + summary files are the record.
-tools/slippage/runs/launchd.log
-tools/tradesize/runs/.checkpoint-*.json
-tools/tradesize/runs/*-resolved.json
+tools/research/slippage/runs/launchd.log
+tools/research/tradesize/runs/.checkpoint-*.json
+tools/research/tradesize/runs/*-resolved.json
