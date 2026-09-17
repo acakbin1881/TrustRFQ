@@ -21,12 +21,21 @@ import { EXPLORER, HORIZON_URL, PASSPHRASE, RFQ_REGISTRY_ID, RFQ_SWAP_CONTRACT_I
 import type { BalanceMap } from '../core/balances';
 import { ensureTrustline } from '../core/fill';
 import { amountTooLarge } from '../core/negotiation';
-import { bestQuote, dropExpired, fmtCountdown, quotePrice, rankQuotes } from '../core/rfq/discover';
-import { needsTrustline, retryDecision } from '../core/rfq/retry';
 import { settleQuote, type RfqChainConfig, type RfqWalletSigner, type SwapExecutedEvent } from '../core/rfq/settle';
 import { TOKENS, tokenLabel, trunc, validAmount } from '../core/tokens';
 import { discoverMakerUrls, fanOutMakerSideOrder, simulateRead } from '../data/rfqNetwork';
-import { sacIdFor, type MakerSideOrderResult, type RfqOrder } from '@trustrfq/sdk';
+import {
+  bestQuote,
+  dropExpired,
+  fmtCountdown,
+  needsTrustline,
+  quotePrice,
+  rankQuotes,
+  retryDecision,
+  sacIdFor,
+  type MakerSideOrderResult,
+  type RfqOrder,
+} from '@trustrfq/sdk';
 import { kit } from '../wallet/kit';
 import { TokenSelect } from './TokenSelect';
 import { errMsg, useToast } from './Toast';

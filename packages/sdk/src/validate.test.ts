@@ -5,12 +5,15 @@
 // validateQuote defends against.
 
 import { describe, expect, it } from 'vitest';
-import authTreeFixture from '../../../../../packages/sdk/fixtures/rfq-auth-tree.json';
-import type { GetMakerSideOrderParams, MakerSideOrderResult, RfqOrder } from '@trustrfq/sdk';
+import authTreeFixture from '../fixtures/rfq-auth-tree.json';
+import type { GetMakerSideOrderParams, MakerSideOrderResult, RfqOrder } from './wire';
 import { validateQuote, type SwapConfig, type ValidateContext } from './validate';
 
 const PASSPHRASE = 'Test SDF Network ; September 2015';
 const SWAP_CONTRACT_ID = authTreeFixture.tree.args.source; // matches the captured tree's root source
+
+// The captured order's legs resolve through these two curated tokens.
+const ALLOWED = ['XLM', 'USDC:GBJH2XCGKRMFKCBYPFJHHGISZGLOYZ3TM3IMFQPQSK7NT2L7JUARLC26'];
 
 const BASE_ORDER = authTreeFixture.order as RfqOrder;
 const BASE_AUTH_ENTRY = authTreeFixture.authEntry;
@@ -52,6 +55,7 @@ function baseCtx(overrides: Partial<ValidateContext> = {}): ValidateContext {
     config: { ...BASE_CONFIG },
     passphrase: PASSPHRASE,
     swapContractId: SWAP_CONTRACT_ID,
+    allowedTokens: ALLOWED,
     nowUnixSeconds: BASE_ORDER.expiry - 100,
     currentLedgerSeq: 100,
     ...overrides,
@@ -276,5 +280,22 @@ describe('validateQuote — concurrency (no shared state)', () => {
     expect(inline[0].accepted).toBe(true);
     expect(inline[1]).toMatchObject({ accepted: false, rejection: { reason: 'fee_mismatch' } });
     expect(inline[2]).toMatchObject({ accepted: false, rejection: { reason: 'undecodable_entry' } });
+  });
+});
+
+import { AUTH_TREE_SHAPE } from './validate';
+
+describe('AUTH_TREE_SHAPE', () => {
+  it('matches the captured real maker auth tree', () => {
+    expect(authTreeFixture.rootArgCount).toBe(AUTH_TREE_SHAPE.rootArgCount);
+    expect(authTreeFixture.subInvocationCount).toBe(AUTH_TREE_SHAPE.feePositiveSubInvocations);
+  });
+});
+
+describe('token allow-list comes from the caller', () => {
+  it('rejects a quote whose maker token is not on the allow-list passed in', () => {
+    const v = validateQuote(baseResult(), baseCtx({ allowedTokens: ['XLM'] }));
+    expect(v.accepted).toBe(false);
+    if (!v.accepted) expect(v.rejection.reason).toBe('token_not_allowed');
   });
 });

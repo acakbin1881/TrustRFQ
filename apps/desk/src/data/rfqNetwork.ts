@@ -16,9 +16,8 @@
 
 import { Account, Address, Contract, TransactionBuilder, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { PASSPHRASE, RFQ_REGISTRY_ID, RFQ_SWAP_CONTRACT_ID, RPC_URL } from '../config';
-import type { SwapConfig, QuoteRejection } from '../core/rfq/validate';
-import { validateQuote } from '../core/rfq/validate';
-import type { GetMakerSideOrderParams, MakerSideOrderResult } from '@trustrfq/sdk';
+import { TOKENS } from '../core/tokens';
+import { validateQuote, type GetMakerSideOrderParams, type MakerSideOrderResult, type SwapConfig, type QuoteRejection } from '@trustrfq/sdk';
 
 const { Server, Api } = rpc;
 const server = new Server(RPC_URL);
@@ -129,6 +128,7 @@ export async function fanOutMakerSideOrder(
     config,
     passphrase: PASSPHRASE,
     swapContractId: RFQ_SWAP_CONTRACT_ID,
+    allowedTokens: TOKENS.map((t) => t.value),
     nowUnixSeconds: Math.floor(Date.now() / 1000),
     currentLedgerSeq: latestLedger.sequence,
   };

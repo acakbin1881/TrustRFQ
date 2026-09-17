@@ -1,14 +1,12 @@
-// Pure coverage for src/core/rfq/retry.ts — every behavior line in
-// 02-04-PLAN.md's Task 1 gets an explicit, named case: the trustline
-// predicate's three distinct states, the expired-vs-unrelated failure
-// classification, and the price guard's boundary (equal counts as
-// not-worse) plus the at-most-once retry property.
+// Pure coverage for retry.ts: the trustline predicate's three states, the
+// expired-vs-unrelated failure classification, and the price guard's
+// boundary (equal counts as not-worse) plus the at-most-once retry property.
 
 import { describe, expect, it } from 'vitest';
 import { quotePrice } from './discover';
 import { isExpiredAuthFailure, needsTrustline, retryDecision } from './retry';
-import type { MakerSideOrderResult } from '@trustrfq/sdk';
-import type { BalanceMap } from '../balances';
+import type { MakerSideOrderResult } from './wire';
+import type { TrustlineLookup } from './retry';
 
 /** A minimal, valid-shaped quote — only makerAmount/takerAmount vary between
  *  calls, mirroring discover.test.ts's mkQuote helper. */
@@ -59,12 +57,12 @@ describe('needsTrustline', () => {
   });
 
   it('returns true for a fetched map lacking the key (genuinely absent trustline)', () => {
-    const balances: BalanceMap = { XLM: '10' };
+    const balances: TrustlineLookup = { XLM: '10' };
     expect(needsTrustline(balances, USDC)).toBe(true);
   });
 
   it('returns false for a fetched map with the key present at a zero balance (trustline exists)', () => {
-    const balances: BalanceMap = { [USDC]: '0' };
+    const balances: TrustlineLookup = { [USDC]: '0' };
     expect(needsTrustline(balances, USDC)).toBe(false);
   });
 });

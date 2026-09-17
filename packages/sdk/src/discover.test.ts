@@ -1,11 +1,10 @@
-// Pure ranking + intersection + expiry-filter coverage for src/core/rfq/discover.ts.
-// Every behavior line in 02-03-PLAN.md's Task 1 gets an explicit case,
+// Pure ranking, intersection and expiry-filter coverage for discover.ts,
 // including the equal-price stability property (run twice, same output),
 // empty/single-element inputs, and the expiry-equals-now boundary.
 
 import { describe, expect, it } from 'vitest';
 import { bestQuote, dropExpired, fmtCountdown, intersectUrls, quotePrice, rankQuotes } from './discover';
-import type { MakerSideOrderResult } from '@trustrfq/sdk';
+import type { MakerSideOrderResult } from './wire';
 
 /** A minimal, valid-shaped quote for ranking/expiry tests — only the fields
  *  these pure functions actually read vary between calls. */

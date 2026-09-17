@@ -12,7 +12,7 @@
 import { Address, nativeToScVal, rpc, xdr } from '@stellar/stellar-sdk';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import authTreeFixture from '../../../../packages/sdk/fixtures/rfq-auth-tree.json';
-import * as validateModule from '../core/rfq/validate';
+import * as validateModule from '@trustrfq/sdk';
 import type { GetMakerSideOrderParams, RfqOrder } from '@trustrfq/sdk';
 
 const PASSPHRASE = 'Test SDF Network ; September 2015';

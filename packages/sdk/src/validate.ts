@@ -1,6 +1,5 @@
 // ---------------------------------------------------------------------------
-// Quote validation — the gate between an untrusted maker server and the
-// taker's wallet (TAKER-03, TAKER-05).
+// Quote validation: the gate between an untrusted maker server and the taker's wallet.
 // ---------------------------------------------------------------------------
 // PURE — no wallet, no network, no DOM, no globalThis/browser reads, no
 // module-level mutable state. Everything it needs arrives as arguments: the maker's quote, the
@@ -21,14 +20,19 @@
 // expiry -> entry expiration -> only then the authorization-tree decode.
 
 import { Address, buildInvocationTree, xdr, type ExecuteInvocation, type InvocationTree } from '@stellar/stellar-sdk';
-import { toAtomic, tokenForSac, type GetMakerSideOrderParams, type MakerSideOrderResult } from '@trustrfq/sdk';
-import { TOKENS } from '../tokens';
+import { toAtomic, tokenForSac } from './assets';
+import type { GetMakerSideOrderParams, MakerSideOrderResult } from './wire';
 
-// Anchored to the captured real maker auth-entry tree (fixtures/rfq-auth-tree.json,
-// captured by tools/e2e/stub-maker.mjs CAPTURE_AUTH_TREE=1 against a live
-// Testnet simulation) rather than reasoned independently from the contract
-// source — every tree-shape assertion below traces back to this fixture.
-import authTreeFixture from '../../../../../packages/sdk/fixtures/rfq-auth-tree.json';
+/**
+ * Shape of the maker's `require_auth_for_args` invocation tree, as the
+ * contract source defines it (contracts/rfq_swap/src/lib.rs): the root
+ * `execute` node carries the eight bound arguments (taker, maker_token,
+ * maker_amount, taker_token, taker_amount, expiry, order_id, fee_bps); with
+ * a positive fee, two maker_token.transfer sub-invocations (maker -> taker,
+ * maker -> fee collector) sit under the maker's credential. validate.test.ts
+ * asserts these against a captured real tree.
+ */
+export const AUTH_TREE_SHAPE = { rootArgCount: 8, feePositiveSubInvocations: 2 } as const;
 
 /** rfq_swap::get_config's return shape, snake_case field names as decoded by
  *  scValToNative (the same map keys the contract's #[contracttype] derive
@@ -53,14 +57,16 @@ export interface ValidateContext {
   passphrase: string;
   /** RFQ_SWAP_CONTRACT_ID. */
   swapContractId: string;
+  /** The caller's curated token strings ('XLM' or 'CODE:ISSUER'); both legs of a quote must be on it. */
+  allowedTokens: readonly string[];
   /** Unix seconds "now" the caller wants this quote checked against. */
   nowUnixSeconds: number;
   /** The current Soroban ledger sequence. */
   currentLedgerSeq: number;
 }
 
-/** Exactly the rejection classes enumerated in 02-02-PLAN.md's Task 1 behavior block. */
-export type REJECT_REASON =
+/** Why a quote was rejected. */
+export type RejectReason =
   | 'economics_mismatch'
   | 'fee_mismatch'
   | 'contract_paused'
@@ -71,15 +77,15 @@ export type REJECT_REASON =
   | 'undecodable_entry'
   | 'tree_mismatch'
   // A maker- or desk-controlled decimal-string amount could not be
-  // interpreted at all (non-numeric, absent, or the wrong JSON type) — as
+  // interpreted at all (non-numeric, absent, or the wrong JSON type), as
   // distinct from a value that WAS interpretable and simply disagreed with
-  // something (economics_mismatch / tree_mismatch). Added 02-06 to close the
-  // per-maker fan-out isolation gap: without this, an uninterpretable value
-  // throws out of toAtomic and denies the whole pass, not just this quote.
+  // something (economics_mismatch / tree_mismatch): without this, an
+  // uninterpretable value throws out of toAtomic and denies the whole pass,
+  // not just this quote.
   | 'malformed_field';
 
 export interface QuoteRejection {
-  reason: REJECT_REASON;
+  reason: RejectReason;
   detail: string;
 }
 
@@ -89,7 +95,7 @@ export type ValidatedQuote =
   | { accepted: true; quote: MakerSideOrderResult }
   | { accepted: false; rejection: QuoteRejection };
 
-const reject = (reason: REJECT_REASON, detail: string): ValidatedQuote => ({ accepted: false, rejection: { reason, detail } });
+const reject = (reason: RejectReason, detail: string): ValidatedQuote => ({ accepted: false, rejection: { reason, detail } });
 
 /** Guards a maker- or desk-controlled decimal-string amount through toAtomic,
  *  converting a throw into null instead of letting it escape. Module-private:
@@ -103,18 +109,10 @@ function tryToAtomic(value: unknown): bigint | null {
   }
 }
 
-// The root `execute` node's arg count for the maker's `require_auth_for_args`
-// tuple over (taker, maker_token, maker_amount, taker_token, taker_amount,
-// expiry, order_id, fee_bps) — the contract source's exact tuple order,
-// verified live in the captured fixture.
-const ROOT_ARG_COUNT = authTreeFixture.rootArgCount; // 8
+// See AUTH_TREE_SHAPE above.
+const ROOT_ARG_COUNT = AUTH_TREE_SHAPE.rootArgCount;
 
-// Captured with fee_bps=10 (fee > 0): two maker_token.transfer sub-invocations
-// (maker->taker, maker->fee_collector) live under the maker's own credential.
-// The taker_token transfer (taker->maker) needs the TAKER's own auth, so it
-// never appears in the MAKER's authorized invocation tree at all — only the
-// two transfers whose "from" is the maker do.
-const FEE_POSITIVE_SUB_INVOCATION_COUNT = authTreeFixture.subInvocationCount; // 2
+const FEE_POSITIVE_SUB_INVOCATION_COUNT = AUTH_TREE_SHAPE.feePositiveSubInvocations;
 // When fee_bps resolves to a zero fee amount, swap()'s `if fee > 0` guard
 // (contracts/rfq_swap/src/lib.rs) skips the fee transfer entirely, leaving
 // only the maker->taker transfer.
@@ -211,11 +209,10 @@ export function validateQuote(result: MakerSideOrderResult, ctx: ValidateContext
   // maker's response (TAKER-05). Both legs must resolve through the curated
   // allow-list, the same quarantine boundary orderTokensKnown enforces for
   // the OTC lane. ---
-  const allowedTokens = TOKENS.map((t) => t.value);
-  if (tokenForSac(order.makerToken, ctx.passphrase, allowedTokens) === null) {
+  if (tokenForSac(order.makerToken, ctx.passphrase, ctx.allowedTokens) === null) {
     return reject('token_not_allowed', `makerToken ${order.makerToken} is not on the curated allow-list`);
   }
-  if (tokenForSac(order.takerToken, ctx.passphrase, allowedTokens) === null) {
+  if (tokenForSac(order.takerToken, ctx.passphrase, ctx.allowedTokens) === null) {
     return reject('token_not_allowed', `takerToken ${order.takerToken} is not on the curated allow-list`);
   }
 

@@ -1,15 +1,12 @@
 // ---------------------------------------------------------------------------
-// RFQ retry guard + trustline predicate — pure. No network, no globals, no
-// wallet (mirrors src/core/oracle.ts's isolation discipline).
+// RFQ retry guard + trustline predicate, pure. No network, no globals, no
+// wallet.
 // ---------------------------------------------------------------------------
-// Encodes exactly two rules from 02-CONTEXT.md and nothing else:
-//
-//   - needsTrustline (D-08): the passive-note predicate over the
-//     ALREADY-FETCHED balance map (src/data/useBalances.ts) — zero extra
-//     network cost, and the caller must never assert a trustline fact it
-//     has not fetched.
-//   - retryDecision + isExpiredAuthFailure (D-09): the price-guarded retry —
-//     the taker never signs at a price they have not seen. At most one
+//   - needsTrustline: the passive-note predicate over the ALREADY-FETCHED
+//     balance map (src/data/useBalances.ts). Zero extra network cost, and
+//     the caller must never assert a trustline fact it has not fetched.
+//   - retryDecision + isExpiredAuthFailure: the price-guarded retry. The
+//     taker never signs at a price they have not seen. At most one
 //     automatic retry, and only when the fresh price is equal to or better
 //     than what was already shown; a strictly worse price stops and forces
 //     explicit re-confirmation.
@@ -28,15 +25,16 @@
 // host's exact wording, narrowly, so an unrelated auth/balance failure can
 // never falsely spend the one retry this guard allows.
 
-import { assetFor } from '../canonical';
-import type { BalanceMap } from '../balances';
+import { assetFor } from './assets';
 import { quotePrice } from './discover';
-import type { MakerSideOrderResult } from '@trustrfq/sdk';
+import type { MakerSideOrderResult } from './wire';
+
+/** Any object keyed by token string; a present key means the trustline exists. */
+export type TrustlineLookup = Readonly<Record<string, unknown>>;
 
 /**
- * D-08's trustline predicate over an already-fetched balance map. Three
- * states, kept distinct — this mirrors src/core/balances.ts's `canAfford`:
- * unknown is never resolved into a convenient answer.
+ * Trustline predicate over an already-fetched balance map. Three states,
+ * kept distinct: unknown is never resolved into a convenient answer.
  *   - the native asset never needs a trustline, regardless of the map;
  *   - a null map (not yet fetched) is NOT evidence of a missing trustline —
  *     the passive note must stay suppressed rather than assert a trustline
@@ -44,7 +42,7 @@ import type { MakerSideOrderResult } from '@trustrfq/sdk';
  *   - a fetched map that lacks the key means the trustline is genuinely
  *     absent; a present key at a zero balance means the trustline IS live.
  */
-export function needsTrustline(balances: BalanceMap | null, tokenStr: string): boolean {
+export function needsTrustline(balances: TrustlineLookup | null, tokenStr: string): boolean {
   if (assetFor(tokenStr).native) return false;
   if (balances === null) return false;
   return balances[tokenStr] === undefined;
