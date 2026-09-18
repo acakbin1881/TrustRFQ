@@ -61,11 +61,11 @@ const signerFor = (address: string): RfqWalletSigner => ({
  * uninvited network burst on a path the taker did not ask to refresh). The
  * maker's own URL is looked up by their address via `readMakerConfig` (the
  * registry's `get_maker` read); the re-quote itself still goes through
- * `fanOutMakerSideOrder`'s validation gate — a retry never trusts an
+ * `fanOutMakerSideOrder`'s validation gate: a retry never trusts an
  * unvalidated re-quote either. Every field (token pair, amount) is read off
  * the FAILED order itself rather than live component state, so the re-quote
  * is for the exact trade the taker actually agreed to. Returns null (never
- * throws) on any failure — that is retryDecision's own "no fresh quote" stop
+ * throws) on any failure; that is retryDecision's own "no fresh quote" stop
  * condition, not a crash.
  */
 async function fetchOneFreshQuote(order: RfqOrder, takerWallet: string): Promise<MakerSideOrderResult | null> {
