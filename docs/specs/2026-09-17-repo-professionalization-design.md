@@ -4,6 +4,15 @@
 architecture in `2026-08-17-rfq-protocol-architecture-design.md`, which stays the protocol
 design record.
 
+**Superseded in part, 2026-09-18.** The protocol-only repository decision
+(`2026-09-18-protocol-only-repo-decision.md`) retires `apps/desk`, the OTC and broadcast lanes,
+Supabase, `otc_swap`, `tools/e2e`, `tools/checks`, `tools/reference` and the desk's Vercel
+configuration. Of this design, the monorepo layout, the `@trustrfq/sdk` extraction, the contract
+fixes, CI and the root files, the `tools/research` and `tools/testnet` hygiene and the docs path
+rules stand. Every `apps/desk` item is cancelled: the USDC runtime config, `Topbar`, the desk
+comment and copy hygiene, the landing rewrite and the README product copy. Read that decision
+first; where the two disagree, it wins.
+
 ## 1. Goal
 
 A senior web3 developer who opens this repository on GitHub should see, in the first two
