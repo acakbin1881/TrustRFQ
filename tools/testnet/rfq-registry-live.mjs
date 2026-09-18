@@ -47,7 +47,7 @@
 // It creates its own throwaway maker actors via Friendbot, so it depends on
 // no gitignored key file and can be re-run from scratch at any time.
 //
-//   RFQ_REGISTRY_ID=C... node tools/rfq-registry-live.mjs
+//   RFQ_REGISTRY_ID=C... node tools/testnet/rfq-registry-live.mjs
 //
 // Exits non-zero on any failed assertion.
 

@@ -7,11 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-// Same fallback as tools/dev-smoke.mjs: no Chrome on this Mac, use the
-// Playwright-cached Chrome for Testing (rev 1223 = playwright 1.60.0's pin).
-export const CHROME = process.env.CHROME_PATH
-  ?? '/Users/acakbin1881/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/'
-   + 'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
+export { chromePath } from '../lib/chrome.mjs';
 
 export function cfgFromEnv() {
   const role = process.env.ROLE;

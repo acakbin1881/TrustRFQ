@@ -108,7 +108,7 @@ const url = `http://localhost:${PORT}`;
 
 // Reuse the repo's existing demo USDC issuer (src/core/tokens.ts's temporary
 // allow-list entry) so the stub maker sells the SAME asset the desk knows.
-const keys = JSON.parse(readFileSync('/Users/acakbin1881/Projects/TrustRFQ/demo-keys.json', 'utf8'));
+const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
 const issuerKp = Keypair.fromSecret(keys.issuer_secret);
 const USDC = new Asset('USDC', issuerKp.publicKey());
 const NATIVE_SAC = Asset.native().contractId(NETWORK);

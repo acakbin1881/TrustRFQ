@@ -19,13 +19,14 @@
 // Usage: npm run build:rfq-demo
 
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, readFileSync, readdirSync, renameSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = path.join(ROOT, 'dist-rfq');
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DESK = path.join(REPO, 'apps', 'desk');
+const OUT = path.join(DESK, 'dist-rfq');
 
 /** public/ files this deploy is allowed to ship. hero.html / hero.css /
  *  hero.js are deliberately absent: they are the landing, a second page.
@@ -38,10 +39,10 @@ const fail = (m) => { console.error(`[rfq-demo] FAILED: ${m}`); process.exit(1);
 // --- 1. typecheck, then build -------------------------------------------------
 
 log('typechecking...');
-execFileSync('npx', ['tsc', '--noEmit'], { cwd: ROOT, stdio: 'inherit' });
+execFileSync('npx', ['tsc', '--noEmit', '-p', DESK], { cwd: REPO, stdio: 'inherit' });
 
 log('building rfq.html -> dist-rfq/...');
-await build({ configFile: path.join(ROOT, 'vite.rfq.config.ts') });
+await build({ root: DESK, configFile: path.join(DESK, 'vite.rfq.config.ts') });
 
 // --- 2. rename the entry so the single page answers at / ----------------------
 
@@ -49,17 +50,38 @@ if (!existsSync(path.join(OUT, 'rfq.html'))) fail('vite did not emit dist-rfq/rf
 renameSync(path.join(OUT, 'rfq.html'), path.join(OUT, 'index.html'));
 log('entry renamed: rfq.html -> index.html');
 
-// --- 3. copy the asset allow-list + the deploy's own vercel.json --------------
+// --- 3. copy the asset allow-list + derive the deploy's own vercel.json -------
 
 for (const name of PUBLIC_ALLOW_LIST) {
-  const src = path.join(ROOT, 'public', name);
+  const src = path.join(DESK, 'public', name);
   if (!existsSync(src)) fail(`public/${name} is missing — the allow-list is stale`);
   copyFileSync(src, path.join(OUT, name));
 }
 log(`copied ${PUBLIC_ALLOW_LIST.length} public assets: ${PUBLIC_ALLOW_LIST.join(', ')}`);
 
-copyFileSync(path.join(ROOT, 'vercel.rfq-demo.json'), path.join(OUT, 'vercel.json'));
-log('copied vercel.rfq-demo.json -> dist-rfq/vercel.json');
+// The demo's vercel.json is DERIVED from the desk's: same headers, minus the
+// Supabase origins this bundle never talks to, minus the desk's redirect and
+// rewrite. One source of truth, so the two CSPs cannot drift.
+const desk = JSON.parse(readFileSync(path.join(REPO, 'vercel.json'), 'utf8'));
+const stripSupabase = (csp) =>
+  csp
+    .split(';')
+    .map((directive) => directive.trim().split(/\s+/).filter((tok) => !tok.includes('supabase.co')).join(' '))
+    .join('; ');
+const demoVercel = {
+  $schema: desk.$schema,
+  framework: null,
+  buildCommand: '',
+  installCommand: '',
+  outputDirectory: '.',
+  cleanUrls: true,
+  headers: desk.headers.map((rule) => ({
+    ...rule,
+    headers: rule.headers.map((h) => (h.key === 'Content-Security-Policy' ? { ...h, value: stripSupabase(h.value) } : h)),
+  })),
+};
+writeFileSync(path.join(OUT, 'vercel.json'), JSON.stringify(demoVercel, null, 2) + '\n');
+log('derived dist-rfq/vercel.json from the desk vercel.json (Supabase origins removed)');
 
 // --- 4. assert the deploy is what it claims to be -----------------------------
 
@@ -135,7 +157,6 @@ log(`refs verified: ${refs.join(' ')}`);
 // /intent redirect — a 200 the whole way, just wrong. Caught only by reading
 // the served headers back.
 log('deploy with:');
-log('  vercel deploy --cwd dist-rfq \\');
-log(`    --local-config ${path.join(OUT, 'vercel.json')} \\`);
+log('  vercel deploy --cwd apps/desk/dist-rfq --local-config apps/desk/dist-rfq/vercel.json \\');
 log('    --project trustrfqdemo --yes --prod');
 log('then verify the served CSP: curl -sI https://trustrfqdemo.vercel.app/ | grep -i content-security');

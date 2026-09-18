@@ -19,9 +19,10 @@ import { readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { chromePath } from '../lib/chrome.mjs';
 
-const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const FIXTURE = join(ROOT, 'fixtures', 'canonical-args.json');
+const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
+const FIXTURE = join(ROOT, 'apps', 'desk', 'fixtures', 'canonical-args.json');
 const LAUNCH = !process.argv.includes('--no-launch');
 const TIMEOUT_MS = 120_000;
 
@@ -33,14 +34,6 @@ const MIME = {
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
 };
-
-const CHROME_CANDIDATES = [
-  process.env.CHROME,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-  '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-].filter(Boolean);
 
 let chrome, profileDir;
 async function shutdown(code) {
@@ -67,7 +60,7 @@ const server = createServer(async (req, res) => {
       res.writeHead(400).end();
       return shutdown(1);
     }
-    await mkdir(join(ROOT, 'fixtures'), { recursive: true });
+    await mkdir(join(ROOT, 'apps', 'desk', 'fixtures'), { recursive: true });
     await writeFile(FIXTURE, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
     res.writeHead(204).end();
     console.log(`wrote ${FIXTURE}`);
@@ -104,12 +97,14 @@ setTimeout(() => {
 }, TIMEOUT_MS).unref();
 
 server.listen(0, '127.0.0.1', async () => {
-  const url = `http://127.0.0.1:${server.address().port}/tools/capture.html`;
-  if (!LAUNCH) return console.log(`serving — open ${url}`);
+  const url = `http://127.0.0.1:${server.address().port}/tools/checks/capture.html`;
+  if (!LAUNCH) return console.log(`serving, open ${url}`);
 
-  const bin = CHROME_CANDIDATES.find((p) => p);
-  if (!bin) {
-    console.error('no Chrome found; set CHROME=/path/to/chrome or use --no-launch');
+  let bin;
+  try {
+    bin = chromePath();
+  } catch (err) {
+    console.error(`${err.message} (or use --no-launch)`);
     return shutdown(1);
   }
   profileDir = await mkdtemp(join(tmpdir(), 'trustrfq-capture-'));

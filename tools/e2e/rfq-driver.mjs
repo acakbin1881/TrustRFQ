@@ -167,7 +167,7 @@ import {
   Horizon, Keypair, Networks, Operation, TransactionBuilder, Asset, xdr, scValToNative,
   Account, Address, Contract, rpc,
 } from '@stellar/stellar-sdk';
-import { CHROME, REPO_ROOT, Tally, click, fillField } from './lib.mjs';
+import { chromePath, REPO_ROOT, Tally, click, fillField } from './lib.mjs';
 import { initScriptFor, makeWalletHandler } from './freighter-mock.mjs';
 
 const HORIZON_URL = 'https://horizon-testnet.stellar.org';
@@ -1284,7 +1284,7 @@ async function main() {
   const directionResults = [];
   const cspViolations = [];
 
-  const browser = await chromium.launch({ executablePath: CHROME, headless: !HEADED });
+  const browser = await chromium.launch({ executablePath: chromePath(), headless: !HEADED });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addInitScript(initScriptFor(takerKp.publicKey()));
   const handler = makeWalletHandler({ keypair: takerKp, tally, stepRef });

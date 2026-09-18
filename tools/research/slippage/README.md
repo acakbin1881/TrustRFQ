@@ -23,11 +23,11 @@ The spread of runs is how the floor is located, not the finding itself.
 ## Commands
 
 ```bash
-node tools/slippage/measure.mjs --manual   # ad-hoc run; never fills a scheduled slot
-node tools/slippage/measure.mjs            # poll; runs only if a slot's window is open, else exits
-node tools/slippage/measure.mjs --force    # run now and record it, ignoring the slot window
-node tools/slippage/report.mjs             # coverage + distribution + the floor
-node tools/slippage/report.mjs --mid       # same, using the spread-inclusive metric
+node tools/research/slippage/measure.mjs --manual   # ad-hoc run; never fills a scheduled slot
+node tools/research/slippage/measure.mjs            # poll; runs only if a slot's window is open, else exits
+node tools/research/slippage/measure.mjs --force    # run now and record it, ignoring the slot window
+node tools/research/slippage/report.mjs             # coverage + distribution + the floor
+node tools/research/slippage/report.mjs --mid       # same, using the spread-inclusive metric
 ```
 
 A run takes about 15 seconds and makes 30 requests (9 sizes x 3 pairs, plus one order book per

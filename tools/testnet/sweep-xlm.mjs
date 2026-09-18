@@ -4,7 +4,7 @@
 // account-merge is signed by the temp source, so the DESTINATION needs no
 // signature — this works against any public key (e.g. a Freighter wallet).
 //
-//   TARGET_G=<G...> TARGET_XLM=3100000 node tools/sweep-xlm.mjs
+//   TARGET_G=<G...> TARGET_XLM=3100000 node tools/testnet/sweep-xlm.mjs
 
 import { Keypair, Networks, Operation, TransactionBuilder, Horizon } from '@stellar/stellar-sdk';
 import { setTimeout as sleep } from 'node:timers/promises';

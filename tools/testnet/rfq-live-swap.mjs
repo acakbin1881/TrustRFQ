@@ -12,7 +12,7 @@
 // It creates its own throwaway actors via Friendbot, so it depends on no
 // gitignored key file and can be re-run from scratch at any time.
 //
-//   RFQ_CONTRACT_ID=C... node tools/rfq-live-swap.mjs
+//   RFQ_CONTRACT_ID=C... node tools/testnet/rfq-live-swap.mjs
 //
 // Exits non-zero on any failed assertion.
 

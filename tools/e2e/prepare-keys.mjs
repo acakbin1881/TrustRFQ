@@ -98,7 +98,7 @@ async function main() {
       log(`taker already holds ${held} USDC, skipping mint`);
     } else {
       log('provisioning taker USDC via tools/mint-usdc.mjs...');
-      const r = spawnSync('node', [path.join(REPO_ROOT, 'tools', 'mint-usdc.mjs')], {
+      const r = spawnSync('node', [path.join(REPO_ROOT, 'tools', 'testnet', 'mint-usdc.mjs')], {
         env: { ...process.env, TARGET_S: keys.taker.secret, AMOUNT: TAKER_USDC_TARGET },
         stdio: 'inherit',
       });

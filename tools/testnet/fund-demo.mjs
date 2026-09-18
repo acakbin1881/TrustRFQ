@@ -38,7 +38,7 @@ const NETWORK = Networks.TESTNET;
 const FEE = '1000';              // stroops per op
 const TIMEOUT = 60;
 const TRUST_LIMIT = '100000000';
-const KEYS_FILE = new URL('../demo-keys.json', import.meta.url);
+const KEYS_FILE = new URL('../../demo-keys.json', import.meta.url);
 
 const preset = PRESETS[SIZE_PRESET];
 if (!preset) throw new Error(`unknown SIZE_PRESET ${SIZE_PRESET}`);

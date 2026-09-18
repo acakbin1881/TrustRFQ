@@ -5,11 +5,14 @@
 //   - mints AMOUNT USDC issuer -> TARGET
 // Idempotent from live Horizon state. Never touches mainnet.
 //
-//   TARGET_S=<S...> AMOUNT=570000 node mint-usdc.mjs
+//   TARGET_S=<S...> AMOUNT=570000 node tools/testnet/mint-usdc.mjs
 
 import { Keypair, Networks, Asset, Operation, TransactionBuilder, Horizon } from '@stellar/stellar-sdk';
 import { readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const HORIZON = 'https://horizon-testnet.stellar.org';
 const FRIENDBOT = 'https://friendbot.stellar.org';
@@ -23,7 +26,7 @@ const AMOUNT = process.env.AMOUNT || '570000';
 if (!TARGET_S) throw new Error('set TARGET_S');
 
 // Reuse the repo's demo issuer so it's the SAME USDC asset as prior demos.
-const keys = JSON.parse(readFileSync('/Users/acakbin1881/Projects/TrustRFQ/demo-keys.json', 'utf8'));
+const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
 const issuerKp = Keypair.fromSecret(keys.issuer_secret);
 const ISSUER = issuerKp.publicKey();
 const USDC = new Asset('USDC', ISSUER);

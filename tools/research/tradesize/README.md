@@ -70,15 +70,15 @@ passed through.
 ## Commands
 
 ```bash
-node tools/tradesize/measure.mjs                       # 14 days back from the last UTC midnight
-node tools/tradesize/measure.mjs --days 7
-node tools/tradesize/measure.mjs --start 2026-08-20T00:00:00Z --end 2026-09-03T00:00:00Z
-node tools/tradesize/measure.mjs --floor 5000          # detail rows above $5k (default $1,000)
-node tools/tradesize/measure.mjs --resume              # continue an interrupted sweep
+node tools/research/tradesize/measure.mjs                       # 14 days back from the last UTC midnight
+node tools/research/tradesize/measure.mjs --days 7
+node tools/research/tradesize/measure.mjs --start 2026-08-20T00:00:00Z --end 2026-09-03T00:00:00Z
+node tools/research/tradesize/measure.mjs --floor 5000          # detail rows above $5k (default $1,000)
+node tools/research/tradesize/measure.mjs --resume              # continue an interrupted sweep
 
-node tools/tradesize/report.mjs                        # newest run: distribution + headline
-node tools/tradesize/report.mjs --threshold 20000      # headline threshold (default $20,000)
-node tools/tradesize/report.mjs --run 20260903T070000Z
+node tools/research/tradesize/report.mjs                        # newest run: distribution + headline
+node tools/research/tradesize/report.mjs --threshold 20000      # headline threshold (default $20,000)
+node tools/research/tradesize/report.mjs --run 20260903T070000Z
 ```
 
 A sweep checkpoints every 25 pages into `runs/.checkpoint-<pair>.json` and rolls the detail file

@@ -5,7 +5,7 @@
 // file. Matched SECRETS are written only to OUT (a gitignored scratchpad path);
 // stdout prints public keys + matched indices only, never secrets.
 //
-//   MNEMONIC="w1 w2 …" TARGETS="G...,G..." OUT=/abs/derived.json node tools/derive-keys.mjs
+//   MNEMONIC="w1 w2 …" TARGETS="G...,G..." OUT=/abs/derived.json node tools/testnet/derive-keys.mjs
 
 import * as bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';

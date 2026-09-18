@@ -33,7 +33,7 @@
 
 import { Asset, Horizon, Keypair, Networks, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 import { chromium } from 'playwright-core';
-import { CHROME, Tally, click, fillField } from './lib.mjs';
+import { chromePath, Tally, click, fillField } from './lib.mjs';
 import { initScriptFor, makeWalletHandler } from './freighter-mock.mjs';
 
 const BASE_URL = process.env.BASE_URL || 'https://trustrfqdemo.vercel.app';
@@ -79,7 +79,7 @@ const stepRef = { current: 'init' };
 const consoleLines = [];
 const cspViolations = [];
 
-const browser = await chromium.launch({ executablePath: CHROME, headless: !HEADED });
+const browser = await chromium.launch({ executablePath: chromePath(), headless: !HEADED });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 await context.addInitScript(initScriptFor(takerKp.publicKey()));
 await context.addInitScript(() => {

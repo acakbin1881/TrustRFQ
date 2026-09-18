@@ -7,8 +7,9 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { chromePath } from '../lib/chrome.mjs';
 
-process.chdir(resolve(fileURLToPath(new URL('..', import.meta.url))));
+process.chdir(resolve(fileURLToPath(new URL('../../apps/desk', import.meta.url))));
 const SEED = process.argv[2] ?? '';
 
 const vite = await createViteServer({ server: { port: 0, host: '127.0.0.1' } });
@@ -69,10 +70,7 @@ const proxy = createServer(async (req, res) => {
 
 setTimeout(() => { console.error('TIMEOUT'); shutdown(1); }, 120_000).unref();
 
-// Override with CHROME_PATH when Chrome isn't installed — e.g. a Playwright
-// cache: ~/Library/Caches/ms-playwright/chromium-*/chrome-mac-arm64/…/Google Chrome for Testing
-const CHROME = process.env.CHROME_PATH
-  ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = chromePath();
 
 proxy.listen(0, '127.0.0.1', () => {
   const url = `http://127.0.0.1:${proxy.address().port}/otc.html`;
