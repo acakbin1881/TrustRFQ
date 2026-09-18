@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+jobs:
+  web:
+    name: sdk + desk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: No inline scripts in the desk build (the CSP forbids them)
+        run: |
+          if grep -Pq '<script(?![^>]*\bsrc=)' apps/desk/dist/*.html; then
+            echo "inline <script> found in apps/desk/dist"; exit 1
+          fi
+      - run: npm run build:rfq-demo
+
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain (contracts/rust-toolchain.toml)
+        run: |
+          rustup toolchain install
+          rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - name: Test snapshots are committed and current
+        # The pathspec is deliberately unquoted: a quoted '*/test_snapshots' is
+        # wildmatched against full file paths and never matches a file inside
+        # the directory, so the check would silently pass.
+        run: |
+          if [ -n "$(git status --porcelain -- */test_snapshots)" ]; then
+            git status --porcelain -- */test_snapshots; echo "stale test_snapshots"; exit 1
+          fi
+      - uses: stellar/stellar-cli@v27.0.0
+      - run: stellar contract build
+      - name: otc_swap bytecode matches the deployed contract
+        run: |
+          echo "83f60b854089d1a93644483968e04b5661fef3b6006966fdead4d1221b5a4df3  target/wasm32v1-none/release/otc_swap.wasm" | sha256sum -c -
