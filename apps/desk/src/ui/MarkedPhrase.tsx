@@ -26,22 +26,22 @@ export interface PhraseMark {
 function Marked({ word, icon: Glyph, rank = 'quiet' }: PhraseMark) {
   const loud = rank === 'loud';
   return (
-    <span tabIndex={0} className="tr-mark group/mark relative inline-block cursor-default
+    <span tabIndex={0} className="tr-phrase group/mark relative inline-block cursor-default
       rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-lime/40">
-      <span className={loud ? 'text-snow' : undefined}>{word}</span>
+      <span className={`tr-phrase-word inline-block ${loud ? 'text-snow' : ''}`}>{word}</span>
 
-      <span className={`ml-[0.3em] inline-block align-[0.02em]
-        ${loud ? 'tr-idle-seal' : 'tr-idle-cursor'}`}>
+      <span className={`ml-[0.28em] inline-block align-[0.02em]
+        ${loud ? 'tr-phrase-idle-seal' : 'tr-phrase-idle-glyph'}`}>
         <Glyph
-          className={`${loud ? 'tr-mark-seal' : 'tr-mark-cursor'} block size-[0.85em]
+          className={`${loud ? 'tr-phrase-seal' : 'tr-phrase-glyph'} block size-[0.8em]
             text-slate group-hover/mark:text-lime`}
           strokeWidth={1.5} aria-hidden="true" />
       </span>
 
       {loud ? (
         // stops at the word: the glyph is punctuation, not part of the claim
-        <span className="tr-mark-rule absolute -bottom-[0.14em] left-0 block h-[1.5px]
-          rounded-pill bg-lime" style={{ width: 'calc(100% - 1.15em)' }} aria-hidden="true" />
+        <span className="tr-mark-rule absolute -bottom-[0.16em] left-0 block h-[1.5px]
+          rounded-pill bg-lime" style={{ width: 'calc(100% - 1.1em)' }} aria-hidden="true" />
       ) : null}
     </span>
   );

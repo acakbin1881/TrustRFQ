@@ -387,7 +387,9 @@ body:where(.tr-dark) {
   transition: transform 620ms var(--ease-glide);
 }
 .tr-mark:hover .tr-mark-rule,
-.tr-mark:focus-visible .tr-mark-rule { transform: scaleX(1); }
+.tr-mark:focus-visible .tr-mark-rule,
+.tr-phrase:hover .tr-mark-rule,
+.tr-phrase:focus-visible .tr-mark-rule { transform: scaleX(1); }
 
 /* The coin turns on hover: XLM out, USDC in — the same gesture as the hero's
    large disc, so the page has one idea of what a swap looks like rather than
@@ -632,4 +634,53 @@ body:where(.tr-dark) {
 
 @media (prefers-reduced-motion: reduce) {
   .tr-field-rule { transition: none; }
+}
+
+/* --- MarkedPhrase: the headline device at body scale -----------------------
+   Its own classes, not the headline's. The .tr-mark-* travels were measured
+   against a 4rem clamp()ed headline, where 0.26em is a confident nudge. At
+   body size the same em is a third of the glyph's own width, and the icon
+   reads as running away from the word it belongs to.
+
+   Everything here is roughly half the headline's travel, and the glyph no
+   longer outruns its word: both move, the word a little less, which is what
+   being led looks like rather than being abandoned. */
+
+.tr-phrase-word,
+.tr-phrase-glyph {
+  transition: transform 520ms var(--ease-glide), color 520ms var(--ease-glide);
+}
+.tr-phrase:hover .tr-phrase-word,
+.tr-phrase:focus-visible .tr-phrase-word { transform: translateX(0.04em); }
+.tr-phrase:hover .tr-phrase-glyph,
+.tr-phrase:focus-visible .tr-phrase-glyph { transform: translate(0.1em, 0.05em); }
+
+/* the loud mark's glyph settles square rather than travelling */
+.tr-phrase-seal {
+  transform: rotate(-10deg) scale(0.94);
+  opacity: 0.6;
+  transition: transform 520ms var(--ease-glide), opacity 520ms var(--ease-glide),
+              color 520ms var(--ease-glide);
+}
+.tr-phrase:hover .tr-phrase-seal,
+.tr-phrase:focus-visible .tr-phrase-seal { transform: none; opacity: 1; }
+
+/* idle, at half the headline's amplitude — this line sits close to the work
+   and must not pull the eye off it */
+@keyframes tr-phrase-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(0.02em, -0.03em); }
+}
+@keyframes tr-phrase-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(1.5deg); }
+}
+.tr-phrase-idle-glyph { animation: tr-phrase-drift 6.5s ease-in-out infinite; }
+.tr-phrase-idle-seal { animation: tr-phrase-tilt 8s ease-in-out infinite; }
+.tr-phrase:hover [class*='tr-phrase-idle'] { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  [class*='tr-phrase-idle'] { animation: none; }
+  .tr-phrase-word, .tr-phrase-glyph, .tr-phrase-seal { transition: none; }
+  .tr-phrase-seal { transform: none; opacity: 1; }
 }

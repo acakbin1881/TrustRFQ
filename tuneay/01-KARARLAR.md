@@ -467,6 +467,14 @@ signature."* Landing'in işaretli-kelime aygıtı gövde ölçeğinde, iki işar
 yine **sıralı**: `one signature` yüksek sesli (iddia bu — tek cüzdan istemi
 mutabakatı bitiriyor), `every maker` sessiz (oraya nasıl varıldığı).
 
+⚠️ **Hareket mesafeleri de ölçekle birlikte küçülmeli.** İlk geçişte
+`MarkedPhrase` başlığın `.tr-mark-*` sınıflarını kullanıyordu; `0.26em`'lik
+kayma 4rem'de kendinden emin bir dürtüşken, gövde puntosunda glifin kendi
+genişliğinin üçte biri oluyor ve ikon ait olduğu kelimeden **kaçıyormuş** gibi
+okunuyordu. Artık kendi sınıfları var (`.tr-phrase-*`), mesafeler yaklaşık
+yarısı, ve **kelime de ikonla birlikte hareket ediyor** — sadece daha az.
+Yönlendirilmek buna benzer; terk edilmek ötekine.
+
 `MarkedPhrase` **ayrı bir bileşen**, landing'inkiyle paylaşılan değil. Sebep
 ölçek: landing'in sayıları 4rem'lik bir başlık için **gözle ölçülmüş** —
 em boyutlu glifler, optik taban çizgisi kayması, 68px tipografinin altında

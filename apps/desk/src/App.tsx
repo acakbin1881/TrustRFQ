@@ -261,8 +261,8 @@ function Desk() {
                   the signature is the claim (one wallet prompt settles it), the
                   fan-out is how it gets there. */}
               <MarkedPhrase
-                className="tr-panel-in mx-auto mb-9 max-w-2xl text-center font-grotesk
-                  text-[clamp(1.05rem,2vw,1.35rem)] leading-relaxed text-ash"
+                className="tr-panel-in mx-auto mb-14 max-w-3xl text-center font-grotesk
+                  text-[clamp(1.35rem,2.8vw,1.9rem)] leading-[1.35] tracking-[-0.015em] text-ash"
                 text="Ask every maker at once, settle in one signature."
                 marks={[
                   { word: 'every maker', icon: Radio, rank: 'quiet' },
