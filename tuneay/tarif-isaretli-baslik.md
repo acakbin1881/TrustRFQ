@@ -231,10 +231,18 @@ Hepsi bu projede bizzat yaşandı.
 
 1. **Tek elemanda `animation` + `transition`** → animasyon kazanır, hover hiç
    görünmez. Katmanları ayır (§3).
-2. **Satır maskesi descender'ları keser.** Başlık satır satır maskeden
-   çıkıyorsa (`overflow: hidden`), `y g p j` harfleri kesilir. Çözüm:
-   `padding-bottom: 0.16em` + eşit `margin-bottom: -0.16em` — pay açılır, düzen
-   bozulmaz. **Aksan çizgisi de bu payın içinde yaşar**, yoksa o da kesilir.
+2. **Satır maskesi kullanma.** (Bu tavsiye değişti — ilk sürümde maske
+   öneriliyordu, sonra sahada yanlış olduğu görüldü.) Başlığı `overflow:
+   hidden` bir kutuya kırpıp yukarı kaydırmak standart hamle ama metin
+   **baştan kesilmiş gibi** okunuyor. İki sebep, ikincisi asıl olan:
+   · `blur()` ile `overflow: hidden` kavga eder. Kırpma içindeki bulanık bir
+     kenar, yumuşak piksellerden geçen **sert bir kesiktir** — satırın altı
+     odak dışı değil, biçilmiş görünür.
+   · Descender payıyla birlikte, yolun yarısı satır kutusundan ancak kısmen
+     çıkmış hâlde geçer. O hâl, geçişin bir ânı olarak değil, tasarımın kendisi
+     olarak okunacak kadar uzun ekranda kalır.
+   **Maskesiz** aynı üç özellik (opacity + translateY + blur) aynı işi görür ve
+   kırpılacak bir kenar yoktur. Descender derdi de kendiliğinden kalkar.
 3. **İkona hover verme, kelimeye ver.** 0.4–0.7em bir isabet alanını kimse
    bilerek bulamaz.
 4. **İkonu px ile boyutlandırma, `em` kullan.** Başlık `clamp()` ile
@@ -245,7 +253,13 @@ Hepsi bu projede bizzat yaşandı.
    civarı bir kaydırma gerekir; değeri gözle ayarla, hesapla değil.
 6. **Hover'da pasif animasyonu iptal etme, duraklat.** İptal edersen sıfıra
    zıplar; duraklatırsan olduğu yerde kalır ve devir teslim pürüzsüz olur.
-7. **`prefers-reduced-motion` yalnızca "animasyon yok" demek değildir.**
+7. **Tipografi animasyonlarını webfont'a kapıla.** Font gelmeden başlarsa satır
+   yedek yüzle animasyonlanır, sonra asıl font inince yeniden dizilir — okurun
+   altında zıplar ve bu ikinci, daha çirkin bir animasyon gibi okunur.
+   `document.fonts.ready` beklenir, **ama bir tavanla**: yüklenmeyen bir font
+   bütün girişi götürmemeli. 900ms iyi bir tavan; yedek yüzle animasyon,
+   animasyonsuzluktan iyidir.
+8. **`prefers-reduced-motion` yalnızca "animasyon yok" demek değildir.**
    Gizli/eğik/soluk başlangıç durumlarını da **geri almalısın**, yoksa hareketi
    kapatan kullanıcı yarı görünmez bir ikonla kalır.
 

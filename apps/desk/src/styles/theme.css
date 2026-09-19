@@ -338,14 +338,34 @@ body:where(.tr-dark) {
    a headline that fails to animate must still be a headline.
    ========================================================================== */
 
+/* NO MASK. The first cut clipped each line to a box and slid it up out of
+   that box, which is the standard move — and it read as the text arriving
+   already cut in half. Two reasons, and the second one is the real one:
+   
+   · blur() and overflow:hidden fight. A blurred edge inside a clip is a HARD
+     cut through soft pixels, so the line's bottom looks sheared rather than
+     out of focus.
+   · at 4rem with a descender pad, half the travel is spent with the line only
+     partly out of its box. That state is on screen long enough to be read as
+     the design, not as a moment in a transition.
+   
+   Unmasked, the same three properties do the same job with nothing to cut
+   against: it rises, resolves, and at no point is it a fragment. */
 @keyframes tr-line-in {
-  from { transform: translateY(112%); filter: blur(12px); opacity: 0; }
+  from { transform: translateY(26px); filter: blur(10px); opacity: 0; }
   to   { transform: translateY(0); filter: blur(0); opacity: 1; }
 }
 
 :root.tr-motion .tr-line {
-  animation: tr-line-in 1150ms var(--ease-glide) var(--tr-lag, 0ms) both;
+  animation: tr-line-in 1250ms var(--ease-glide) var(--tr-lag, 0ms) both;
 }
+
+/* Text animations wait for the webfont. Started before it lands, the line
+   animates in its fallback face and then re-lays out under the reader when
+   Space Grotesk arrives — the jump reads as a second, uglier animation.
+   src/main.tsx adds .tr-fonts once fonts are ready, or after 900ms, whichever
+   comes first: a font that never loads must not cost us the whole entrance. */
+:root.tr-motion:not(.tr-fonts) .tr-line { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
   :root.tr-motion .tr-line { animation: none; }
@@ -605,13 +625,16 @@ body:where(.tr-dark) {
    them against, and a panel that waits for an observer on a page that never
    scrolls simply never appears. */
 @keyframes tr-panel-in {
-  from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
+  from { opacity: 0; transform: translateY(18px); filter: blur(9px); }
   to   { opacity: 1; transform: none; filter: blur(0); }
 }
 .tr-panel-in {
-  animation: tr-panel-in 820ms var(--ease-glide) both;
+  animation: tr-panel-in 980ms var(--ease-glide) both;
   animation-delay: var(--tr-lag, 0ms);
 }
+
+/* Same webfont gate as the headline — the desk's panels are mostly type. */
+:root:not(.tr-fonts) .tr-panel-in { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
   .tr-panel-in { animation: none; }

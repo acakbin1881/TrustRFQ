@@ -547,6 +547,27 @@ durağan bir gradyana düşer, ki düşülecek iyi bir yer.
 Sürekli dönüyor ama sessiz (%55 opaklık, 7 saniyelik tur); hover'da tam güce
 çıkıyor.
 
+### Açılışlar (dokuzuncu revizyon)
+
+**Landing başlığındaki maske kaldırıldı.** Her satırı kırpıp yukarı kaydırmak
+standart hamleydi ama metin **baştan kesilmiş gibi** okunuyordu:
+⚠️ `blur()` ile `overflow: hidden` kavga ediyor — kırpma içindeki bulanık bir
+kenar, yumuşak piksellerden geçen sert bir kesik. Üstelik descender payıyla
+birlikte yolun yarısı, satır kutusundan ancak kısmen çıkmış hâlde geçiyor ve o
+hâl "geçişin bir ânı" değil "tasarım" olarak okunacak kadar uzun kalıyor.
+Maskesiz aynı üç özellik aynı işi görüyor, kırpılacak kenar yok.
+
+**Tipografi animasyonları artık webfont'u bekliyor.** Font gelmeden başlarsa
+satır yedek yüzle animasyonlanıp Space Grotesk inince yeniden diziliyordu —
+okurun altındaki bu zıplama ikinci ve daha çirkin bir animasyon gibi okunuyor.
+`main.tsx` `document.fonts.ready`'yi bekleyip `<html>`'e `.tr-fonts` ekliyor.
+⚠️ **900ms tavan asıl yarısı:** yüklenmeyen bir font (engellenmiş, çevrimdışı,
+yavaş CDN) bütün girişi götürmemeli. Hangisi önce olursa.
+
+**Desk kademesi okuma sırasına göre:** çubuk → cümle → sol panel → sağ panel
+(0 / 150 / 300 / 420ms). İşin yapılış sırası da bu. Nav bilerek animasyonsuz:
+chrome anında orada olmalı, insan cüzdanını görmek ister.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

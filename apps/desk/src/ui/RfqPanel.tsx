@@ -363,7 +363,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
           replied. Side by side, the request stays on screen while the quotes
           arrive — and that is the thing you are comparing them against. */}
       <section className="tr-panel-in rounded-card border border-carbon-line bg-carbon-card/40
-        p-7 backdrop-blur-2xl">
+        p-7 backdrop-blur-2xl" style={{ '--tr-lag': '300ms' } as React.CSSProperties}>
         <h2 className="font-grotesk text-[15px] font-medium text-snow">Request a quote</h2>
         <p className="mt-1.5 font-grotesk text-[13px] text-slate">
           Firm, signed, and yours to accept or leave.
@@ -444,7 +444,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       </section>
 
       <section className="tr-panel-in rounded-card border border-carbon-line bg-carbon-card/40
-        p-7 backdrop-blur-2xl" style={{ '--tr-lag': '120ms' } as React.CSSProperties}>
+        p-7 backdrop-blur-2xl" style={{ '--tr-lag': '420ms' } as React.CSSProperties}>
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="font-grotesk text-[15px] font-medium text-snow">Quotes</h2>
           {visibleQuotes.length > 0 && !settled ? (

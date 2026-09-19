@@ -297,7 +297,7 @@ function Desk() {
                   the signature is the claim (one wallet prompt settles it), the
                   fan-out is how it gets there. */}
               <MarkedPhrase
-                style={{ '--tr-lag': '90ms' } as React.CSSProperties}
+                style={{ '--tr-lag': '150ms' } as React.CSSProperties}
                 className="tr-panel-in mx-auto mb-14 max-w-3xl text-center font-grotesk
                   text-[clamp(1.35rem,2.8vw,1.9rem)] leading-[1.35] tracking-[-0.015em] text-ash"
                 text="Ask every maker at once, settle in one signature."

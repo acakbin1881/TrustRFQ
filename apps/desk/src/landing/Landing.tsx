@@ -472,11 +472,9 @@ function HeadlineLine({ text, tone }: { text: string; tone: string }) {
  * machine typing it out, while a line is the unit the sentence is written in,
  * so the reader receives a whole clause at a time.
  *
- * The mask needs room for descenders — the y and g in "you agreed on." sit
- * below the baseline and a plain overflow:hidden slices them. The padding
- * opens that room and the negative margin takes it back out of the layout, so
- * the line spacing is exactly what it was before the mask existed. The marked
- * word's rule lives in that same padding, which is why it is not clipped.
+ * There is no mask: see tr-line-in in theme.css for why the clipped version
+ * read as text arriving pre-cut. Without one, the marked word's rule needs no
+ * padding to survive in either.
  *
  * This is deliberately NOT .tr-reveal: that one waits for an observer, and
  * this headline is above the fold on arrival. It animates on mount.
@@ -491,11 +489,9 @@ function HeroHeadline() {
     <h1 className="font-grotesk text-[clamp(2.5rem,6vw,4.25rem)] font-medium
       leading-[1.04] tracking-[-0.03em]">
       {lines.map((l, i) => (
-        <span key={l.text} className="block -mb-[0.16em] overflow-hidden pb-[0.16em]">
-          <span className="tr-line block"
-            style={{ '--tr-lag': `${i * 130}ms` } as React.CSSProperties}>
-            <HeadlineLine text={l.text} tone={l.tone} />
-          </span>
+        <span key={l.text} className="tr-line block"
+          style={{ '--tr-lag': `${i * 150}ms` } as React.CSSProperties}>
+          <HeadlineLine text={l.text} tone={l.tone} />
         </span>
       ))}
     </h1>
