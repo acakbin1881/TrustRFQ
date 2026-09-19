@@ -55,8 +55,12 @@ function Marked({ word, icon: Glyph, rank = 'quiet' }: PhraseMark) {
  * skipped — a flourish that silently goes missing beats one that renders in
  * the wrong place.
  */
-export function MarkedPhrase({ text, marks, className = '' }: {
-  text: string; marks: readonly PhraseMark[]; className?: string;
+export function MarkedPhrase({ text, marks, className = '', style }: {
+  text: string;
+  marks: readonly PhraseMark[];
+  className?: string;
+  /** passes through for stagger vars like --tr-lag */
+  style?: React.CSSProperties;
 }) {
   const parts: React.ReactNode[] = [];
   let rest = text;
@@ -71,5 +75,5 @@ export function MarkedPhrase({ text, marks, className = '' }: {
   }
   parts.push(<span key={key++}>{rest}</span>);
 
-  return <p className={className}>{parts}</p>;
+  return <p className={className} style={style}>{parts}</p>;
 }

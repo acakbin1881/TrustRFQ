@@ -190,6 +190,39 @@ function DeskNav({ address, balances, loading, onDisconnect }: {
   );
 }
 
+/**
+ * TrustBot: help, one field away.
+ *
+ * Shaped like a search field because that is the affordance people already
+ * know for "type a question here" — the mark on the left says whose answer it
+ * is, the same way Uniswap's magnifier says what its field does.
+ *
+ * It does not go anywhere yet, and it says so when pressed rather than doing
+ * nothing. A control that swallows a click teaches people the page is broken;
+ * one that answers "not yet" costs the same pixel and tells the truth. When
+ * the route exists this becomes a Link and the toast goes.
+ */
+function TrustBotBar() {
+  const toast = useToast();
+  return (
+    <button type="button"
+      onClick={() => toast('TrustBot is not live yet — it arrives with the next release.')}
+      className="group mx-auto flex w-full max-w-md items-center gap-3 rounded-pill border
+        border-carbon-line bg-carbon-card/50 py-2.5 pl-2.5 pr-4 backdrop-blur-xl
+        transition-colors duration-500 ease-glide hover:border-lime/25 hover:bg-carbon-hi/60">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-carbon-deep">
+        <BrandMark size={15} className="text-lime" />
+      </span>
+      <span className="flex-1 text-left font-grotesk text-[14px] text-slate transition-colors
+        duration-500 ease-glide group-hover:text-ash">
+        Something off? Ask TrustBot
+      </span>
+      <ArrowRight className="size-4 shrink-0 text-slate transition-all duration-500 ease-glide
+        group-hover:translate-x-0.5 group-hover:text-lime" strokeWidth={1.5} aria-hidden="true" />
+    </button>
+  );
+}
+
 /** The wallet gate, in the desk's own language. src/ui/Gate.tsx is left alone:
  *  RfqDemo ships it against the old stylesheet. */
 function DeskGate({ onConnect }: { onConnect: () => void }) {
@@ -256,11 +289,16 @@ function Desk() {
         <div className="w-full">
           {address ? (
             <>
+              <div className="tr-panel-in mb-7">
+                <TrustBotBar />
+              </div>
+
               {/* What the page does, in one line, above the work — the
                   landing's marked-word device at body scale. Two marks, ranked:
                   the signature is the claim (one wallet prompt settles it), the
                   fan-out is how it gets there. */}
               <MarkedPhrase
+                style={{ '--tr-lag': '90ms' } as React.CSSProperties}
                 className="tr-panel-in mx-auto mb-14 max-w-3xl text-center font-grotesk
                   text-[clamp(1.35rem,2.8vw,1.9rem)] leading-[1.35] tracking-[-0.015em] text-ash"
                 text="Ask every maker at once, settle in one signature."

@@ -502,6 +502,19 @@ koreografi, scroll'a bağlı sahneler — burada yok. Öyle bir sahne çıkarsa
 (örneğin teklif kartlarının sıralı girişi ve mutabakat sekansı birbirine
 bağlanırsa) o zaman gerekçesi oluşur.
 
+### TrustBot çubuğu (yer tutucu)
+
+Cümlenin üstünde, arama alanı biçiminde bir kontrol: solda marka mührü,
+*"Something off? Ask TrustBot"*, sağda ok. Arama alanı biçimi bilinçli —
+"buraya bir soru yaz" için insanların zaten bildiği biçim o; soldaki mühür de
+cevabın kimden geleceğini söylüyor, Uniswap'in büyüteci kendi alanının ne
+yaptığını söylediği gibi.
+
+⚠️ **Henüz bir yere gitmiyor ve basınca bunu söylüyor**, sessizce yutmuyor.
+Tıklamayı yutan bir kontrol insana sayfanın bozuk olduğunu öğretir; "henüz
+değil" diyen aynı pikseli harcar ve doğruyu söyler. Rota geldiğinde bu bir
+`Link` olacak ve toast gidecek.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".
