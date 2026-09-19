@@ -32,6 +32,16 @@ export const HERO = {
     lead: 'Move institutional',
     rest: ['size. Keep the price', 'you agreed on.'],
   } satisfies TwoToneHeading,
+
+  /** The word the headline marks with a coin and a rule.
+   *
+   *  "price" and not "size": size is what you bring to the desk, price is what
+   *  the desk promises not to move. Marking the promise is the whole point —
+   *  mark the wrong word and the flourish is decoration.
+   *
+   *  It must appear verbatim in one of the lines above; if it ever stops
+   *  matching, HeroHeadline renders the line plain rather than guessing. */
+  markedWord: 'price',
 } as const;
 
 /** The hero's signature element: one deal, as three signed tickets. */

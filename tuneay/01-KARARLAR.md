@@ -317,6 +317,26 @@ sayfa açılırken zaten ekranda. Mount'ta çalışıyor.
 düşen bir iz, sayfanın kıvrımın altında devam ettiğini gösterir — aynı bilgi,
 emir kipi olmadan. Bir bağlantı, yani tıklanınca da çalışıyor.
 
+**Başlıkta tek işaretli kelime: `price`.** Yanında bir madeni para, altında
+hover'da soldan sağa çizilen lime bir çizgi.
+
+Neden `price`, `size` değil: size masaya getirdiğin şey, price ise masanın
+kıpırdatmayacağına söz verdiği şey. İşaretlenmeye değer olan söz. Yanlış
+kelimeyi işaretlersen süs olur.
+
+- Kelime `content.ts`'te `markedWord` olarak duruyor ve satırda **string
+  eşleşmesiyle** bulunuyor — metin okunabilir bir cümle olarak kalsın diye.
+  Eşleşme bir gün tutmazsa satır düz render ediliyor; sessizce kaybolan bir
+  süs, yanlış yerde beliren bir süsten iyidir.
+- Hover hedefi **kelime**, madeni para değil: para `0.72em`, kimsenin bilerek
+  bulamayacağı bir isabet alanı. `tabIndex` + `focus-visible` ile klavyeden de
+  çalışıyor.
+- Para `em` ile ölçekleniyor, başlığın `clamp()`'iyle birlikte büyüyüp
+  küçülüyor. `align-[-0.1em]` optik taban çizgisi için: gerçek taban çizgisine
+  oturtulan bir daire metnin üstünde yüzüyormuş gibi duruyor.
+- Çizgi başlığın descender payının içinde yaşıyor — maske onu bu yüzden
+  kesmiyor.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

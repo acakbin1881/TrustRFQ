@@ -366,3 +366,40 @@ body:where(.tr-dark) {
 @media (prefers-reduced-motion: reduce) {
   .tr-trickle { animation: none; opacity: 0.6; }
 }
+
+/* ==========================================================================
+   The marked word
+   ==========================================================================
+   One word in the headline carries a coin and a rule. "price" — because size
+   is what you bring to the desk and price is what the desk promises not to
+   move, so the promise is the thing worth marking.
+
+   Both respond to hovering the WORD, not the coin: at this size the word is a
+   generous target and the coin is 0.72em, which is a hit area nobody finds on
+   purpose.
+   ========================================================================== */
+
+/* The rule draws itself left to right, then leaves the same way — a wipe, not
+   a fade, so it reads as being ruled under rather than lit up. */
+.tr-mark-rule {
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 620ms var(--ease-glide);
+}
+.tr-mark:hover .tr-mark-rule,
+.tr-mark:focus-visible .tr-mark-rule { transform: scaleX(1); }
+
+/* The coin turns on hover: XLM out, USDC in — the same gesture as the hero's
+   large disc, so the page has one idea of what a swap looks like rather than
+   two. Slower here: it is punctuation inside a sentence, not an event. */
+.tr-mark-coin {
+  transform-style: preserve-3d;
+  transition: transform 760ms var(--ease-glide);
+}
+.tr-mark:hover .tr-mark-coin,
+.tr-mark:focus-visible .tr-mark-coin { transform: rotateY(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-mark-rule { transform: scaleX(1); transition: none; }
+  .tr-mark-coin { transition: none; }
+}

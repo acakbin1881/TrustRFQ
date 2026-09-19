@@ -355,6 +355,64 @@ function TicketPreview() {
 }
 
 /**
+ * The coin that punctuates the marked word.
+ *
+ * Sized in em, so it scales with the headline's clamp() instead of being
+ * pinned to one viewport. `align-[-0.1em]` sits it on the optical baseline —
+ * a circle centred on the true baseline reads as floating above the text.
+ *
+ * It is the hero disc's gesture at sentence scale: XLM out, USDC in. Same
+ * idea, quieter, so the page has one notion of what a swap looks like.
+ */
+function MarkCoin() {
+  const face = `absolute inset-0 flex items-center justify-center rounded-full
+    bg-carbon-card tr-flip-face`;
+  return (
+    <span className="relative ml-[0.2em] inline-block align-[-0.1em]"
+      style={{ width: '0.72em', height: '0.72em', perspective: '400px' }} aria-hidden="true">
+      <span className="tr-mark-coin relative block size-full">
+        <span className={`${face} border border-carbon-line`}>
+          <TokenXLM size={64} variant="mono" className="size-[58%] text-snow" />
+        </span>
+        <span className={`${face} tr-flip-face--back border border-lime/40`}>
+          <TokenUSDC size={64} variant="mono" className="size-[58%] text-lime" />
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/**
+ * A headline line, with the marked word split out of it.
+ *
+ * The word is found by string match rather than stored pre-split, so the copy
+ * in content.ts stays a readable sentence. If the match ever fails — the copy
+ * changed, the marked word did not — the line renders plain. A flourish that
+ * silently goes missing is better than one that renders in the wrong place.
+ */
+function HeadlineLine({ text, tone }: { text: string; tone: string }) {
+  const word = HERO.markedWord;
+  const at = text.indexOf(word);
+  if (at === -1) return <span className={tone}>{text}</span>;
+
+  return (
+    <span className={tone}>
+      {text.slice(0, at)}
+      <span tabIndex={0} className="tr-mark relative inline-block cursor-default
+        rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-lime/40">
+        <span className="text-snow">{word}</span>
+        <MarkCoin />
+        {/* the rule sits under the word alone, not under the coin: it marks
+            the promise, and the coin is only its punctuation */}
+        <span className="tr-mark-rule absolute -bottom-[0.06em] left-0 block h-[0.055em]
+          rounded-pill bg-lime" style={{ width: `calc(100% - 0.92em)` }} aria-hidden="true" />
+      </span>
+      {text.slice(at + word.length)}
+    </span>
+  );
+}
+
+/**
  * The hero headline, rising line by line out of its own masks.
  *
  * Line-level rather than word-level: at this size a word stagger reads as a
@@ -364,7 +422,8 @@ function TicketPreview() {
  * The mask needs room for descenders — the y and g in "you agreed on." sit
  * below the baseline and a plain overflow:hidden slices them. The padding
  * opens that room and the negative margin takes it back out of the layout, so
- * the line spacing is exactly what it was before the mask existed.
+ * the line spacing is exactly what it was before the mask existed. The marked
+ * word's rule lives in that same padding, which is why it is not clipped.
  *
  * This is deliberately NOT .tr-reveal: that one waits for an observer, and
  * this headline is above the fold on arrival. It animates on mount.
@@ -380,9 +439,9 @@ function HeroHeadline() {
       leading-[1.04] tracking-[-0.03em]">
       {lines.map((l, i) => (
         <span key={l.text} className="block -mb-[0.16em] overflow-hidden pb-[0.16em]">
-          <span className={`tr-line block ${l.tone}`}
+          <span className="tr-line block"
             style={{ '--tr-lag': `${i * 130}ms` } as React.CSSProperties}>
-            {l.text}
+            <HeadlineLine text={l.text} tone={l.tone} />
           </span>
         </span>
       ))}
