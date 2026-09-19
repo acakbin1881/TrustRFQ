@@ -370,6 +370,38 @@ nabız atmıyor. Hover'da duruyor, niyetli hareket kareyi devralıyor.
 **Hiçbiri parlamıyor.** İmlecin altında açan bir ışık bildirim gibi okunur;
 bunlar cevap.
 
+### Kaydırma işareti: ok değil, el
+
+Ok işaret eder; **el çeker**. Sayfa, kıvrımın üstünden yukarı sürüklediğin bir
+şey, dolayısıyla işaret gerçekten yapacağın hareketi gösteriyor: macOS'un
+kendi açık-el/kapalı-el çifti. Haritayı sürüklemiş olan herkes öğrenmeden
+okuyor. Pasifte aşağı süzülüyor (çekiştiriyor), hover'da avuç kapanıyor ve
+bütün öğe birkaç piksel aşağı oturuyor — tuttun.
+
+### Merdiven kartı bir ölçeğe dönüştü
+
+Üç renkli şeritten okunabilir bir grafiğe:
+
+- **Tick'ler** track'in kendi arka planında (`tr-track`), her **üçte bir** —
+  çeyrekte olunca dört eksen etiketi (0/20/40/60) çizgilerin *yanına*
+  düşüyordu; hata gibi görünecek kadar yakın, okunacak kadar değil.
+- **Bar'ın ucunda başlık**: göz değerin *bittiği* yere iniyor, bildirilen sayı
+  o. Arkasındaki şerit bağlam.
+- **Eksen aşağıda ve satırların grid'inde**, başlıkta çıplak bir aralık olarak
+  değil.
+- Her iki sayı sütunu **sabit genişlikte**: sayarak dolan bir rakam kendi
+  sütununu boyutlandırırsa sayarken düzeni sürüklüyor.
+
+⚠️ **İki hizalama tuzağı** (ikisi de yaşandı):
+1. Eksenin hayalet sütunu gerçek sütunun **yapısını** taklit etmeli, tahmini
+   genişliğini değil. Sabit bir `rem` 9px şaşırdı.
+2. Satırlar hover bandı için `-mx-3 px-3` ile taşıyor; bu, `1fr` track'in
+   ölçüldüğü kutuyu genişletiyor. Eksende aynı taşma yoksa track 24px dar
+   kalıyor ve her etiket adını verdiği tick'in soluna düşüyor.
+
+`lg` kırılımında bölüm oranı da değişti (`0.9/1.1` → `0.82/1.18`, gap 20→14):
+1024px'de sayı sütunları track'i 82px'e eziyordu.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

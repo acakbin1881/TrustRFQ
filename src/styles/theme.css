@@ -520,3 +520,45 @@ body:where(.tr-dark) {
   .tr-breathe { animation: none; }
   .tr-edge { transition: none; }
 }
+
+/* --- the scroll cue: a hand that pulls ------------------------------------
+   An arrow points; a hand pulls. The page is something you drag up past the
+   fold, so the cue is the gesture you would actually make — macOS's own
+   open-hand/closed-hand pair, which anyone who has dragged a map already
+   knows. Idle it drifts down as if tugging; hover closes the grip.
+
+   Two layers again: the idle loop and the hover transform both want
+   `transform`, and on one element the animation wins outright. */
+@keyframes tr-pull {
+  0%, 100% { transform: translateY(0); }
+  45%      { transform: translateY(5px); }
+}
+.tr-pull { animation: tr-pull 2.8s ease-in-out infinite; }
+.group:hover .tr-pull { animation-play-state: paused; }
+
+.tr-grip { transition: transform 520ms var(--ease-glide); }
+.group:hover .tr-grip { transform: translateY(4px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-pull { animation: none; }
+  .tr-grip { transition: none; }
+}
+
+/* --- the ladder's track ----------------------------------------------------
+   Faint ticks turn the bars from three coloured strips into a scale you can
+   read a value off. They live in the track's own background, so they cannot
+   drift out of alignment with it.
+
+   EVERY THIRD, not every quarter: the axis prints four labels (0/20/40/60)
+   and justify-between drops them at 0, 33.3, 66.7 and 100%. Quarter ticks put
+   lines at 25/50/75 instead, and every label sat beside a line rather than on
+   one — close enough to look like a bug and not close enough to read. */
+.tr-track {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(33.333% - 1px),
+    var(--color-carbon-line) calc(33.333% - 1px),
+    var(--color-carbon-line) 33.333%
+  );
+}

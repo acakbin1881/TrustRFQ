@@ -23,7 +23,7 @@ import { Link } from 'react-router';
 import {
   Anchor, ArrowDown, ArrowRight, ArrowLeftRight, BadgeCheck, CheckCheck, Cpu,
   ExternalLink, EyeOff, Fingerprint, FlaskConical, Minus, MousePointer2, PenLine,
-  Plus, ShieldCheck, TrendingDown, Wallet, Zap,
+  Grab, Hand, Plus, ShieldCheck, TrendingDown, Wallet, Zap,
   type LucideIcon,
 } from 'lucide-react';
 // The real marks — Stellar's and Circle's own SVGs (@web3icons/react, MIT).
@@ -502,19 +502,33 @@ function HeroHeadline() {
   );
 }
 
-/** A trace running down a hairline. An arrow would tell you to scroll; a thing
- *  falling past the fold shows the page continuing, which is the same
- *  instruction without the imperative. It is a link, so it also works. */
+/**
+ * The scroll cue: a hand, not an arrow.
+ *
+ * An arrow points; a hand pulls — and the page is something you drag up past
+ * the fold, so the cue shows the gesture you would actually make. It uses
+ * macOS's own open-hand/closed-hand pair, which anyone who has dragged a map
+ * already reads without being taught.
+ *
+ * Idle, it drifts down as if tugging. Hover closes the grip and the whole
+ * thing settles a few pixels lower: you took hold of it.
+ */
 function ScrollCue() {
   return (
     <a href="#why" aria-label="Skip to why OTC"
-      className="group mx-auto mt-16 flex w-10 flex-col items-center gap-3">
-      <span className="relative block h-12 w-px overflow-hidden bg-carbon-line">
-        <span className="tr-trickle absolute inset-x-0 top-0 block h-4 bg-lime" aria-hidden="true" />
+      className="group mx-auto mt-16 flex w-20 flex-col items-center gap-3">
+      <span className="tr-pull block">
+        <span className="tr-grip relative block size-5 text-slate transition-colors
+          duration-500 ease-glide group-hover:text-lime">
+          <Hand className="absolute inset-0 size-5 opacity-100 transition-opacity
+            duration-400 ease-glide group-hover:opacity-0" strokeWidth={1.4} aria-hidden="true" />
+          <Grab className="absolute inset-0 size-5 opacity-0 transition-opacity
+            duration-400 ease-glide group-hover:opacity-100" strokeWidth={1.4} aria-hidden="true" />
+        </span>
       </span>
       <span className="font-grotesk text-[11px] uppercase tracking-[0.18em] text-slate
         transition-colors duration-500 ease-glide group-hover:text-ash">
-        Scroll
+        Pull
       </span>
     </a>
   );
@@ -548,15 +562,27 @@ function LadderRow({ rung, index }: { rung: Rung; index: number }) {
       rounded-well border-t border-carbon-line px-3 py-5 transition-colors duration-500
       ease-glide first:border-t-0 hover:bg-carbon-deep/40" style={delay(index * 90)}>
       <span className="w-16 font-grotesk text-[15px] font-medium text-snow">{rung.size}</span>
-      <span className="relative h-1.5 overflow-hidden rounded-pill bg-carbon-deep">
-        <span className="absolute inset-y-0 left-0 rounded-pill bg-lime/70 group-hover:bg-lime"
-          style={{ width: rung.width, transition: 'width 1400ms var(--ease-glide), background-color 500ms var(--ease-glide)' }} />
+      <span className="tr-track relative h-2 rounded-pill bg-carbon-deep/80">
+        <span className="absolute inset-y-0 left-0 rounded-pill bg-lime/60 transition-colors
+          duration-500 ease-glide group-hover:bg-lime/80"
+          style={{ width: rung.width, transition: 'width 1400ms var(--ease-glide), background-color 500ms var(--ease-glide)' }}>
+          {/* a head on the bar: the eye lands on where the value ENDS, which
+              is the number being reported — the strip behind it is context */}
+          <span className="absolute right-0 top-1/2 block size-2.5 -translate-y-1/2
+            translate-x-1/2 rounded-full bg-lime ring-4 ring-carbon-card/70 transition-transform
+            duration-500 ease-glide group-hover:scale-125" />
+        </span>
       </span>
       <span className="flex items-baseline justify-end gap-3 text-right">
+        {/* both widths are fixed. A counting number that sizes its own column
+            drags the layout while it counts, and the axis ghost below can only
+            line up against a column whose width is knowable. */}
         <span ref={pct.ref as React.Ref<HTMLSpanElement>}
-          className="font-grotesk text-[15px] tabular-nums text-ash">~{Math.round(pct.value)}%</span>
+          className="w-12 text-right font-grotesk text-[15px] tabular-nums text-ash">
+          ~{Math.round(pct.value)}%
+        </span>
         <span ref={loss.ref as React.Ref<HTMLSpanElement>}
-          className="w-28 font-grotesk text-[15px] font-medium tabular-nums text-lime">
+          className="w-28 text-right font-grotesk text-[15px] font-medium tabular-nums text-lime">
           ~${Math.round(loss.value)}{rung.lossUnit} lost
         </span>
       </span>
@@ -568,7 +594,7 @@ function Problem() {
   const h = HEADINGS.problem;
   return (
     <Section id="why">
-      <div className="grid gap-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-20">
+      <div className="grid gap-14 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:gap-14">
         <div>
           <div className="tr-reveal"><Eyebrow>{h.eyebrow}</Eyebrow></div>
           <h2 className={`tr-reveal mt-6 text-snow ${headingClass}`} style={delay(60)}>{h.title}</h2>
@@ -582,15 +608,40 @@ function Problem() {
           </p>
         </div>
 
-        <figure className="tr-reveal rounded-card border border-carbon-line bg-carbon-card/50 p-7"
-          style={delay(100)}>
-          <figcaption className="mb-2 flex items-baseline justify-between">
+        <figure className="tr-reveal rounded-card border border-carbon-line bg-carbon-card/50 p-7
+          shadow-[inset_0_1px_0_0_var(--color-carbon-line)]" style={delay(100)}>
+          <figcaption className="mb-5 flex items-baseline justify-between gap-4">
             <span className="font-grotesk text-[15px] font-medium text-snow">{LADDER.title}</span>
-            <span className="font-grotesk text-[12px] uppercase tracking-wider text-slate">
-              {LADDER.axis.from} — {LADDER.axis.to}
+            <span className="flex items-center gap-2 font-grotesk text-[11px] uppercase
+              tracking-[0.14em] text-slate">
+              <span className="size-1.5 rounded-full bg-lime/60" aria-hidden="true" />
+              Slippage
             </span>
           </figcaption>
+
           {LADDER.rungs.map((r, i) => <LadderRow key={r.size} rung={r} index={i} />)}
+
+          {/* The axis sits UNDER the bars and on their own grid, so each label
+              lines up with the tick it names. Printed as a bare range in the
+              caption it was a number nobody could use; here it turns the
+              strips into a scale you can read a value off. */}
+          {/* -mx-3 px-3 exactly as the rows have it: the rows bleed 12px each
+              side for their hover band, which widens the box their 1fr track
+              is measured in. Without the same bleed here the axis track is
+              24px narrower and every label sits left of the tick it names. */}
+          <div className="-mx-3 mt-3 grid grid-cols-[auto_1fr_auto] items-center gap-5 px-3">
+            <span className="w-16" aria-hidden="true" />
+            <span className="flex justify-between font-grotesk text-[11px] tabular-nums text-slate/70">
+              {['0%', '20%', '40%', '60%'].map((t) => <span key={t}>{t}</span>)}
+            </span>
+            {/* mirrors the real row's third column by STRUCTURE, not by a
+                guessed width — a hardcoded rem was 9px out and would drift
+                again the moment a figure changed */}
+            <span className="flex justify-end gap-3" aria-hidden="true">
+              <span className="w-12" />
+              <span className="w-28" />
+            </span>
+          </div>
         </figure>
       </div>
     </Section>
