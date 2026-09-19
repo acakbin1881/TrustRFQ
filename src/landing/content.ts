@@ -33,15 +33,27 @@ export const HERO = {
     rest: ['size. Keep the price', 'you agreed on.'],
   } satisfies TwoToneHeading,
 
-  /** The word the headline marks with a coin and a rule.
+  /**
+   * The words the headline marks, one per line, each with its own gesture.
    *
-   *  "price" and not "size": size is what you bring to the desk, price is what
-   *  the desk promises not to move. Marking the promise is the whole point —
-   *  mark the wrong word and the flourish is decoration.
+   * RANKED, not equal. `price` is the promise this desk exists to make, so it
+   * carries the loud mark: a lime rule and a turning coin. The other two are
+   * quieter by design — an emphasis repeated at the same weight is an emphasis
+   * spent, and three equal flourishes in one sentence read as a toolbar.
    *
-   *  It must appear verbatim in one of the lines above; if it ever stops
-   *  matching, HeroHeadline renders the line plain rather than guessing. */
-  markedWord: 'price',
+   *   Move    verb    a pointer, and the word drags a little under it
+   *   price   promise a coin, and a rule drawn under the word     ← loudest
+   *   agreed  seal    a check, settling into place
+   *
+   * Each word must appear verbatim in its line. If a match ever fails — the
+   * copy changed, the mark did not — that line renders plain. A flourish that
+   * silently goes missing beats one that renders in the wrong place.
+   */
+  marks: [
+    { word: 'Move', kind: 'cursor' },
+    { word: 'price', kind: 'coin' },
+    { word: 'agreed', kind: 'seal' },
+  ],
 } as const;
 
 /** The hero's signature element: one deal, as three signed tickets. */

@@ -21,9 +21,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
-  Anchor, ArrowDown, ArrowRight, ArrowLeftRight, CheckCheck, Cpu, ExternalLink,
-  EyeOff, Fingerprint, FlaskConical, Minus, PenLine, Plus, ShieldCheck,
-  TrendingDown, Wallet, Zap,
+  Anchor, ArrowDown, ArrowRight, ArrowLeftRight, BadgeCheck, CheckCheck, Cpu,
+  ExternalLink, EyeOff, Fingerprint, FlaskConical, Minus, MousePointer2, PenLine,
+  Plus, ShieldCheck, TrendingDown, Wallet, Zap,
   type LucideIcon,
 } from 'lucide-react';
 // The real marks — Stellar's and Circle's own SVGs (@web3icons/react, MIT).
@@ -355,7 +355,7 @@ function TicketPreview() {
 }
 
 /**
- * The coin that punctuates the marked word.
+ * The coin that punctuates `price`.
  *
  * Sized in em, so it scales with the headline's clamp() instead of being
  * pinned to one viewport. `align-[-0.1em]` sits it on the optical baseline —
@@ -383,31 +383,77 @@ function MarkCoin() {
 }
 
 /**
- * A headline line, with the marked word split out of it.
+ * A marked word and its gesture.
+ *
+ * Three ranks, and the ranking is the point (see HERO.marks):
+ *
+ *   coin    `price`  — lime rule + turning coin. The promise, so the loudest.
+ *   cursor  `Move`   — a pointer that leads and a word that follows it a
+ *                      shorter distance. Being dragged, which is the verb.
+ *   seal    `agreed` — a check that settles from tilted and dim to square and
+ *                      lit, the way a stamp lands.
+ *
+ * The hover target is always the WORD. The glyphs are well under 1em, which is
+ * a hit area nobody finds on purpose; tabIndex and focus-visible give the same
+ * gestures to the keyboard.
+ */
+function MarkedWord({ word, kind }: { word: string; kind: 'coin' | 'cursor' | 'seal' }) {
+  const shell = `tr-mark relative inline-block cursor-default rounded-sm outline-none
+    focus-visible:ring-2 focus-visible:ring-lime/40`;
+
+  if (kind === 'coin') {
+    return (
+      <span tabIndex={0} className={shell}>
+        <span className="text-snow">{word}</span>
+        <MarkCoin />
+        {/* the rule marks the promise; the coin is only its punctuation, so
+            the rule stops at the word and does not run under the coin */}
+        <span className="tr-mark-rule absolute -bottom-[0.06em] left-0 block h-[0.055em]
+          rounded-pill bg-lime" style={{ width: 'calc(100% - 0.92em)' }} aria-hidden="true" />
+      </span>
+    );
+  }
+
+  if (kind === 'cursor') {
+    return (
+      <span tabIndex={0} className={`${shell} group/mark`}>
+        <span className="tr-drag inline-block text-snow">{word}</span>
+        <MousePointer2
+          className="tr-mark-cursor ml-[0.12em] inline-block size-[0.42em] align-[0.34em]
+            fill-current text-slate group-hover/mark:text-lime"
+          strokeWidth={1.5} aria-hidden="true" />
+      </span>
+    );
+  }
+
+  return (
+    <span tabIndex={0} className={`${shell} group/mark`}>
+      {word}
+      <BadgeCheck
+        className="tr-mark-seal ml-[0.16em] inline-block size-[0.52em] align-[0.02em]
+          text-slate group-hover/mark:text-lime"
+        strokeWidth={1.5} aria-hidden="true" />
+    </span>
+  );
+}
+
+/**
+ * A headline line, with its marked word split out of it.
  *
  * The word is found by string match rather than stored pre-split, so the copy
- * in content.ts stays a readable sentence. If the match ever fails — the copy
- * changed, the marked word did not — the line renders plain. A flourish that
- * silently goes missing is better than one that renders in the wrong place.
+ * in content.ts stays a readable sentence. One mark per line is all the design
+ * asks for, so the first match wins and the rest of the line is left alone.
  */
 function HeadlineLine({ text, tone }: { text: string; tone: string }) {
-  const word = HERO.markedWord;
-  const at = text.indexOf(word);
-  if (at === -1) return <span className={tone}>{text}</span>;
+  const mark = HERO.marks.find((m) => text.includes(m.word));
+  if (!mark) return <span className={tone}>{text}</span>;
 
+  const at = text.indexOf(mark.word);
   return (
     <span className={tone}>
       {text.slice(0, at)}
-      <span tabIndex={0} className="tr-mark relative inline-block cursor-default
-        rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-lime/40">
-        <span className="text-snow">{word}</span>
-        <MarkCoin />
-        {/* the rule sits under the word alone, not under the coin: it marks
-            the promise, and the coin is only its punctuation */}
-        <span className="tr-mark-rule absolute -bottom-[0.06em] left-0 block h-[0.055em]
-          rounded-pill bg-lime" style={{ width: `calc(100% - 0.92em)` }} aria-hidden="true" />
-      </span>
-      {text.slice(at + word.length)}
+      <MarkedWord word={mark.word} kind={mark.kind} />
+      {text.slice(at + mark.word.length)}
     </span>
   );
 }

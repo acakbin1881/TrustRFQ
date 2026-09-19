@@ -317,12 +317,22 @@ sayfa açılırken zaten ekranda. Mount'ta çalışıyor.
 düşen bir iz, sayfanın kıvrımın altında devam ettiğini gösterir — aynı bilgi,
 emir kipi olmadan. Bir bağlantı, yani tıklanınca da çalışıyor.
 
-**Başlıkta tek işaretli kelime: `price`.** Yanında bir madeni para, altında
-hover'da soldan sağa çizilen lime bir çizgi.
+**Başlıkta üç işaretli kelime, ama eşit değil — sıralı.**
 
-Neden `price`, `size` değil: size masaya getirdiğin şey, price ise masanın
-kıpırdatmayacağına söz verdiği şey. İşaretlenmeye değer olan söz. Yanlış
-kelimeyi işaretlersen süs olur.
+| Kelime | Ne | Hareket | Rütbe |
+|--------|-----|---------|-------|
+| `Move` | fiil | imleç öne kayar, kelime onu daha kısa mesafede takip eder | 2 |
+| `price` | söz | dönen para + altına çizilen lime çizgi | **1 (en yüksek sesli)** |
+| `agreed` | mühür | eğik ve soluktan düz ve parlağa oturur | 3 |
+
+Sıralama işin kendisi. Aynı ağırlıkta tekrarlanan vurgu harcanmış vurgudur;
+tek cümlede üç eşit süs bir araç çubuğu gibi okunur. `price` en yüksek sesli
+olan çünkü bu masanın var olma sebebi olan söz: size masaya getirdiğin şey,
+price ise masanın kıpırdatmayacağına söz verdiği şey.
+
+`Move` için imleç metaforu birebir fiili canlandırıyor: imleç öncülük ediyor,
+kelime peşinden sürükleniyor. `agreed` için mühür dönmüyor, **oturuyor** —
+damganın inişi gibi.
 
 - Kelime `content.ts`'te `markedWord` olarak duruyor ve satırda **string
   eşleşmesiyle** bulunuyor — metin okunabilir bir cümle olarak kalsın diye.

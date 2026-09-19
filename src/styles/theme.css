@@ -403,3 +403,36 @@ body:where(.tr-dark) {
   .tr-mark-rule { transform: scaleX(1); transition: none; }
   .tr-mark-coin { transition: none; }
 }
+
+/* --- the quieter two marks ------------------------------------------------
+   `Move` and `agreed` are ranked below `price`, so their gestures are smaller
+   and their accents arrive only on hover. Same curve throughout, so the three
+   read as one family rather than three ideas. */
+
+/* Move: the pointer leads, the word follows a shorter distance behind it —
+   which is what being dragged looks like. Both return together. */
+.tr-drag,
+.tr-mark-cursor { transition: transform 620ms var(--ease-glide), color 620ms var(--ease-glide); }
+.tr-mark:hover .tr-drag,
+.tr-mark:focus-visible .tr-drag { transform: translateX(0.1em); }
+.tr-mark:hover .tr-mark-cursor,
+.tr-mark:focus-visible .tr-mark-cursor { transform: translate(0.26em, 0.12em); }
+
+/* agreed: the seal settles rather than spins — a quarter turn back to true,
+   the way a stamp lands. */
+.tr-mark-seal {
+  transform: rotate(-12deg) scale(0.92);
+  opacity: 0.55;
+  transition: transform 620ms var(--ease-glide), opacity 620ms var(--ease-glide),
+              color 620ms var(--ease-glide);
+}
+.tr-mark:hover .tr-mark-seal,
+.tr-mark:focus-visible .tr-mark-seal {
+  transform: rotate(0deg) scale(1);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-drag, .tr-mark-cursor, .tr-mark-seal { transition: none; }
+  .tr-mark-seal { transform: none; opacity: 1; }
+}
