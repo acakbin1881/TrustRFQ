@@ -16,8 +16,8 @@
 //   the useSettlement invariant grep in CLAUDE.md (Gotchas) → exactly 3 lines
 //   (the definition, ThreadView's import, ThreadView's one call).
 
-import { useCallback, useEffect, type ReactNode } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from 'react-router';
+import { lazy, Suspense, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import { isExpired, trunc } from './core/tokens';
 import type { BalanceMap } from './core/balances';
 import type { Order } from './core/types';
@@ -25,6 +25,12 @@ import { useBalances } from './data/useBalances';
 import { useBroadcasts } from './data/useBroadcasts';
 import { useOrders } from './data/useOrders';
 import { DEFAULT_SECTION, SECTIONS, deskPath, sectionBySlug, type SectionId } from './routes/sections';
+// Lazy on purpose, and it is not about the landing's size. The landing and the
+// desk are two separate design systems, and hero.css re-declares the document's
+// base (body, a, svg, scrollbars). Splitting it means someone who opens /desk
+// never downloads those rules at all — the scoping in hero.css handles the case
+// where a visitor walks from the landing INTO the desk in one session.
+const Landing = lazy(() => import('./landing/Landing'));
 import { useWallet, WalletProvider } from './wallet/WalletContext';
 import { BalanceStrip } from './ui/BalanceStrip';
 import { BroadcastList } from './ui/BroadcastList';
@@ -51,7 +57,8 @@ function Topbar({ address, balances, loading, onDisconnect, nav }: {
 }) {
   return (
     <header className="topbar">
-      <a className="brand" href="/hero.html">
+      {/* the landing is a route now, so this stays inside the app */}
+      <Link className="brand" to="/">
         <svg width="24" height="24" viewBox="0 0 64 64" fill="none" aria-hidden="true">
           <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
           <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
@@ -59,7 +66,7 @@ function Topbar({ address, balances, loading, onDisconnect, nav }: {
           <circle cx="49" cy="32" r="8" stroke="currentColor" strokeWidth="4" />
         </svg>
         TrustRFQ
-      </a>
+      </Link>
       <span className="net-pill">Testnet</span>
       {/* balances sit with the network label, not with the wallet: both say
           WHERE you are trading, and they line up on the bar's left run */}
@@ -220,21 +227,40 @@ function Desk() {
   );
 }
 
-// TEMPORARY — tuneay/02-PLAN.md step 3 retires this. The landing is still the
-// hand-written public/hero.html, which lives outside the bundle, so "/" hands
-// the browser over to it instead of rendering a route of its own.
-function LandingBridge() {
-  useEffect(() => { window.location.replace('/hero.html'); }, []);
+/**
+ * Scroll to the top when the PAGE changes, not when the section does.
+ *
+ * The browser only restores scroll on a real document load, so without this a
+ * reader who followed "Open the desk" from the landing's footer arrives at the
+ * desk already scrolled past it. Keyed on the first path segment so that
+ * switching desk sections — still /desk/* — leaves the scroll alone, which is
+ * what you want when you are comparing two lists.
+ */
+function ScrollToTopOnPageChange() {
+  const { pathname } = useLocation();
+  const page = pathname.split('/')[1] ?? '';
+  const previous = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (previous.current !== null && previous.current !== page) {
+      window.scrollTo(0, 0);
+    }
+    previous.current = page;
+  }, [page]);
+
   return null;
 }
 
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTopOnPageChange />
       <ToastProvider>
         <WalletProvider>
           <Routes>
-            <Route path="/" element={<LandingBridge />} />
+            {/* No visible fallback: the chunk is small and local, and a
+                spinner that flashes for 30ms reads as a glitch. */}
+            <Route path="/" element={<Suspense fallback={null}><Landing /></Suspense>} />
             {/* ONE route with the section as a param, not four sibling routes.
                 Sibling routes would UNMOUNT the desk on every section switch,
                 and the desk's whole layout rests on staying mounted: a

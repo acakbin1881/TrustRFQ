@@ -4,10 +4,10 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "redirects": [
-    { "source": "/intent", "destination": "/otc", "permanent": false }
+    { "source": "/intent", "destination": "/otc", "permanent": false },
+    { "source": "/hero", "destination": "/", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/", "destination": "/hero" },
     { "source": "/desk/:path*", "destination": "/index.html" }
   ],
   "headers": [

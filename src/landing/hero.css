@@ -124,10 +124,20 @@
 }
 
 /* ------------------------------------------------------------------ 2. BASE
-   Re-provided here because hero.html no longer loads styles.css. Dropping any
+   Re-provided here because the landing does not load styles.css. Dropping any
    of these is a silent regression (box-sizing especially — without it every
    padded panel gains its padding to its width and the layout looks *almost*
-   right, which is worse than broken). */
+   right, which is worse than broken).
+
+   SCOPED to :where(.lp-body) since the landing became a route rather than its
+   own document: it now shares a page with the desk, whose styles.css claims the
+   same `body`, `a`, `svg` and scrollbar. :where() contributes NO specificity,
+   so the cascade WITHIN this file is untouched — the scoping is invisible here
+   and decisive next door. src/landing/motion.ts puts .lp-body on <body> while
+   the landing is mounted and takes it off on unmount.
+
+   box-sizing and html{scroll-behavior} are left global on purpose: styles.css
+   sets both to the same values, so there is nothing to fight over. */
 *, *::before, *::after { box-sizing: border-box; }
 
 /* No scroll-snap. The hero→problem handoff is driven by hero.js (see filmIntro),
@@ -136,7 +146,7 @@
    while the script is mid-flight — so there is exactly one mechanism, not two. */
 html { scroll-behavior: smooth; }
 
-body {
+body:where(.lp-body) {
   margin: 0;
   min-height: 100vh;
   background: var(--lp-canvas);
@@ -149,19 +159,19 @@ body {
   overflow-x: hidden;
 }
 
-a { color: inherit; text-decoration: none; }
+:where(.lp-body) a { color: inherit; text-decoration: none; }
 
-::selection { background: rgba(31, 43, 238, 0.16); color: var(--lp-ink-1); }
+:where(.lp-body) ::selection { background: rgba(31, 43, 238, 0.16); color: var(--lp-ink-1); }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--lp-canvas-deep); }
-::-webkit-scrollbar-thumb {
+:where(.lp-body, .lp-body *)::-webkit-scrollbar { width: 10px; height: 10px; }
+:where(.lp-body, .lp-body *)::-webkit-scrollbar-track { background: var(--lp-canvas-deep); }
+:where(.lp-body, .lp-body *)::-webkit-scrollbar-thumb {
   background: rgba(13, 17, 64, 0.22);
   border-radius: 999px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(13, 17, 64, 0.38); }
+:where(.lp-body, .lp-body *)::-webkit-scrollbar-thumb:hover { background: rgba(13, 17, 64, 0.38); }
 
-:focus-visible {
+:where(.lp-body) :focus-visible {
   outline: none;
   box-shadow: var(--lp-ring);
   border-radius: var(--lp-r-pill);
@@ -243,7 +253,7 @@ a { color: inherit; text-decoration: none; }
   100% { filter: hue-rotate(360deg) saturate(1.7); }
 }
 
-img, svg { display: block; max-width: 100%; }
+:where(.lp-body) img, :where(.lp-body) svg { display: block; max-width: 100%; }
 
 /* ------------------------------------------------------------- 3. THE GLASS
    Opaque first, upgraded to frosted only where the browser supports it. Never
