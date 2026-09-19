@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TrustRFQ — RFQ Demo</title>
+  <meta name="description" content="The TrustRFQ RFQ demo: discover a registered maker on-chain, request a firm quote from its own quote server, and settle it atomically on Stellar Testnet with one wallet signature.">
+  <meta name="theme-color" content="#E2E5F3">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- ORDER IS LOAD-BEARING, exactly as in otc.html: intent.css must come
+       SECOND. It also carries EVERY [data-panel="rfq"] rule — the RFQ panel's
+       whole layout is scoped under that attribute, so dropping this sheet (or
+       the wrapper's data-panel) silently unstyles the demo. -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/intent.css">
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Runtime config, un-bundled so a Testnet reset stays a one-file edit
+       (see src/config.ts). NOTE: no supabase-config.js — this demo's module
+       graph never reaches a database client, and its CSP has no Supabase
+       origin to match (tools/build-rfq-demo.mjs asserts both). -->
+  <script src="/otc-config.js"></script>
+  <script type="module" src="/src/rfq-main.tsx"></script>
+</body>
+</html>

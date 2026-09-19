@@ -2,7 +2,7 @@
 //! RFQ settlement contract: an AirSwap RFQ port to Soroban.
 //!
 //! Deliberately **asymmetric**, and this is the whole design (see
-//! `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` §4):
+//! `docs/specs/2026-08-17-rfq-protocol-architecture-design.md` §4):
 //!
 //! - The **maker** quotes off-chain and pre-signs a detached
 //!   `SorobanAuthorizationEntry` scoped with `require_auth_for_args` over every

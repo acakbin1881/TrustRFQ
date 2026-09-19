@@ -1,0 +1,26 @@
+{
+  "name": "@trustrfq/desk",
+  "private": true,
+  "type": "module",
+  "description": "The TrustRFQ reference client: a client-only React desk that discovers makers, validates quotes and settles with one signature.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "1.9.5",
+    "@stellar/stellar-sdk": "^16.0.1",
+    "@supabase/supabase-js": "^2.110.2",
+    "@trustrfq/sdk": "*",
+    "buffer": "^6.0.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3"
+  }
+}

@@ -15,7 +15,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { Keypair } from '@stellar/stellar-sdk';
-import { CHROME, Tally, cfgFromEnv, click, fillField, truncAddr, uniqueAmounts } from './lib.mjs';
+import { chromePath, Tally, cfgFromEnv, click, fillField, truncAddr, uniqueAmounts } from './lib.mjs';
 import { initScriptFor, makeWalletHandler } from './freighter-mock.mjs';
 
 const cfg = cfgFromEnv();
@@ -181,7 +181,7 @@ async function takerSteps(page) {
 
 async function main() {
   mkdirSync(cfg.scratch, { recursive: true });
-  const browser = await chromium.launch({ executablePath: CHROME, headless: !cfg.headed });
+  const browser = await chromium.launch({ executablePath: chromePath(), headless: !cfg.headed });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addInitScript(initScriptFor(me.public));
   const handler = makeWalletHandler({ keypair, tally, stepRef });

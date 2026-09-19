@@ -68,7 +68,7 @@ const TIMEOUT = 120;
 
 const PORT = Number(process.env.STUB_MAKER_PORT || 4174);
 const RFQ_SWAP_CONTRACT_ID = process.env.RFQ_SWAP_CONTRACT_ID || 'CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT';
-const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
+const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBEFE7JY3PT5XF6CT3BMWF5RGPNUBGHKWPUDD3KLFZBLXFE3RPIDRLL3';
 const CAPTURE_AUTH_TREE = !!process.env.CAPTURE_AUTH_TREE;
 const CAPTURE_PATH = path.join(REPO_ROOT, 'fixtures', 'rfq-auth-tree.json');
 
@@ -108,7 +108,7 @@ const url = `http://localhost:${PORT}`;
 
 // Reuse the repo's existing demo USDC issuer (src/core/tokens.ts's temporary
 // allow-list entry) so the stub maker sells the SAME asset the desk knows.
-const keys = JSON.parse(readFileSync('/Users/acakbin1881/Projects/TrustRFQ/demo-keys.json', 'utf8'));
+const keys = JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo-keys.json'), 'utf8'));
 const issuerKp = Keypair.fromSecret(keys.issuer_secret);
 const USDC = new Asset('USDC', issuerKp.publicKey());
 const NATIVE_SAC = Asset.native().contractId(NETWORK);

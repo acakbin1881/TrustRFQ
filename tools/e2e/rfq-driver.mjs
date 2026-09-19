@@ -167,7 +167,7 @@ import {
   Horizon, Keypair, Networks, Operation, TransactionBuilder, Asset, xdr, scValToNative,
   Account, Address, Contract, rpc,
 } from '@stellar/stellar-sdk';
-import { CHROME, REPO_ROOT, Tally, click, fillField } from './lib.mjs';
+import { chromePath, REPO_ROOT, Tally, click, fillField } from './lib.mjs';
 import { initScriptFor, makeWalletHandler } from './freighter-mock.mjs';
 
 const HORIZON_URL = 'https://horizon-testnet.stellar.org';
@@ -209,7 +209,7 @@ const LIVE_DIRECTIONS = (process.env.LIVE_DIRECTIONS || 'xlm-usdc,usdc-xlm')
 // rather than reusing SELL_AMOUNT, since the two directions sell different
 // assets at different natural scales.
 const SELL_AMOUNT_USDC_XLM = process.env.SELL_AMOUNT_USDC_XLM || '5';
-const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G';
+const RFQ_REGISTRY_ID = process.env.RFQ_REGISTRY_ID || 'CBEFE7JY3PT5XF6CT3BMWF5RGPNUBGHKWPUDD3KLFZBLXFE3RPIDRLL3';
 // Matches public/otc-config.js's window.RFQ_SWAP_CONTRACT_ID — the ONE
 // settlement contract every LIVE-mode swap below settles through, and the
 // ONLY source of the live fee_bps/fee_collector Task 2's delta math trusts.
@@ -1284,7 +1284,7 @@ async function main() {
   const directionResults = [];
   const cspViolations = [];
 
-  const browser = await chromium.launch({ executablePath: CHROME, headless: !HEADED });
+  const browser = await chromium.launch({ executablePath: chromePath(), headless: !HEADED });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addInitScript(initScriptFor(takerKp.publicKey()));
   const handler = makeWalletHandler({ keypair: takerKp, tally, stepRef });
