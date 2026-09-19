@@ -437,7 +437,10 @@ fn swap_rejects_when_paused() {
     let s = setup(0);
     s.client.set_paused(&true);
 
-    assert_eq!(s.client.try_swap(&order_of(&s, 100, 250, 0)), Err(Ok(Error::Paused)));
+    assert_eq!(
+        s.client.try_swap(&order_of(&s, 100, 250, 0)),
+        Err(Ok(Error::Paused))
+    );
 
     s.client.set_paused(&false);
     s.client.swap(&order_of(&s, 100, 250, 0));
@@ -522,7 +525,12 @@ fn admin_functions_reject_non_admin() {
         // Only the attacker's authorization is present, so the contract's
         // `admin.require_auth()` finds nothing that matches.
         let r = match *fn_name {
-            "set_fee" => s.client.mock_auths(&auths).try_set_fee(&5).map(|_| ()).map_err(|_| ()),
+            "set_fee" => s
+                .client
+                .mock_auths(&auths)
+                .try_set_fee(&5)
+                .map(|_| ())
+                .map_err(|_| ()),
             "set_fee_collector" => s
                 .client
                 .mock_auths(&auths)

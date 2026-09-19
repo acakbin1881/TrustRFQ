@@ -1,4 +1,10 @@
 #![no_std]
+// `fill` takes nine arguments on purpose: every economic term of the swap has to
+// sit inside the signed auth entry, so the arity IS the security property. The
+// signature is frozen anyway (the deployed wasm hash is gated in CI). Crate-level
+// rather than item-level: `contractimpl` generates the client functions outside
+// the impl block, where an item-level allow cannot reach them.
+#![allow(clippy::too_many_arguments)]
 //! OTC settlement contract: a two-signature symmetric swap on Soroban.
 //!
 //! Both parties agree off-chain. Each then independently signs an off-chain
@@ -17,7 +23,9 @@
 //! server, so neither party is the natural signer and either must be able to
 //! submit. The sibling `rfq_swap` is the faithful AirSwap port.
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, BytesN, Env};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, token, Address, BytesN, Env,
+};
 
 // NOTE: `contractmeta!` is intentionally omitted — it adds a wasm custom section
 // that changes the bytecode hash, which would break the invariant that the

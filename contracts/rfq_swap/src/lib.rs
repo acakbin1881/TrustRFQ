@@ -259,7 +259,7 @@ impl RfqSwap {
         if fee > 0 {
             token::Client::new(&env, &order.maker_token).transfer(
                 &order.maker,
-                &fee_collector(&env),
+                fee_collector(&env),
                 &fee,
             );
         }
@@ -378,10 +378,12 @@ fn is_paused(env: &Env) -> bool {
 }
 
 fn cancelled(env: &Env, maker: &Address, order_id: u64) -> bool {
-    env.storage().temporary().has(&DataKey::Cancelled(CancelKey {
-        maker: maker.clone(),
-        order_id,
-    }))
+    env.storage()
+        .temporary()
+        .has(&DataKey::Cancelled(CancelKey {
+            maker: maker.clone(),
+            order_id,
+        }))
 }
 
 fn require_admin(env: &Env) {

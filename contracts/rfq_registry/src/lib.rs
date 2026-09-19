@@ -258,7 +258,7 @@ impl RfqRegistry {
     /// itself — the storage key is keyed on the same address.
     pub fn set_url(env: Env, maker: Address, url: String) -> Result<(), Error> {
         maker.require_auth();
-        if url.len() == 0 || url.len() > MAX_URL_BYTES {
+        if url.is_empty() || url.len() > MAX_URL_BYTES {
             return Err(Error::UrlInvalid);
         }
 
@@ -519,7 +519,7 @@ impl RfqRegistry {
         }
 
         for protocol in protocols.iter() {
-            if cfg.protocols.contains(&protocol) {
+            if cfg.protocols.contains(protocol) {
                 return Err(Error::ProtocolAlreadyAdded);
             }
             cfg.protocols.push_back(protocol);
@@ -550,7 +550,7 @@ impl RfqRegistry {
         for protocol in protocols.iter() {
             let idx = cfg
                 .protocols
-                .first_index_of(&protocol)
+                .first_index_of(protocol)
                 .ok_or(Error::ProtocolNotFound)?;
             cfg.protocols.remove(idx);
         }
@@ -664,11 +664,7 @@ impl RfqRegistry {
         env.storage().persistent().remove(&key);
 
         let contract_addr = env.current_contract_address();
-        token::Client::new(&env, &stake_token(&env)).transfer(
-            &contract_addr,
-            &maker,
-            &cfg.staked,
-        );
+        token::Client::new(&env, &stake_token(&env)).transfer(&contract_addr, &maker, &cfg.staked);
 
         MakerEjected {
             maker,
@@ -690,10 +686,7 @@ fn require_admin(env: &Env) {
 }
 
 fn stake_token(env: &Env) -> Address {
-    env.storage()
-        .instance()
-        .get(&DataKey::StakeToken)
-        .unwrap()
+    env.storage().instance().get(&DataKey::StakeToken).unwrap()
 }
 
 fn base_cost(env: &Env) -> i128 {
