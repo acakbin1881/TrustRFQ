@@ -198,6 +198,21 @@ body:where(.tr-dark) {
 :where(.tr-dark) ol,
 :where(.tr-dark) ul { list-style: none; margin: 0; padding: 0; }
 
+/* A <button> with no background utility renders on the browser's own
+   ButtonFace — a light grey panel, which on carbon means invisible text. The
+   FAQ shipped exactly that for a moment. This is the part of preflight the
+   landing genuinely needs, scoped so the desk's own button styling in
+   public/styles.css is left alone. */
+:where(.tr-dark) button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
 :where(.tr-dark) ::selection {
   background: color-mix(in srgb, var(--color-lime) 30%, transparent);
   color: var(--color-snow);
@@ -216,51 +231,60 @@ body:where(.tr-dark) {
 }
 
 /* ==========================================================================
-   The ground
+   Motion utilities
    ==========================================================================
-   Not a glow. Blurred colour blobs behind a hero are the house style of every
-   template on the internet, and they say nothing about what this page is for.
-   This is a trading desk: the ground is a measured grid, faded out at the
-   edges so it reads as depth rather than wallpaper, with grain over it to kill
-   the plastic flatness of a pure hex background.
+   The background is flat on purpose. A grid, a grain layer and a light that
+   chased the cursor were all tried and all removed: they decorated the page
+   instead of differentiating it, and a cursor-tracking glow in particular is
+   the single most template-looking thing a dark landing can do. What separates
+   this page is the layout, the sequencing and what the sections actually say.
    ========================================================================== */
 
-/* A surveyor's grid. 1px lines at a 72px pitch, masked to an ellipse so it
-   never reaches an edge and never has to be "ended" with a hard line. */
-.tr-grid {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--color-carbon-line) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--color-carbon-line) 70%, transparent) 1px, transparent 1px);
-  background-size: 72px 72px;
-  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 38%, #000 25%, transparent 78%);
-  mask-image: radial-gradient(ellipse 75% 55% at 50% 38%, #000 25%, transparent 78%);
+/* The claim strip under the hero. Two identical runs of the list sit side by
+   side and the track slides exactly one run's width, so the loop closes on a
+   seam nobody can see. Width comes from the content, so adding a claim needs
+   no arithmetic here. */
+@keyframes tr-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
 
-/* Film grain. The opacity is deliberately near the threshold of visibility —
-   you should not be able to point at it, only notice the background stops
-   looking like a flat fill. */
-.tr-grain::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+.tr-marquee-track {
+  animation: tr-marquee 34s linear infinite;
 }
 
-/* The pointer light. One soft ellipse that follows the cursor at a distance —
-   --tr-px/--tr-py are set by usePointerSpot. Low enough that it reads as the
-   page catching light, not as an effect. Falls back to a centred rest position
-   on touch, where there is no pointer to follow. */
-.tr-spot {
-  background: radial-gradient(
-    680px circle at var(--tr-px, 50%) var(--tr-py, 30%),
-    color-mix(in srgb, var(--color-lime) 7%, transparent),
-    transparent 62%
-  );
-  transition: background 600ms var(--ease-glide);
+/* Hovering the strip pauses it — a reader who stops to read should not have
+   the words walk away from them. */
+.tr-marquee:hover .tr-marquee-track { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-marquee-track { animation: none; }
+}
+
+/* The FAQ's answer panel. Height is animated through grid-template-rows, which
+   transitions cleanly from 0fr to 1fr — max-height guesswork would either clip
+   a long answer or leave dead space after a short one. */
+.tr-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 550ms var(--ease-glide);
+}
+.tr-answer[data-open='true'] { grid-template-rows: 1fr; }
+.tr-answer > div { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-answer { transition: none; }
+}
+
+/* The mechanism panel, on a step change. The panel is keyed on the step, so
+   React remounts it and this runs fresh — the copy resolves in rather than
+   swapping in place, which would read as a glitch at this size. Small travel:
+   the panel is already where it belongs, only its contents changed. */
+@keyframes tr-panel {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tr-spot { transition: none; }
+  [class*="tr-panel"] { animation: none !important; }
 }

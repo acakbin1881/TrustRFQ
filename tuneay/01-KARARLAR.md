@@ -203,6 +203,48 @@ Grotesk'in yanında bağırmak yerine durmalı. Her çözüm kartı, her adım v
 güvenlik maddesi kendi ikonunu taşıyor; ikon anahtarları `content.ts`'te düz
 string, bileşene `Landing.tsx` çeviriyor — içerik dosyası React'ten uzak kalsın.
 
+### Arka plan düz (2026-09-19, ikinci revizyon)
+
+Grid, grain ve imleci takip eden ışık **kaldırıldı**. Sayfayı süslüyorlardı,
+ayırt etmiyorlardı — ve imleci kovalayan bir glow, koyu bir landing'in
+yapabileceği en "şablon" hareket. Zemin artık düz karbon.
+
+**Farklılaşma nereden geliyor:** düzenden, sıralamadan ve bölümlerin ne
+söylediğinden. Bölüm listesi ve her birinin neden orada olduğu:
+
+| Bölüm | İşi | Düzen |
+|-------|-----|-------|
+| Hero | Ürünün kendisi, doldurulmuş halde | Merkezi, dar |
+| Ticker | İki yoğun bölüm arasında ritim | Tam genişlik şerit |
+| Problem | Mevcut durumun maliyeti, sayarak | Asimetrik 2 sütun |
+| **Difference** | Emir defteri vs masa, iddia iddia | Tablo, 2 eşit sütun |
+| Solution | Üç iddia | 3 kart |
+| **Mechanism** | Üç adım, **okuyucunun sürdüğü** | Ray + panel |
+| **Evidence** | Kayıtlı zincir çalışması | Asimetrik + veri |
+| Security | Garantiler | 2 sütun + 2×2 |
+| **Questions** | Karşı tarafın sorduğu şeyler | Tek sütun, dar |
+
+Kalın olanlar bu turda eklendi.
+
+**Difference bölümünde sol sütun kasıtlı olarak sağlam.** Her satır, düzgün
+çalışan bir emir defteri için doğru. İddia bu zaten: sorun mekanizmanın
+kendisi, kötü bir uygulaması değil. Çürük adam kurmak argümanı zayıflatırdı.
+
+**Mechanism scroll'a bağlı değil, sekmeli.** Scroll'u ele geçiren bir sekans
+sayfayı okuyandan alır ve trackpad'de istediğin adıma inmek neredeyse
+imkânsız. Sekme, ikinci adımı yukarı kaydırmadan tekrar okumaya izin veriyor.
+
+**Evidence hiçbir şablonun taşıyamayacağı bölüm.** Rakamlar
+`docs/evidence/live-rfq-run.json`'dan geliyor — 2026-09-14'te
+`npm run e2e:rfq:live` ile alınmış iki yönlü gerçek Testnet çalışması. İşlem
+hash'leri explorer'a bağlı; çözülemeyen bir hash dekordur, bölümün tüm amacı
+bunların doğrulanabilir olması.
+
+**Bir tuzak daha:** preflight kapalı olduğu için `<button>` tarayıcının
+`ButtonFace` zeminini alıyor — karbon üzerinde açık gri panel, yani görünmez
+yazı. SSS bir an bunu yayınladı. `theme.css` artık `:where(.tr-dark) button`
+ile preflight'ın bu parçasını landing kapsamında yapıyor.
+
 ### Şu an nerede
 
 Landing bu dille yeniden yapıldı. **Desk henüz eski açık temada** — token

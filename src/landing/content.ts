@@ -194,3 +194,125 @@ export const FOOTER = {
   tagline: 'Peer-to-peer OTC on Stellar.',
   fine: 'Built on Stellar · Soroban settlement · Testnet MVP — no real funds involved.',
 } as const;
+
+/* ==========================================================================
+   Sections added in the differentiation pass
+   ========================================================================== */
+
+/** The strip under the hero. Short, flat claims — it is a rhythm device, not a
+ *  place to explain anything. */
+export const TICKER = [
+  'Non-custodial',
+  'Atomic settlement',
+  'Signature-bound',
+  'Zero slippage',
+  'No intent leak',
+  'Live on Stellar Testnet',
+] as const;
+
+/** Order book vs desk, claim by claim. The left column is not a straw man —
+ *  every line of it is true of an on-chain order book working correctly. That
+ *  is the point: the mechanism is the problem, not an implementation of it. */
+export const COMPARISON = {
+  eyebrow: 'The difference',
+  heading: { lead: 'Same chain.', rest: ['Opposite mechanism.'] } satisfies TwoToneHeading,
+  left: { label: 'On-chain order book', note: 'Working exactly as designed' },
+  right: { label: 'TrustRFQ desk', note: 'Peer-to-peer, settled on Soroban' },
+  rows: [
+    {
+      topic: 'Price',
+      left: 'Your order walks the book. The deeper it goes, the worse the average fill.',
+      right: 'One price, agreed before anything is signed. It is the price that settles.',
+    },
+    {
+      topic: 'Visibility',
+      left: 'The order is public the moment it lands. Anyone can read your size.',
+      right: 'A directed offer is visible to one counterparty. Nobody else sees it.',
+    },
+    {
+      topic: 'Execution',
+      left: 'Partial fills across several transactions, each at a different price.',
+      right: 'Both legs move in one transaction, or neither does.',
+    },
+    {
+      topic: 'Custody',
+      left: 'Funds sit in the protocol while the order rests.',
+      right: 'Funds never leave your wallet until the fill lands.',
+    },
+    {
+      topic: 'Failure',
+      left: 'A reverted leg can leave you holding half a trade.',
+      right: 'An invalid fill has no valid signature. It cannot execute at all.',
+    },
+  ],
+} as const;
+
+/**
+ * A recorded Testnet run, not a claim.
+ *
+ * Every figure here comes from docs/evidence/live-rfq-run.json, produced by
+ * `npm run e2e:rfq:live` on 2026-09-14 — two real round trips through the RFQ
+ * path, both settled on-chain. Update this block from that file, never by hand.
+ */
+export const PROOF = {
+  eyebrow: 'Evidence',
+  heading: { lead: 'Not a claim.', rest: ['A recorded run.'] } satisfies TwoToneHeading,
+  body: 'Two live round trips through the quote-to-settlement path on Stellar Testnet, both filled on-chain. The transaction hashes below are real and still resolvable.',
+  recordedAt: '14 Sep 2026',
+  stats: [
+    { value: 5.7, unit: 's', label: 'Quote to settled', note: 'median of both directions' },
+    { value: 10, unit: ' bps', label: 'Protocol fee', note: '0.1%, charged on fill' },
+    { value: 2, unit: '', label: 'Directions settled', note: 'XLM → USDC and back' },
+    { value: 1, unit: ' tx', label: 'Per trade', note: 'both legs, atomically' },
+  ],
+  runs: [
+    {
+      pair: 'XLM → USDC',
+      sold: '1 XLM',
+      received: '2.5 USDC',
+      ms: 5692,
+      tx: '257fbc16d8efca857704e86bc8b7514c4a02472075a5befd8b44bc80bf5cfb0a',
+    },
+    {
+      pair: 'USDC → XLM',
+      sold: '5 USDC',
+      received: '2 XLM',
+      ms: 5714,
+      tx: 'b0d6b9dfe09c9b0cdd5d9943373994365dd7bef5bc23ac32ee60353c555dd0aa',
+    },
+  ],
+} as const;
+
+export type ProofRun = (typeof PROOF)['runs'][number];
+
+/** Questions a counterparty actually asks before sending size to a new desk. */
+export const FAQ = {
+  eyebrow: 'Questions',
+  heading: { lead: 'Before you send size.', rest: [] } satisfies TwoToneHeading,
+  items: [
+    {
+      q: 'What stops the other side changing the amounts?',
+      a: 'Nothing they control. Each party signs a Soroban authorization entry over the exact arguments of the fill — both addresses, both amounts, both tokens, the expiry and a nonce. Change any one of them and the signature no longer matches, so the contract rejects the transaction. The submitter cannot alter the deal, and neither can we.',
+    },
+    {
+      q: 'Who can see my order?',
+      a: 'A directed offer is addressed to one wallet and is visible to that counterparty alone. A broadcast offer goes to the takers watching that pair — you choose which of the two you are sending when you leave the counterparty field empty or fill it in.',
+    },
+    {
+      q: 'Do I have to trust TrustRFQ with my funds?',
+      a: 'No. There is no deposit, no escrow and no custody step. Funds move directly between the two wallets inside the fill transaction. Until that transaction lands, everything you signed is an off-chain authorization that moves nothing.',
+    },
+    {
+      q: 'What happens if one leg fails?',
+      a: 'Then nothing happens. Both transfers live in a single Soroban transaction: it either succeeds whole or reverts whole. There is no state in which one side has paid and the other has not.',
+    },
+    {
+      q: 'Is this live on Mainnet?',
+      a: 'Not yet. TrustRFQ runs on Stellar Testnet today, with the settlement contract deployed and a two-wallet run recorded on-chain. Mainnet follows a full external audit of the contract.',
+    },
+    {
+      q: 'Which wallets are supported?',
+      a: 'Freighter, today. The RFQ flow needs both SEP-43 message signing and Soroban auth-entry signing, and Freighter is the wallet that supports both and that counterparties can actually install.',
+    },
+  ],
+} as const;
