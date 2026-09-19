@@ -283,15 +283,15 @@ function Desk() {
   }, [connect, toast]);
 
   return (
-    <div className="min-h-screen bg-carbon font-grotesk antialiased">
+    <div className="flex min-h-screen flex-col bg-carbon font-grotesk antialiased">
       <DeskNav address={address} balances={balances} loading={loading} onDisconnect={disconnect} />
 
       {/* The work sits in the middle of the page, not at the top of it. A
           single panel pinned under the bar leaves a column of dead carbon
           below it; centred, the page reads as one composition at any height.
-          min-h is the viewport minus the 4rem bar, so the centring is of the
-          space actually left over. */}
-      <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center px-6 py-12">
+          flex-1 rather than a min-h calc: with a footer now under it, the
+          leftover space is what the browser works out, not what we predict. */}
+      <main className="mx-auto flex w-full max-w-5xl flex-1 items-center px-6 py-10">
         <div className="w-full">
           {address ? (
             <>
@@ -321,6 +321,8 @@ function Desk() {
         </div>
       </main>
 
+      <DeskFooter />
+
       {/* mounted always, open/closed by style — see .tr-bot in theme.css */}
       <TrustBot open={botOpen} onClose={() => setBotOpen(false)} />
     </div>
@@ -345,6 +347,52 @@ function useDeskCanvas() {
 function DeskRoute() {
   useDeskCanvas();
   return <Desk />;
+}
+
+/**
+ * The desk's footer.
+ *
+ * Quieter than the landing's, and carrying one thing the landing does not have
+ * to: this is Testnet and the money is not real. Someone who arrived straight
+ * at /desk — a saved link, the RFQ demo, a teammate's message — has passed no
+ * page that says so, and the nav badge moved into the wallet popover.
+ *
+ * The links point back into the landing's sections rather than anywhere in the
+ * desk, because the desk is one page now and there is nothing else here.
+ */
+function DeskFooter() {
+  const links = [
+    { to: '/#why', label: 'Why OTC' },
+    { to: '/#how', label: 'How it works' },
+    { to: '/#security', label: 'Security' },
+    { to: '/#evidence', label: 'Evidence' },
+  ];
+
+  return (
+    <footer className="border-t border-carbon-line px-6 py-7">
+      <div className="mx-auto flex max-w-5xl flex-col gap-5 sm:flex-row sm:items-center
+        sm:justify-between">
+        <Link to="/" className="flex items-center gap-2 font-grotesk text-[14px]
+          font-medium text-ash transition-colors duration-500 ease-glide hover:text-snow">
+          <BrandMark size={16} className="text-lime" />
+          TrustRFQ
+        </Link>
+
+        <nav className="flex flex-wrap gap-x-6 gap-y-2 font-grotesk text-[13px]">
+          {links.map((l) => (
+            <Link key={l.to} to={l.to}
+              className="text-slate transition-colors duration-500 ease-glide hover:text-lime">
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+
+      <p className="mx-auto mt-5 max-w-5xl font-grotesk text-[12px] text-slate">
+        Built on Stellar · Soroban settlement · Testnet MVP — no real funds involved.
+      </p>
+    </footer>
+  );
 }
 
 /**
