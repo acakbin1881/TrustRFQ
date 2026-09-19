@@ -1,0 +1,79 @@
+/* ==========================================================================
+   Tailwind bridge — tuneay/01-KARARLAR.md K-02
+   ==========================================================================
+   Tailwind v4, wired onto the desk's EXISTING tokens instead of replacing
+   them. public/styles.css stays the single source of truth for what a colour
+   or radius actually IS; this file only teaches Tailwind their names.
+
+   Two things here are load-bearing:
+
+   1. PREFLIGHT IS DELIBERATELY NOT IMPORTED. Tailwind's reset would fight
+      styles.css's own base layer (its `* { box-sizing }`, its `input`
+      defaults, its scrollbar rules), and those base rules are what every
+      existing screen is drawn against. So we import theme + utilities only,
+      the way Tailwind documents opting out of preflight. Do not swap these
+      three lines back to a plain `@import "tailwindcss"` — that pulls the
+      reset back in and repaints every existing screen.
+
+   2. `@theme inline` — NOT a plain `@theme`. `inline` keeps the var()
+      references intact in Tailwind's output, so `bg-canvas` resolves to
+      `var(--bg)` at RUNTIME. Change --bg in styles.css and every Tailwind
+      utility follows. A plain `@theme` would COPY today's value and the two
+      systems would silently drift apart.
+
+   styles.css token NAMES are a compatibility contract (intent.css and the JSX
+   hardcode them) — this file consumes them, never renames them. Note --gold*
+   is the INK accent family, not gold; the Tailwind-side name says so.
+   ========================================================================== */
+
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme inline {
+  /* --- surfaces ------------------------------------------------------- */
+  --color-canvas: var(--bg);
+  --color-surface: var(--bg-raised);
+  --color-sunken: var(--bg-sunken);
+  --color-toast: var(--bg-toast);
+
+  /* --- ink ------------------------------------------------------------ */
+  --color-ink: var(--text-1);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+  --color-ink-4: var(--text-4);
+
+  /* --- accent (the --gold* family is ink, not gold) -------------------- */
+  --color-accent: var(--gold);
+  --color-accent-hi: var(--gold-hi);
+  --color-accent-lo: var(--gold-lo);
+  --color-on-accent: var(--gold-ink);
+
+  /* --- status --------------------------------------------------------- */
+  --color-ok: var(--green);
+  --color-bad: var(--red);
+
+  /* --- lines: alpha ink (line-N) + the ticket's flat lavender-grays ----- */
+  --color-line-1: var(--line-1);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
+  --color-hair: var(--line-hair);
+  --color-seam: var(--line-seam);
+  --color-line-ink: var(--line-ink);
+
+  /* --- type ----------------------------------------------------------- */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  /* --- radii ---------------------------------------------------------- */
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-pill: var(--r-pill);
+
+  /* --- shadows -------------------------------------------------------- */
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --shadow-float: var(--shadow-float);
+}

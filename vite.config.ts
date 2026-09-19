@@ -1,8 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  // Tailwind is wired onto the desk's existing tokens rather than replacing
+  // them; the bridge (and why preflight stays out) lives in src/styles/theme.css.
+  plugins: [react(), tailwindcss()],
 
   // Some wallet/SDK deps reference Node's `global` at module scope. esm.sh
   // shimmed this for the vanilla app; a bundler must do it explicitly or the
