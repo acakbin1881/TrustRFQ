@@ -510,10 +510,20 @@ Cümlenin üstünde, arama alanı biçiminde bir kontrol: solda marka mührü,
 cevabın kimden geleceğini söylüyor, Uniswap'in büyüteci kendi alanının ne
 yaptığını söylediği gibi.
 
-⚠️ **Henüz bir yere gitmiyor ve basınca bunu söylüyor**, sessizce yutmuyor.
-Tıklamayı yutan bir kontrol insana sayfanın bozuk olduğunu öğretir; "henüz
-değil" diyen aynı pikseli harcar ve doğruyu söyler. Rota geldiğinde bu bir
-`Link` olacak ve toast gidecek.
+**Sayfaya değil, sayfanın üstüne açılıyor.** Soru *bu sayfa hakkında* ve işlem
+ortasında soruluyor; bir rota, soruyu sorulabilir kılan bağlamı çöpe atardı.
+
+**Sayfa kaybolmuyor, odaktan çıkıyor.** Örtmek yerine bulanıklaştırmak "masa
+hâlâ orada, sen hâlâ işlemin ortasındasın" der.
+⚠️ `backdrop-filter` **içeriği örten elemanda** olmak zorunda. Panele
+koyarsan perdeyi örnekler — perde düz bir yıkama olduğu için hiçbir şeye
+bulanıklaşmaz.
+
+⚠️ **Bot uydurmuyor.** Yer tutucu bir asistanın mutabakat ya da trustline
+hakkında kulağa makul gelen cevaplar üretmesi, hiç asistan olmamasından
+kötüdür — insanlar bir masanın söylediğine göre hareket eder. Bot soruyu
+alıyor, düşünüyor ve cevap veremeyeceğini dürüstçe söylüyor. Gerçek bir uç
+nokta geldiğinde değişecek **tek fonksiyon** `reply()`.
 
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 

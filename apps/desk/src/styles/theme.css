@@ -684,3 +684,71 @@ body:where(.tr-dark) {
   .tr-phrase-word, .tr-phrase-glyph, .tr-phrase-seal { transition: none; }
   .tr-phrase-seal { transform: none; opacity: 1; }
 }
+
+/* ==========================================================================
+   TrustBot
+   ==========================================================================
+   The page does not go away when the assistant opens — it goes OUT OF FOCUS.
+   Blurring what you were doing, rather than covering it, says the desk is
+   still there and you are still in the middle of a trade; it is a conversation
+   about this page, not a departure from it.
+
+   Open/closed are styles, not mount states: an unmounted dialog cannot animate
+   out, and a scrim that vanishes instantly while its panel is still leaving
+   reads as a bug.
+   ========================================================================== */
+
+.tr-bot { transition: opacity 360ms var(--ease-glide); }
+.tr-bot[data-open='false'] { pointer-events: none; opacity: 0; }
+.tr-bot[data-open='true'] { opacity: 1; }
+
+/* The scrim carries the blur. backdrop-filter has to sit on the element that
+   covers the content — put it on the panel and it samples the scrim instead,
+   which is a uniform wash and blurs to nothing. */
+.tr-bot-scrim {
+  background: color-mix(in srgb, var(--color-carbon-deep) 62%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: backdrop-filter 420ms var(--ease-glide);
+}
+
+.tr-bot-panel {
+  transition:
+    opacity 420ms var(--ease-glide),
+    transform 420ms var(--ease-glide),
+    filter 420ms var(--ease-glide);
+}
+.tr-bot[data-open='false'] .tr-bot-panel {
+  opacity: 0;
+  transform: translateY(14px) scale(0.975);
+  filter: blur(8px);
+}
+.tr-bot[data-open='true'] .tr-bot-panel {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+
+/* A message lands rather than appears. Short travel: it arrives where it
+   belongs, it is not flying in from somewhere else. */
+@keyframes tr-msg-in {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+.tr-msg { animation: tr-msg-in 520ms var(--ease-glide) both; }
+
+/* Three dots while the answer is on its way. Staggered by delay, not by
+   separate keyframes, so their rhythm can be changed in one number. */
+@keyframes tr-think {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30%           { opacity: 1; transform: translateY(-3px); }
+}
+.tr-think > span { animation: tr-think 1.25s ease-in-out infinite; }
+.tr-think > span:nth-child(2) { animation-delay: 0.16s; }
+.tr-think > span:nth-child(3) { animation-delay: 0.32s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-bot, .tr-bot-panel, .tr-bot-scrim { transition: none; }
+  .tr-msg { animation: none; }
+  .tr-think > span { animation: none; opacity: 0.6; }
+}

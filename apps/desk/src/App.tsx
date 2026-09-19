@@ -22,6 +22,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router';
 import { ArrowRight, Check, Copy, LogOut, PenLine, Radio, Wallet } from 'lucide-react';
 import { MarkedPhrase } from './ui/MarkedPhrase';
+import { TrustBot } from './ui/TrustBot';
 import { TokenUSDC, TokenXLM } from '@web3icons/react';
 import type { BalanceMap } from './core/balances';
 import { trunc } from './core/tokens';
@@ -197,16 +198,13 @@ function DeskNav({ address, balances, loading, onDisconnect }: {
  * know for "type a question here" — the mark on the left says whose answer it
  * is, the same way Uniswap's magnifier says what its field does.
  *
- * It does not go anywhere yet, and it says so when pressed rather than doing
- * nothing. A control that swallows a click teaches people the page is broken;
- * one that answers "not yet" costs the same pixel and tells the truth. When
- * the route exists this becomes a Link and the toast goes.
+ * It opens a dialog over the desk rather than navigating: the question is
+ * about the page you are on, mid-trade, and a route would throw away the
+ * context that makes it askable.
  */
-function TrustBotBar() {
-  const toast = useToast();
+function TrustBotBar({ onOpen }: { onOpen: () => void }) {
   return (
-    <button type="button"
-      onClick={() => toast('TrustBot is not live yet — it arrives with the next release.')}
+    <button type="button" onClick={onOpen}
       className="group mx-auto flex w-full max-w-md items-center gap-3 rounded-pill border
         border-carbon-line bg-carbon-card/50 py-2.5 pl-2.5 pr-4 backdrop-blur-xl
         transition-colors duration-500 ease-glide hover:border-lime/25 hover:bg-carbon-hi/60">
@@ -267,6 +265,7 @@ function Desk() {
   const { address, connect, disconnect } = useWallet();
   const toast = useToast();
   const { balances, loading } = useBalances(address);
+  const [botOpen, setBotOpen] = useState(false);
 
   const handleConnect = useCallback(async () => {
     try {
@@ -290,7 +289,7 @@ function Desk() {
           {address ? (
             <>
               <div className="tr-panel-in mb-7">
-                <TrustBotBar />
+                <TrustBotBar onOpen={() => setBotOpen(true)} />
               </div>
 
               {/* What the page does, in one line, above the work — the
@@ -314,6 +313,9 @@ function Desk() {
           )}
         </div>
       </main>
+
+      {/* mounted always, open/closed by style — see .tr-bot in theme.css */}
+      <TrustBot open={botOpen} onClose={() => setBotOpen(false)} />
     </div>
   );
 }
