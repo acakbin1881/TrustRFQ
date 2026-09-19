@@ -628,6 +628,27 @@ Sol artık "Set an amount. Every registered maker gets asked.", sağ o cümleyi
 devraldı ve "Ranked by price" etiketi oraya katıldı — satır sayısı azaldı,
 simetri oturdu.
 
+### Token seçici: panel yerine kayan pill
+
+`<select>` gitti. İki token varken yerli seçici, cevap uzayının tamamı zaten
+ekranda olan bir soruya **bütün bir işletim sistemi paneli** harcıyordu — ve
+masaüstünde o panel platformun kendi stilinde, yani sayfadaki karbon paletinin
+ulaşamadığı tek yüzeydi.
+
+Yerine iki seçenek yan yana ve altlarında kayan bir pill. Sütunlar eşit
+(`flex-1`), dolayısıyla yol tam olarak bir sütun genişliği — transform hiçbir
+ölçüm gerektirmiyor.
+⚠️ **Gerçek bir `radiogroup` olarak kaldı:** tek tab durağı, ok tuşlarıyla
+geçiş. `<select>`'in bedavaya verdiği, sıradan butonlardan oluşan bir satırın
+sessizce elinden alacağı şey buydu.
+
+**Bir taraf seçilince diğeri yoldan çekiliyor.** Aynı token çifti bir takas
+değil ve iki kontrol de ekrandayken tek tıkla ulaşılabiliyordu — sonra da
+"Choose a pair" ile karşılanıyordu, yani form izin verdiği tek şeyi yaptığın
+için seni azarlıyordu. Artık öteki picker kayıyor; hem düzeltme hem açıklama.
+⚠️ Yalnızca **seçim zorunluyken** devrede: tam olarak bir alternatif varsa.
+Üç token olsaydı hangisini istediğin tahmin edilmiş olurdu.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

@@ -36,7 +36,7 @@ import {
   type RfqWalletSigner,
   type SwapExecutedEvent,
 } from '@trustrfq/sdk';
-import { ArrowRight, Check, ChevronDown, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowRight, Check, ExternalLink, Loader2 } from 'lucide-react';
 import { TokenUSDC, TokenXLM } from '@web3icons/react';
 import { kit } from '../wallet/kit';
 import { errMsg, useToast } from './Toast';
@@ -145,41 +145,71 @@ function Empty({ title, body }: { title: string; body: string }) {
 }
 
 /**
- * The token control, drawn against the carbon palette.
+ * The token control: both options on screen, one pill sliding between them.
  *
- * Local rather than src/ui/TokenSelect.tsx: that one is shared with RfqDemo,
- * which ships the old stylesheet on purpose, so restyling it in place would
- * repaint a deploy this branch does not own.
+ * It replaced a <select>. With exactly two tokens, a native picker spends a
+ * whole OS panel to answer a question whose entire answer space is already
+ * visible — and on desktop that panel is styled by the platform, so it was the
+ * one surface on this page the carbon palette could not reach.
  *
- * It stays a real <select>. A custom listbox here would have to re-earn
- * keyboard handling, type-ahead and the platform's own touch picker, and the
- * only thing it would buy is styled option rows in a two-item list.
+ * The indicator slides rather than cutting: at this size the move IS the
+ * feedback, and a pill that jumps leaves you checking which side won. The
+ * columns are equal (flex-1) so the travel is exactly 100% of a column, which
+ * is why the transform needs no measurement.
+ *
+ * Kept as a real radiogroup: one tab stop, arrow keys move between options.
+ * That is what a <select> gave for free and what a row of buttons would have
+ * quietly taken away.
  */
 function TokenPicker({ id, value, label, disabled, onChange }: {
   id: string; value: string; label: string; disabled: boolean; onChange: (v: string) => void;
 }) {
-  const code = tokenLabel(value);
-  const Mark = code === 'USDC' ? TokenUSDC : TokenXLM;
+  const index = Math.max(0, TOKENS.findIndex((t) => t.value === value));
+
+  const step = (delta: number) => {
+    const next = TOKENS[(index + delta + TOKENS.length) % TOKENS.length];
+    if (next) onChange(next.value);
+  };
 
   return (
-    <span className="relative flex shrink-0 items-center">
-      <span className="pointer-events-none absolute left-3 flex size-5 items-center
-        justify-center rounded-full bg-carbon-deep">
-        <Mark size={12} variant="mono" className={code === 'USDC' ? 'text-lime' : 'text-snow'} />
-      </span>
+    <div id={id} role="radiogroup" aria-label={label}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); step(1); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); step(-1); }
+      }}
+      className={`relative flex shrink-0 rounded-pill border border-carbon-line bg-carbon-deep
+        p-1 ${disabled ? 'opacity-50' : ''}`}>
 
-      <select id={id} aria-label={label} value={value} disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-pill border border-carbon-line bg-carbon-card py-2.5
-          pl-10 pr-9 font-grotesk text-[14px] font-medium text-snow outline-none transition-colors
-          duration-500 ease-glide hover:border-lime/25 focus-visible:border-lime/40
-          disabled:cursor-not-allowed disabled:opacity-50">
-        {TOKENS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-      </select>
+      {/* the pill. inset-y-1 matches the wrapper's padding, so it sits inside
+          the border rather than on it */}
+      <span aria-hidden="true"
+        className="absolute inset-y-1 left-1 rounded-pill bg-carbon-card transition-transform
+          duration-500 ease-glide"
+        style={{ width: `calc((100% - 0.5rem) / ${TOKENS.length})`,
+                 transform: `translateX(${index * 100}%)` }} />
 
-      <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-slate"
-        strokeWidth={1.5} aria-hidden="true" />
-    </span>
+      {TOKENS.map((t, i) => {
+        const on = i === index;
+        const code = tokenLabel(t.value);
+        const Mark = code === 'USDC' ? TokenUSDC : TokenXLM;
+        return (
+          <button key={t.value} type="button" role="radio" aria-checked={on}
+            tabIndex={on ? 0 : -1} disabled={disabled}
+            onClick={() => onChange(t.value)}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-pill
+              px-3 py-1.5 font-grotesk text-[13px] font-medium outline-none transition-colors
+              duration-500 ease-glide focus-visible:ring-2 focus-visible:ring-lime/40
+              disabled:cursor-not-allowed
+              ${on ? 'text-snow' : 'text-slate hover:text-ash'}`}>
+            <Mark size={14} variant="mono"
+              className={`transition-colors duration-500 ease-glide
+                ${on && code === 'USDC' ? 'text-lime' : ''}`} />
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -190,6 +220,29 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
 
   const [sellToken, setSellToken] = useState(TOKENS[0].value);
   const [buyToken, setBuyToken] = useState(TOKENS[1]?.value ?? TOKENS[0].value);
+
+  /**
+   * Picking one side moves the other off it.
+   *
+   * A pair of the same token is not a trade, and with both controls on screen
+   * it was reachable in one click — then answered with "Choose a pair", which
+   * is the form telling you off for doing the only thing it let you do. The
+   * other picker slides instead, which is both the fix and the explanation.
+   *
+   * Only meaningful while the allow-list has two tokens. With three it would
+   * be a guess at which one you wanted, so it steps aside only when the
+   * choice is forced: exactly one other option exists.
+   */
+  const pick = useCallback((side: 'sell' | 'buy', next: string) => {
+    const set = side === 'sell' ? setSellToken : setBuyToken;
+    const setOther = side === 'sell' ? setBuyToken : setSellToken;
+    const other = side === 'sell' ? buyToken : sellToken;
+
+    set(next);
+    if (next !== other) return;
+    const alternatives = TOKENS.filter((t) => t.value !== next);
+    if (alternatives.length === 1) setOther(alternatives[0].value);
+  }, [buyToken, sellToken]);
   const [amount, setAmount] = useState('');
   const [makerCount, setMakerCount] = useState<number | null>(null);
   const [quotes, setQuotes] = useState<MakerSideOrderResult[]>([]);
@@ -421,7 +474,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
           <span className="tr-field-rule absolute inset-x-0 bottom-0 block h-[1.5px] bg-lime/70"
             aria-hidden="true" />
           <TokenPicker id="rfqSellToken" value={sellToken} label="Sell token"
-            disabled={fieldsDisabled} onChange={setSellToken} />
+            disabled={fieldsDisabled} onChange={(v) => pick('sell', v)} />
         </div>
 
         <label htmlFor="rfqBuyToken" className="mt-6 block font-grotesk text-[13px] text-slate">
@@ -429,11 +482,13 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
         </label>
         <div className="mt-2.5 flex items-center justify-between gap-2 rounded-well border
           border-carbon-line bg-carbon-deep/70 p-2">
-          <span className="px-3 py-2 font-grotesk text-[15px] text-slate">
-            Quoted by the maker
+          {/* short enough to sit beside the picker without truncating: the
+              full sentence lives in the panel's subtitle */}
+          <span className="min-w-0 truncate px-3 py-2 font-grotesk text-[14px] text-slate">
+            Maker quotes it
           </span>
           <TokenPicker id="rfqBuyToken" value={buyToken} label="Buy token"
-            disabled={fieldsDisabled} onChange={setBuyToken} />
+            disabled={fieldsDisabled} onChange={(v) => pick('buy', v)} />
         </div>
 
         {noPair ? (
