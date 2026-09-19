@@ -180,6 +180,29 @@ Açılış hareketi **blur içerir**: içerik kayarak değil, **odağa gelerek**
   bounce'ı ve son bölümden sonrasını kaplamaz; gövdeninki kaplar. Unmount'ta
   bırakılıyor, yoksa desk siyah sayfayı miras alıyor.
 
+### Jenerik olanı ayıklama kuralları
+
+İlk geçişte sayfa "şablon" gibi duruyordu. Çıkan üç kural:
+
+1. **Bulanık renk küreleri yasak.** İnternetteki her şablonun varsayılan
+   görünümü ve sayfanın ne işe yaradığı hakkında hiçbir şey söylemiyor. Yerine
+   **ölçüm gridi** (72px, kenarlara doğru maskeli) + **film grain** + fareyi
+   uzaktan izleyen **tek yumuşak ışık**. Grid "enstrüman" der, küre "şablon".
+2. **Hover'da hiçbir şey parlamaz.** `box-shadow` ile lime glow bir bildirim
+   gibi okunuyordu, cevap gibi değil. Butonlar **etiketlerini takas ederek**
+   cevap verir (üstteki yukarı çıkar, yenisi alttan gelir) ve ok öne kayar.
+   Kartlar sadece yüzeylerini ve kenarlarını değiştirir.
+3. **Çubuk (pill) enflasyonu yok.** Navbar'da yan yana duran üçüncü bir
+   "Testnet" pili, barı parçalardan kurulmuş gösteriyordu. Testnet bir
+   **navigasyon öğesi değil, eylemin niteliği** — bu yüzden artık nitelediği
+   butonun üstünde küçük bir rozet. CTA'da tekrar edilmiyor; orada zaten
+   "Connect a Testnet wallet" yazıyor.
+
+**İkonlar:** Lucide, `strokeWidth={1.5}`. Varsayılandan ince, çünkü Space
+Grotesk'in yanında bağırmak yerine durmalı. Her çözüm kartı, her adım ve her
+güvenlik maddesi kendi ikonunu taşıyor; ikon anahtarları `content.ts`'te düz
+string, bileşene `Landing.tsx` çeviriyor — içerik dosyası React'ten uzak kalsın.
+
 ### Şu an nerede
 
 Landing bu dille yeniden yapıldı. **Desk henüz eski açık temada** — token

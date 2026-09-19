@@ -123,6 +123,42 @@ export function usePointerDrift(ref: RefObject<HTMLElement | null>, strength = 1
 }
 
 /**
+ * Writes the pointer's position into --tr-px / --tr-py as percentages of the
+ * element's own box, for the soft light in .tr-spot to follow.
+ *
+ * Percentages rather than pixels so the gradient keeps working when the element
+ * resizes, and a custom property rather than a transform because a transformed
+ * ancestor would become the backdrop root and flatten every frosted surface
+ * inside the hero.
+ */
+export function usePointerSpot(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || prefersReduced()) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    let frame = 0;
+    const track = (event: PointerEvent) => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const box = el.getBoundingClientRect();
+        const x = ((event.clientX - box.left) / box.width) * 100;
+        const y = ((event.clientY - box.top) / box.height) * 100;
+        el.style.setProperty('--tr-px', `${x.toFixed(1)}%`);
+        el.style.setProperty('--tr-py', `${y.toFixed(1)}%`);
+      });
+    };
+
+    window.addEventListener('pointermove', track, { passive: true });
+    return () => {
+      window.removeEventListener('pointermove', track);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [ref]);
+}
+
+/**
  * Counts a number up once the element is in view.
  *
  * Eased on the same curve as the reveals, so a figure arriving and a card

@@ -109,16 +109,19 @@ export const HERO_TICKET = {
 export const SOLUTION = [
   {
     num: '01',
+    icon: 'anchor',
     title: 'Zero slippage',
     body: 'Stellar DEX pools are too shallow to absorb institutional size without punishing the price. On the desk, the number you sign is the number that settles.',
   },
   {
     num: '02',
+    icon: 'hidden',
     title: 'No intent leak',
     body: 'Order books broadcast intent to the whole network. Directed orders on TrustRFQ are visible only to the counterparty you addressed. Front-running has nowhere to run.',
   },
   {
     num: '03',
+    icon: 'atomic',
     title: 'Atomic settlement',
     body: 'No CEX, no off-chain escrow, no capital leaving Stellar. Both legs of the trade move in a single Soroban transaction, or neither does.',
   },
@@ -128,29 +131,39 @@ export const STEPS = [
   {
     num: '01',
     delay: undefined,
+    icon: 'sign',
     title: 'Agree & sign',
     body: 'You agree terms with your counterparty and create a directed order — amounts, tokens, expiry, their address. Your wallet signs the exact payload.',
   },
   {
     num: '02',
     delay: '90ms',
+    icon: 'countersign',
     title: 'Counter-sign',
     body: 'The order appears live on their desk. They accept, and each wallet signs a Soroban authorization binding every argument of the fill — amounts included.',
   },
   {
     num: '03',
     delay: '180ms',
+    icon: 'fill',
     title: 'Atomic fill',
     body: 'Anyone can submit the fill carrying both signatures. Both legs move in one transaction — or nothing moves at all.',
   },
 ] as const;
 
 export const GUARANTEES = [
-  { name: 'Non-custodial', desc: "Funds never leave the signer's wallet until the atomic fill lands." },
-  { name: 'Soroban-enforced', desc: 'The contract validates every argument against both signatures.' },
-  { name: 'Signature-bound', desc: 'Amounts, addresses and expiry are cryptographically locked to the order.' },
-  { name: 'Testnet MVP', desc: 'Running today on Stellar Testnet. Mainnet after a full external audit.' },
+  { icon: 'wallet', name: 'Non-custodial', desc: "Funds never leave the signer's wallet until the atomic fill lands." },
+  { icon: 'contract', name: 'Soroban-enforced', desc: 'The contract validates every argument against both signatures.' },
+  { icon: 'signature', name: 'Signature-bound', desc: 'Amounts, addresses and expiry are cryptographically locked to the order.' },
+  { icon: 'testnet', name: 'Testnet MVP', desc: 'Running today on Stellar Testnet. Mainnet after a full external audit.' },
 ] as const;
+
+/** Icon keys are names, not components: content.ts stays free of React so it
+ *  can be read, diffed and reordered as plain data. Landing.tsx maps them. */
+export type IconKey =
+  | 'anchor' | 'hidden' | 'atomic'
+  | 'sign' | 'countersign' | 'fill'
+  | 'wallet' | 'contract' | 'signature' | 'testnet';
 
 export const HEADINGS = {
   problem: {

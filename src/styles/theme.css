@@ -214,3 +214,53 @@ body:where(.tr-dark) {
 @media (prefers-reduced-motion: reduce) {
   [style*="tr-float"] { animation: none !important; }
 }
+
+/* ==========================================================================
+   The ground
+   ==========================================================================
+   Not a glow. Blurred colour blobs behind a hero are the house style of every
+   template on the internet, and they say nothing about what this page is for.
+   This is a trading desk: the ground is a measured grid, faded out at the
+   edges so it reads as depth rather than wallpaper, with grain over it to kill
+   the plastic flatness of a pure hex background.
+   ========================================================================== */
+
+/* A surveyor's grid. 1px lines at a 72px pitch, masked to an ellipse so it
+   never reaches an edge and never has to be "ended" with a hard line. */
+.tr-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-carbon-line) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-carbon-line) 70%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 38%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 55% at 50% 38%, #000 25%, transparent 78%);
+}
+
+/* Film grain. The opacity is deliberately near the threshold of visibility —
+   you should not be able to point at it, only notice the background stops
+   looking like a flat fill. */
+.tr-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The pointer light. One soft ellipse that follows the cursor at a distance —
+   --tr-px/--tr-py are set by usePointerSpot. Low enough that it reads as the
+   page catching light, not as an effect. Falls back to a centred rest position
+   on touch, where there is no pointer to follow. */
+.tr-spot {
+  background: radial-gradient(
+    680px circle at var(--tr-px, 50%) var(--tr-py, 30%),
+    color-mix(in srgb, var(--color-lime) 7%, transparent),
+    transparent 62%
+  );
+  transition: background 600ms var(--ease-glide);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-spot { transition: none; }
+}
