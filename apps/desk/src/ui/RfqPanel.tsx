@@ -97,6 +97,35 @@ function Note({ children, tone = 'quiet' }: { children: React.ReactNode; tone?: 
   );
 }
 
+/**
+ * A quote row that has not arrived yet.
+ *
+ * It mirrors the real row's geometry — label over amount on the left, a
+ * countdown and a select dot on the right — so the list does not resize when
+ * the answers land. Getting that wrong is the whole failure mode of
+ * skeletons: a placeholder of the wrong shape makes the arrival a jump.
+ */
+function QuoteSkeleton({ index }: { index: number }) {
+  return (
+    <div aria-hidden="true"
+      className="flex items-center justify-between gap-4 rounded-well border
+        border-carbon-line bg-carbon-deep/40 p-4">
+      <span className="flex flex-col gap-2.5">
+        <span className="tr-skeleton block h-2.5 w-20 rounded-pill"
+          style={{ '--tr-lag': `${index * 120}ms` } as React.CSSProperties} />
+        <span className="tr-skeleton block h-5 w-36 rounded-pill"
+          style={{ '--tr-lag': `${index * 120 + 60}ms` } as React.CSSProperties} />
+      </span>
+      <span className="flex items-center gap-2.5">
+        <span className="tr-skeleton block h-2.5 w-9 rounded-pill"
+          style={{ '--tr-lag': `${index * 120 + 90}ms` } as React.CSSProperties} />
+        <span className="tr-skeleton block size-5 rounded-full"
+          style={{ '--tr-lag': `${index * 120 + 120}ms` } as React.CSSProperties} />
+      </span>
+    </div>
+  );
+}
+
 /** The quotes column with nothing in it. Says what would put something there,
  *  because an empty panel that only says "empty" makes the reader guess
  *  whether they did something wrong. */
@@ -454,17 +483,25 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
 
         {retryNote ? <Note>{retryNote}</Note> : null}
 
-        {showEmptyMakers ? (
+        {!busyDiscovering && showEmptyMakers ? (
           <Empty title="No makers registered"
             body="No makers are registered for this pair yet on the registry. Try a different pair." />
         ) : null}
 
-        {showEmptyQuotes ? (
+        {!busyDiscovering && showEmptyQuotes ? (
           <Empty title="No quotes available"
             body="No registered maker responded in time. Refresh quotes to try again, or pick a different pair." />
         ) : null}
 
-        {visibleQuotes.length === 0 && !settled && !showEmptyMakers && !showEmptyQuotes ? (
+        {busyDiscovering ? (
+          <div className="mt-5 flex flex-col gap-2" role="status"
+            aria-label="Requesting quotes from makers">
+            {[0, 1, 2].map((i) => <QuoteSkeleton key={i} index={i} />)}
+          </div>
+        ) : null}
+
+        {!busyDiscovering && visibleQuotes.length === 0 && !settled
+          && !showEmptyMakers && !showEmptyQuotes ? (
           <Empty title="Nothing quoted yet"
             body="Set an amount and request quotes. Every quote you see here is signed by its maker and settles exactly as shown." />
         ) : null}

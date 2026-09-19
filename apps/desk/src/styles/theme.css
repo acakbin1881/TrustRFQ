@@ -841,3 +841,36 @@ body:where(.tr-dark) {
 @media (prefers-reduced-motion: reduce) {
   .tr-orbit::before { animation: none; opacity: 0.35; }
 }
+
+/* ==========================================================================
+   Skeletons
+   ==========================================================================
+   Shown only where a real wait exists and the SHAPE of what is coming is
+   known: the quote rows while makers are being polled, the balances while
+   Horizon answers. Not for the landing chunk, which resolves in under a frame
+   — a skeleton that flashes is worse than the blank it replaced.
+
+   A sweep rather than a pulse, and left to right, because that is the same
+   gesture the field rules and the card edges use. A pulse says "something is
+   here"; a sweep says "something is arriving", which is the honest one.
+
+   Low contrast on purpose. A skeleton competing with the panel it sits in
+   turns waiting into an event.
+   ========================================================================== */
+@keyframes tr-sweep { to { background-position: -200% 0; } }
+
+.tr-skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-carbon-hi) 0%,
+    color-mix(in srgb, var(--color-carbon-line) 80%, var(--color-snow) 6%) 50%,
+    var(--color-carbon-hi) 100%
+  );
+  background-size: 200% 100%;
+  animation: tr-sweep 1.9s linear infinite;
+  animation-delay: var(--tr-lag, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-skeleton { animation: none; background-image: none; background-color: var(--color-carbon-hi); }
+}

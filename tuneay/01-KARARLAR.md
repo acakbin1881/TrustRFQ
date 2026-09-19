@@ -587,6 +587,25 @@ türden bir şey.
 `assets/` altını **hariç tutuyor**, yoksa eksik bir CSS dosyası 404 yerine
 `index.html` döner ve hata sessizce kaybolur.
 
+### Skeleton'lar
+
+**Yalnızca gerçek bir bekleme olan ve gelecek şeyin biçimi bilinen yerlerde:**
+maker'lar yoklanırken teklif satırları, Horizon cevap verirken bakiyeler.
+Landing chunk'ına konmadı — bir kareden kısa sürede çözülüyor ve **flash eden
+bir skeleton, yerini aldığı boşluktan kötüdür.**
+
+⚠️ **Geometri birebir aynı olmalı.** Skeleton satırı gerçek satırın düzenini
+taklit ediyor (solda etiket üstü tutar, sağda geri sayım ve seçim noktası).
+Skeleton'ların tek gerçek başarısızlık biçimi bu: yanlış biçimli bir yer
+tutucu, cevabın gelişini **zıplama** yapar.
+
+**Nabız değil süpürme, ve soldan sağa** — alan çizgileri ve kart kenarlarıyla
+aynı hareket. Nabız "burada bir şey var" der; süpürme "bir şey geliyor" der,
+dürüst olan ikincisi.
+
+Kontrast bilerek düşük: içinde durduğu panelle yarışan bir skeleton, beklemeyi
+olaya çevirir.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

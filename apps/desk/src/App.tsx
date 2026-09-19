@@ -111,6 +111,7 @@ function WalletMenu({ address, balances, loading, onDisconnect }: {
       </button>
 
       <div data-open={open} role="dialog" aria-label="Wallet details"
+        aria-busy={loading || !balances}
         className="tr-pop absolute right-0 top-[calc(100%+10px)] z-50 w-72 rounded-card
           border border-carbon-line bg-carbon-card/90 p-4 backdrop-blur-2xl">
         <div className="flex items-center justify-between gap-3">
@@ -143,9 +144,15 @@ function WalletMenu({ address, balances, loading, onDisconnect }: {
                 </span>
                 <span className="font-grotesk text-[13px] text-ash">{code}</span>
               </span>
-              <span className="font-grotesk text-[13px] tabular-nums text-snow">
-                {loading || !balances ? '—' : amount ?? '—'}
-              </span>
+              {/* a bar of the figure's own width, so the row does not jump
+                  when Horizon answers */}
+              {loading || !balances ? (
+                <span className="tr-skeleton block h-3 w-20 rounded-pill" aria-hidden="true" />
+              ) : (
+                <span className="font-grotesk text-[13px] tabular-nums text-snow">
+                  {amount ?? '—'}
+                </span>
+              )}
             </div>
           ))}
         </div>
