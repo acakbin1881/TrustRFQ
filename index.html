@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TrustRFQ — OTC Desk</title>
+  <title>TrustRFQ — Peer-to-peer OTC on Stellar</title>
   <meta name="description" content="The TrustRFQ desk: send wallet-signed OTC offers on Stellar — to one counterparty or to every taker watching the pair — and settle them atomically on-chain.">
   <meta name="theme-color" content="#E2E5F3">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -19,13 +19,9 @@
   <link rel="stylesheet" href="/intent.css">
 </head>
 <body>
-  <!-- COMPATIBILITY ENTRY. index.html is the real one now; this file loads the
-       same app and the router sends /otc.html on to /desk/new.
-       It stays because the team's harnesses hardcode this path:
-         tools/e2e/lib.mjs, tools/e2e/rfq-driver.mjs (BASE_URL defaults)
-         tools/dev-smoke.mjs
-       Retire it once those point at /desk — not before, or a live RFQ run
-       breaks mid-hackathon. -->
+  <!-- The ONE entry. Routing is client-side from here (src/routes/sections.ts):
+       / is the landing, /desk/<section> is the desk. otc.html is kept beside
+       this file as a compatibility entry — see its own comment. -->
   <div id="root"></div>
 
   <!-- Runtime config: plain scripts from public/, deliberately un-bundled so a

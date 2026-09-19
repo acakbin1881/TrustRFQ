@@ -7,7 +7,8 @@
     { "source": "/intent", "destination": "/otc", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/", "destination": "/hero" }
+    { "source": "/", "destination": "/hero" },
+    { "source": "/desk/:path*", "destination": "/index.html" }
   ],
   "headers": [
     {

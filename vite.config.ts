@@ -24,11 +24,16 @@ export default defineConfig({
   },
 
   build: {
-    // otc.html is the ONE entry — the desk is the whole app. hero.html /
-    // hero.js / styles.css / intent.css / the config scripts live in public/ and
-    // are copied verbatim, never bundled, so the hand-written landing keeps
-    // shipping exactly as it does today.
-    rollupOptions: { input: ['otc.html'] },
+    // index.html is the entry; the app routes client-side from there. otc.html
+    // ships alongside it purely so the team's E2E/dev-smoke harnesses keep
+    // resolving their hardcoded /otc.html — it loads the same bundle and the
+    // router forwards it to /desk/new. Drop it from this list once those
+    // harnesses point at /desk.
+    //
+    // hero.html / hero.js / styles.css / intent.css / the config scripts live
+    // in public/ and are copied verbatim, never bundled, so the hand-written
+    // landing keeps shipping exactly as it does today.
+    rollupOptions: { input: ['index.html', 'otc.html'] },
 
     // Vite's modulepreload polyfill is the one inline <script> it would emit.
     // vercel.json's CSP has no 'unsafe-inline' and must never gain one — an
