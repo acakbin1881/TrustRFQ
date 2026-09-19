@@ -205,9 +205,9 @@ function DeskNav({ address, balances, loading, onDisconnect }: {
 function TrustBotBar({ onOpen }: { onOpen: () => void }) {
   return (
     <button type="button" onClick={onOpen}
-      className="group mx-auto flex w-full max-w-md items-center gap-3 rounded-pill border
-        border-carbon-line bg-carbon-card/50 py-2.5 pl-2.5 pr-4 backdrop-blur-xl
-        transition-colors duration-500 ease-glide hover:border-lime/25 hover:bg-carbon-hi/60">
+      className="tr-orbit group mx-auto flex w-full max-w-md items-center gap-3 rounded-pill
+        border border-carbon-line bg-carbon-card/50 py-2.5 pl-2.5 pr-4 backdrop-blur-xl
+        transition-colors duration-500 ease-glide hover:bg-carbon-hi/60">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-carbon-deep">
         <BrandMark size={15} className="text-lime" />
       </span>

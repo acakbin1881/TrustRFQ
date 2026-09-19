@@ -519,11 +519,33 @@ hâlâ orada, sen hâlâ işlemin ortasındasın" der.
 koyarsan perdeyi örnekler — perde düz bir yıkama olduğu için hiçbir şeye
 bulanıklaşmaz.
 
+⚠️ **Blur sıfırdan animasyonlanmalı**, sönen bir opaklığın arkasında son
+değerinde bekletilmemeli. Şeffaf bir elemanda 18px'te tutulunca tarayıcının
+backdrop katmanını eleman gerçekten görünene kadar kurmak için sebebi yok —
+blur bir beat geç geliyordu ve sayfa, panel çoktan yerleştikten sonra odaktan
+çıkıyordu. Filtrenin kendisini geçiş yaptırmak onu diğer her şeyle aynı saate
+bağlıyor; `will-change` da katmanı baştan istiyor.
+
 ⚠️ **Bot uydurmuyor.** Yer tutucu bir asistanın mutabakat ya da trustline
 hakkında kulağa makul gelen cevaplar üretmesi, hiç asistan olmamasından
 kötüdür — insanlar bir masanın söylediğine göre hareket eder. Bot soruyu
 alıyor, düşünüyor ve cevap veremeyeceğini dürüstçe söylüyor. Gerçek bir uç
 nokta geldiğinde değişecek **tek fonksiyon** `reply()`.
+
+### Yörüngedeki kenarlık
+
+TrustBot çubuğunun etrafında dolanan bir ışık: sayfada bir yere **götüren** tek
+kontrol, hâlâ hareket eden tek şey olsun diye.
+
+**Nasıl:** başlangıç açısı animasyonlanan bir konik gradyan, padding kutusu
+dışında her şey maskelenerek 1px'lik bir halkaya indirgeniyor.
+⚠️ Açı **kayıtlı bir custom property** (`@property --tr-orbit`) olmak zorunda:
+CSS bir gradyanın içindeki ham `from <angle>` değerini interpolate edemez,
+yalnızca tiplenmiş olanı. `@property` olmadan animasyon hiç çalışmaz — ve
+durağan bir gradyana düşer, ki düşülecek iyi bir yer.
+
+Sürekli dönüyor ama sessiz (%55 opaklık, 7 saniyelik tur); hover'da tam güce
+çıkıyor.
 
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 

@@ -97,10 +97,10 @@ export function TrustBot({ open, onClose }: { open: boolean; onClose: () => void
         className="tr-bot-scrim absolute inset-0 cursor-default" />
 
       <div role="dialog" aria-modal="true" aria-label="TrustBot"
-        className="tr-bot-panel relative flex h-[min(34rem,85vh)] w-full max-w-xl flex-col
+        className="tr-bot-panel relative flex h-[min(40rem,88vh)] w-full max-w-2xl flex-col
           overflow-hidden rounded-card border border-carbon-line bg-carbon-card/85 backdrop-blur-2xl">
 
-        <header className="flex items-center gap-3 border-b border-carbon-line px-5 py-4">
+        <header className="flex items-center gap-3 border-b border-carbon-line px-6 py-4">
           <span className="flex size-8 items-center justify-center rounded-full bg-carbon-deep">
             <BrandMark size={15} className="text-lime" />
           </span>
@@ -117,7 +117,7 @@ export function TrustBot({ open, onClose }: { open: boolean; onClose: () => void
           </button>
         </header>
 
-        <div ref={logRef} className="flex-1 overflow-y-auto px-5 py-5">
+        <div ref={logRef} className="flex-1 overflow-y-auto px-6 py-6">
           {messages.length === 0 ? (
             <div className="tr-msg">
               <p className="font-grotesk text-[15px] leading-relaxed text-ash">{GREETING}</p>
@@ -163,7 +163,7 @@ export function TrustBot({ open, onClose }: { open: boolean; onClose: () => void
 
         <form onSubmit={(e) => { e.preventDefault(); send(draft); }}
           className="tr-field relative flex items-center gap-2 border-t border-carbon-line
-            px-3 py-3">
+            px-4 py-3.5">
           <input ref={inputRef} value={draft} onChange={(e) => setDraft(e.target.value)}
             placeholder="Ask about quotes, trustlines, settlement…" aria-label="Your question"
             className="min-w-0 flex-1 !border-0 !bg-transparent px-3 py-2.5 font-grotesk

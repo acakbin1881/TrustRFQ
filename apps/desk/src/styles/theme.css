@@ -698,30 +698,45 @@ body:where(.tr-dark) {
    reads as a bug.
    ========================================================================== */
 
-.tr-bot { transition: opacity 360ms var(--ease-glide); }
-.tr-bot[data-open='false'] { pointer-events: none; opacity: 0; }
-.tr-bot[data-open='true'] { opacity: 1; }
+.tr-bot[data-open='false'] { pointer-events: none; }
 
 /* The scrim carries the blur. backdrop-filter has to sit on the element that
    covers the content — put it on the panel and it samples the scrim instead,
-   which is a uniform wash and blurs to nothing. */
+   which is a uniform wash and blurs to nothing.
+   
+   THE BLUR IS ANIMATED FROM ZERO, not left at its final value behind a fading
+   opacity. Held at 18px on a transparent element, the browser has no reason
+   to build the backdrop layer until the element is actually visible, so the
+   blur arrived a beat late and the page snapped out of focus after the panel
+   had already landed. Transitioning the filter itself puts it on the same
+   clock as everything else, and will-change asks for the layer up front. */
 .tr-bot-scrim {
+  background: color-mix(in srgb, var(--color-carbon-deep) 0%, transparent);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  will-change: backdrop-filter, background-color;
+  transition:
+    backdrop-filter 480ms var(--ease-glide),
+    -webkit-backdrop-filter 480ms var(--ease-glide),
+    background-color 480ms var(--ease-glide);
+}
+.tr-bot[data-open='true'] .tr-bot-scrim {
   background: color-mix(in srgb, var(--color-carbon-deep) 62%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  transition: backdrop-filter 420ms var(--ease-glide);
 }
 
 .tr-bot-panel {
+  will-change: transform, opacity, filter;
   transition:
-    opacity 420ms var(--ease-glide),
-    transform 420ms var(--ease-glide),
-    filter 420ms var(--ease-glide);
+    opacity 520ms var(--ease-glide),
+    transform 520ms var(--ease-glide),
+    filter 520ms var(--ease-glide);
 }
 .tr-bot[data-open='false'] .tr-bot-panel {
   opacity: 0;
-  transform: translateY(14px) scale(0.975);
-  filter: blur(8px);
+  transform: translateY(18px) scale(0.97);
+  filter: blur(10px);
 }
 .tr-bot[data-open='true'] .tr-bot-panel {
   opacity: 1;
@@ -751,4 +766,55 @@ body:where(.tr-dark) {
   .tr-bot, .tr-bot-panel, .tr-bot-scrim { transition: none; }
   .tr-msg { animation: none; }
   .tr-think > span { animation: none; opacity: 0.6; }
+}
+
+/* ==========================================================================
+   The orbiting border
+   ==========================================================================
+   A light that travels around the TrustBot bar, so the one control that leads
+   somewhere is the one thing on the page still moving.
+
+   HOW: a conic gradient whose start angle is animated, painted into a 1px
+   ring by masking out everything but the padding box. The angle is a
+   registered custom property — CSS cannot interpolate a raw `from <angle>`
+   inside a gradient, only a typed one, so without @property this animation
+   does not run at all (and degrades to a still gradient, which is a fine
+   place to land).
+   ========================================================================== */
+@property --tr-orbit {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes tr-orbit { to { --tr-orbit: 360deg; } }
+
+.tr-orbit { position: relative; isolation: isolate; }
+.tr-orbit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--tr-orbit),
+    transparent 0deg 250deg,
+    color-mix(in srgb, var(--color-lime) 55%, transparent) 320deg,
+    var(--color-lime) 352deg,
+    transparent 360deg
+  );
+  /* keep the fill, drop the middle: what is left is the border */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.55;
+  transition: opacity 600ms var(--ease-glide);
+  animation: tr-orbit 7s linear infinite;
+  pointer-events: none;
+}
+.tr-orbit:hover::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-orbit::before { animation: none; opacity: 0.35; }
 }
