@@ -369,10 +369,12 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
           Firm, signed, and yours to accept or leave.
         </p>
 
-        <label htmlFor="rfqAmount" className="mt-7 block font-grotesk text-[12px]
-          uppercase tracking-[0.14em] text-slate">You sell</label>
-        <div className="mt-2.5 flex items-center gap-2 rounded-well border border-carbon-line
-          bg-carbon-deep/70 p-2 focus-within:border-lime/30 transition-colors duration-500 ease-glide">
+        <label htmlFor="rfqAmount" className="mt-7 block font-grotesk text-[13px] text-slate">
+          You sell
+        </label>
+        <div className="tr-field relative mt-2.5 flex items-center gap-2 overflow-hidden
+          rounded-well border border-carbon-line bg-carbon-deep/70 p-2 transition-colors
+          duration-500 ease-glide focus-within:border-lime/25">
           <input type="text" id="rfqAmount" inputMode="decimal"
             placeholder={noPair ? 'Choose a pair' : '0.00'}
             value={amount} disabled={fieldsDisabled || noPair}
@@ -383,12 +385,16 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
             className="min-w-0 flex-1 !border-0 !bg-transparent px-3 py-2 font-grotesk
               text-[22px] tabular-nums !text-snow outline-none placeholder:text-slate/60
               disabled:cursor-not-allowed disabled:opacity-50" />
+          {/* the field answers by ruling itself, left to right */}
+          <span className="tr-field-rule absolute inset-x-0 bottom-0 block h-[1.5px] bg-lime/70"
+            aria-hidden="true" />
           <TokenPicker id="rfqSellToken" value={sellToken} label="Sell token"
             disabled={fieldsDisabled} onChange={setSellToken} />
         </div>
 
-        <label htmlFor="rfqBuyToken" className="mt-6 block font-grotesk text-[12px]
-          uppercase tracking-[0.14em] text-slate">You buy</label>
+        <label htmlFor="rfqBuyToken" className="mt-6 block font-grotesk text-[13px] text-slate">
+          You buy
+        </label>
         <div className="mt-2.5 flex items-center justify-between gap-2 rounded-well border
           border-carbon-line bg-carbon-deep/70 p-2">
           <span className="px-3 py-2 font-grotesk text-[15px] text-slate">
@@ -442,9 +448,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="font-grotesk text-[15px] font-medium text-snow">Quotes</h2>
           {visibleQuotes.length > 0 && !settled ? (
-            <span className="font-grotesk text-[12px] uppercase tracking-[0.14em] text-slate">
-              Ranked by price
-            </span>
+            <span className="font-grotesk text-[13px] text-slate">Ranked by price</span>
           ) : null}
         </div>
 
@@ -481,8 +485,7 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
                         ? 'border-lime/35 bg-carbon-deep'
                         : 'border-carbon-line bg-carbon-deep/40 hover:bg-carbon-deep/70'}`}>
                     <span>
-                      <span className="block font-grotesk text-[12px] uppercase
-                        tracking-[0.14em] text-slate">You receive</span>
+                      <span className="block font-grotesk text-[13px] text-slate">You receive</span>
                       <span className="mt-1.5 block font-grotesk text-[20px] font-medium
                         tabular-nums text-snow">
                         {q.order.makerAmount}

@@ -460,6 +460,40 @@ Genişlik `max-w-6xl` → `max-w-5xl`.
 gözlemcisiyle değil: burada kaydırılacak bir sayfa yok ve observer bekleyen bir
 panel hiç belirmezdi.
 
+### Desk'in cümlesi, cümle düzeni, alan cevabı (sekizinci revizyon)
+
+**Panellerin üstünde tek satır:** *"Ask every maker at once, settle in one
+signature."* Landing'in işaretli-kelime aygıtı gövde ölçeğinde, iki işaretli ve
+yine **sıralı**: `one signature` yüksek sesli (iddia bu — tek cüzdan istemi
+mutabakatı bitiriyor), `every maker` sessiz (oraya nasıl varıldığı).
+
+`MarkedPhrase` **ayrı bir bileşen**, landing'inkiyle paylaşılan değil. Sebep
+ölçek: landing'in sayıları 4rem'lik bir başlık için **gözle ölçülmüş** —
+em boyutlu glifler, optik taban çizgisi kayması, 68px tipografinin altında
+okunacak kalınlıkta bir çizgi. Hiçbiri 18px'e düşürülünce hayatta kalmıyor;
+türetilmediler, ölçüldüler. Paylaşılan şey **dilbilgisi**, ve o
+`tuneay/tarif-isaretli-baslik.md`'de yazılı.
+
+**Uppercase kalktı** (desk). `YOU SELL` → `You sell`. Harf aralığı açılmış
+büyük harf, bir etiketi *tabela* yapıyor; burada hepsi bir cümlenin parçası.
+⚠️ Landing'deki bölüm etiketleri (`THE PROBLEM`) bilerek kaldı — orada
+gerçekten tabela işi görüyorlar.
+
+**Alan kendini çizerek cevap veriyor.** Odaklanınca altına soldan sağa bir
+çizgi çekiliyor — işaretli kelimenin aynı hareketi. Renk değişimi değil,
+**süpürme**: süpürmenin yönü var, ve yön onu "alan sana cevap veriyor" yapan
+şey; sayfanın yeniden boyanması değil.
+⚠️ Çizgi **sarmalayıcıda**, input'ta değil: input şeffaf ve kenarlıksız olmak
+zorunda (`styles.css` specificity'si yüzünden `!` ile), dolayısıyla üstünde
+çizilecek bir şey yok.
+
+**GSAP eklenmedi.** Buradaki hareketlerin hepsi tek özellikli geçişler ve
+anahtar kareler; CSS aynı eğriyi aynı akıcılıkta veriyor ve derleyici onları
+compositor'a bırakıyor. GSAP'ın kazandırdığı şey — timeline'lar, sıralı
+koreografi, scroll'a bağlı sahneler — burada yok. Öyle bir sahne çıkarsa
+(örneğin teklif kartlarının sıralı girişi ve mutabakat sekansı birbirine
+bağlanırsa) o zaman gerekçesi oluşur.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

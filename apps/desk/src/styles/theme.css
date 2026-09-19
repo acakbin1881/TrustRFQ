@@ -614,3 +614,22 @@ body:where(.tr-dark) {
 @media (prefers-reduced-motion: reduce) {
   .tr-panel-in { animation: none; }
 }
+
+/* --- the field's focus rule ------------------------------------------------
+   A field says it is active by drawing a line under itself, left to right —
+   the same gesture the landing's marked word uses. It is a wipe rather than a
+   colour change because a wipe has a direction, and direction is what makes
+   it read as the field answering you rather than the page repainting.
+
+   On the WRAPPER, not the input: the input is transparent and borderless (it
+   has to be, see the ! in RfqPanel), so there is nothing on it to draw. */
+.tr-field-rule {
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 520ms var(--ease-glide);
+}
+.tr-field:focus-within .tr-field-rule { transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-field-rule { transition: none; }
+}

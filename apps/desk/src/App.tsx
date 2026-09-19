@@ -20,7 +20,8 @@
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router';
-import { ArrowRight, Check, Copy, LogOut, Wallet } from 'lucide-react';
+import { ArrowRight, Check, Copy, LogOut, PenLine, Radio, Wallet } from 'lucide-react';
+import { MarkedPhrase } from './ui/MarkedPhrase';
 import { TokenUSDC, TokenXLM } from '@web3icons/react';
 import type { BalanceMap } from './core/balances';
 import { trunc } from './core/tokens';
@@ -112,11 +113,8 @@ function WalletMenu({ address, balances, loading, onDisconnect }: {
         className="tr-pop absolute right-0 top-[calc(100%+10px)] z-50 w-72 rounded-card
           border border-carbon-line bg-carbon-card/90 p-4 backdrop-blur-2xl">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-grotesk text-[12px] uppercase tracking-[0.14em] text-slate">
-            Connected
-          </span>
-          <span className="flex items-center gap-1.5 font-grotesk text-[11px] uppercase
-            tracking-[0.12em] text-lime">
+          <span className="font-grotesk text-[13px] text-slate">Connected</span>
+          <span className="flex items-center gap-1.5 font-grotesk text-[12px] text-lime">
             <span className="size-1 rounded-full bg-lime" aria-hidden="true" />
             Testnet
           </span>
@@ -256,9 +254,26 @@ function Desk() {
           space actually left over. */}
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center px-6 py-12">
         <div className="w-full">
-          {address
-            ? <RfqPanel address={address} balances={balances} />
-            : <DeskGate onConnect={() => void handleConnect()} />}
+          {address ? (
+            <>
+              {/* What the page does, in one line, above the work — the
+                  landing's marked-word device at body scale. Two marks, ranked:
+                  the signature is the claim (one wallet prompt settles it), the
+                  fan-out is how it gets there. */}
+              <MarkedPhrase
+                className="tr-panel-in mx-auto mb-9 max-w-2xl text-center font-grotesk
+                  text-[clamp(1.05rem,2vw,1.35rem)] leading-relaxed text-ash"
+                text="Ask every maker at once, settle in one signature."
+                marks={[
+                  { word: 'every maker', icon: Radio, rank: 'quiet' },
+                  { word: 'one signature', icon: PenLine, rank: 'loud' },
+                ]} />
+
+              <RfqPanel address={address} balances={balances} />
+            </>
+          ) : (
+            <DeskGate onConnect={() => void handleConnect()} />
+          )}
         </div>
       </main>
     </div>
