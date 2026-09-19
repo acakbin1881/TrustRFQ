@@ -31,7 +31,6 @@ import {
 // as a mockup of itself.
 import { NetworkStellar, TokenUSDC, TokenXLM } from '@web3icons/react';
 import { BrandMark } from '../brand/mark';
-import { deskPath } from '../routes/sections';
 import {
   COMPARISON, CTA, FAQ, FOOTER, GUARANTEES, HEADINGS, HERO, HERO_TICKET, LADDER,
   NAV_LINKS, PROOF, SOLUTION, STEPS,
@@ -39,7 +38,8 @@ import {
 } from './content';
 import { useCarbonCanvas, useCountUp, useReveal, useScrolled } from './motion';
 
-const DESK = deskPath('create');
+// One desk, one URL. The section slugs went with the sections.
+const DESK = '/desk';
 const EXPLORER = 'https://stellar.expert/explorer/testnet/tx/';
 
 /** Stagger helper: every reveal reads its own delay off --tr-delay. */

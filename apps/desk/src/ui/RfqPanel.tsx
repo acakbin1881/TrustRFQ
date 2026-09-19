@@ -36,8 +36,9 @@ import {
   type RfqWalletSigner,
   type SwapExecutedEvent,
 } from '@trustrfq/sdk';
+import { ArrowRight, Check, ChevronDown, ExternalLink, Loader2 } from 'lucide-react';
+import { TokenUSDC, TokenXLM } from '@web3icons/react';
 import { kit } from '../wallet/kit';
-import { TokenSelect } from './TokenSelect';
 import { errMsg, useToast } from './Toast';
 import { useNow } from './useNow';
 
@@ -84,6 +85,70 @@ async function fetchOneFreshQuote(order: RfqOrder, takerWallet: string): Promise
   } catch {
     return null;
   }
+}
+
+/** A note under a field: quiet by default, red when it is a refusal. */
+function Note({ children, tone = 'quiet' }: { children: React.ReactNode; tone?: 'quiet' | 'bad' }) {
+  return (
+    <p className={`mt-4 font-grotesk text-[13px] leading-relaxed
+      ${tone === 'bad' ? 'text-bad' : 'text-slate'}`}>
+      {children}
+    </p>
+  );
+}
+
+/** The quotes column with nothing in it. Says what would put something there,
+ *  because an empty panel that only says "empty" makes the reader guess
+ *  whether they did something wrong. */
+function Empty({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="mt-5 rounded-well border border-dashed border-carbon-line
+      bg-carbon-deep/30 px-5 py-8 text-center">
+      <div className="font-grotesk text-[15px] font-medium text-ash">{title}</div>
+      <p className="mx-auto mt-2 max-w-xs font-grotesk text-[13px] leading-relaxed text-slate">
+        {body}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The token control, drawn against the carbon palette.
+ *
+ * Local rather than src/ui/TokenSelect.tsx: that one is shared with RfqDemo,
+ * which ships the old stylesheet on purpose, so restyling it in place would
+ * repaint a deploy this branch does not own.
+ *
+ * It stays a real <select>. A custom listbox here would have to re-earn
+ * keyboard handling, type-ahead and the platform's own touch picker, and the
+ * only thing it would buy is styled option rows in a two-item list.
+ */
+function TokenPicker({ id, value, label, disabled, onChange }: {
+  id: string; value: string; label: string; disabled: boolean; onChange: (v: string) => void;
+}) {
+  const code = tokenLabel(value);
+  const Mark = code === 'USDC' ? TokenUSDC : TokenXLM;
+
+  return (
+    <span className="relative flex shrink-0 items-center">
+      <span className="pointer-events-none absolute left-3 flex size-5 items-center
+        justify-center rounded-full bg-carbon-deep">
+        <Mark size={12} variant="mono" className={code === 'USDC' ? 'text-lime' : 'text-snow'} />
+      </span>
+
+      <select id={id} aria-label={label} value={value} disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none rounded-pill border border-carbon-line bg-carbon-card py-2.5
+          pl-10 pr-9 font-grotesk text-[14px] font-medium text-snow outline-none transition-colors
+          duration-500 ease-glide hover:border-lime/25 focus-visible:border-lime/40
+          disabled:cursor-not-allowed disabled:opacity-50">
+        {TOKENS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+      </select>
+
+      <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-slate"
+        strokeWidth={1.5} aria-hidden="true" />
+    </span>
+  );
 }
 
 export function RfqPanel({ address, balances }: RfqPanelProps) {
@@ -291,110 +356,207 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
   const showEmptyQuotes = phase === 'empty-quotes' || (phase === 'quoted' && visibleQuotes.length === 0);
 
   return (
-    <div className="rfq-panel">
-      <div className="field">
-        <label className="field__label" htmlFor="rfqSellToken">Sell</label>
-        <div className="rfq-sell-row">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+      {/* LEFT: what you are asking for. RIGHT: what came back. The panel used
+          to be one narrow column with the quotes stacked under the form, which
+          pushed the answer below the fold the moment more than two makers
+          replied. Side by side, the request stays on screen while the quotes
+          arrive — and that is the thing you are comparing them against. */}
+      <section className="rounded-card border border-carbon-line bg-carbon-card/50 p-6">
+        <h2 className="font-grotesk text-[15px] font-medium text-snow">Request a quote</h2>
+        <p className="mt-1.5 font-grotesk text-[13px] text-slate">
+          Firm, signed, and yours to accept or leave.
+        </p>
+
+        <label htmlFor="rfqAmount" className="mt-7 block font-grotesk text-[12px]
+          uppercase tracking-[0.14em] text-slate">You sell</label>
+        <div className="mt-2.5 flex items-center gap-2 rounded-well border border-carbon-line
+          bg-carbon-deep/70 p-2 focus-within:border-lime/30 transition-colors duration-500 ease-glide">
           <input type="text" id="rfqAmount" inputMode="decimal"
-            placeholder={noPair ? 'Choose a pair to see live quotes.' : '0.00'}
+            placeholder={noPair ? 'Choose a pair' : '0.00'}
             value={amount} disabled={fieldsDisabled || noPair}
-            onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))} />
-          <TokenSelect id="rfqSellToken" value={sellToken} options={TOKENS} label="Sell token"
+            onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+            /* the ! is load-bearing: public/styles.css styles `input[type="text"]`
+               by attribute, which outranks a plain utility class, and without
+               it this field renders on the old theme's pale fill */
+            className="min-w-0 flex-1 !border-0 !bg-transparent px-3 py-2 font-grotesk
+              text-[22px] tabular-nums !text-snow outline-none placeholder:text-slate/60
+              disabled:cursor-not-allowed disabled:opacity-50" />
+          <TokenPicker id="rfqSellToken" value={sellToken} label="Sell token"
             disabled={fieldsDisabled} onChange={setSellToken} />
         </div>
-      </div>
 
-      <div className="field">
-        <label className="field__label" htmlFor="rfqBuyToken">Buy</label>
-        <TokenSelect id="rfqBuyToken" value={buyToken} options={TOKENS} label="Buy token"
-          disabled={fieldsDisabled} onChange={setBuyToken} />
-      </div>
+        <label htmlFor="rfqBuyToken" className="mt-6 block font-grotesk text-[12px]
+          uppercase tracking-[0.14em] text-slate">You buy</label>
+        <div className="mt-2.5 flex items-center justify-between gap-2 rounded-well border
+          border-carbon-line bg-carbon-deep/70 p-2">
+          <span className="px-3 py-2 font-grotesk text-[15px] text-slate">
+            Quoted by the maker
+          </span>
+          <TokenPicker id="rfqBuyToken" value={buyToken} label="Buy token"
+            disabled={fieldsDisabled} onChange={setBuyToken} />
+        </div>
 
-      {noPair ? (
-        <div className="hint">Choose a pair to see live quotes.</div>
-      ) : overCap ? (
-        <div className="hint is-err">Amount too large (max 10,000,000,000,000).</div>
-      ) : showTrustlineNote ? (
-        <div className="hint">You'll need a trustline for {buyToken.split(':')[0]} to settle this swap — makers may decline to quote without one.</div>
-      ) : null}
+        {noPair ? (
+          <Note>Choose a pair to see live quotes.</Note>
+        ) : overCap ? (
+          <Note tone="bad">Amount too large (max 10,000,000,000,000).</Note>
+        ) : showTrustlineNote ? (
+          <Note>
+            You&apos;ll need a trustline for {buyToken.split(':')[0]} to settle this swap —
+            makers may decline to quote without one.
+          </Note>
+        ) : null}
 
-      <div className="order__actions">
-        <button type="button" id="rfqRefreshBtn" className={busyDiscovering ? 'btn btn--gold is-busy' : 'btn btn--gold'}
-          disabled={!canQuote || fieldsDisabled} onClick={() => void refreshQuotes()}>
-          {busyDiscovering ? <span className="btn__orb" aria-hidden="true"><span className="spin" /></span> : 'Refresh quotes'}
+        <button type="button" id="rfqRefreshBtn"
+          disabled={!canQuote || fieldsDisabled} onClick={() => void refreshQuotes()}
+          className="group mt-7 flex w-full items-center justify-center gap-2.5 rounded-well
+            bg-lime py-3.5 font-grotesk text-[15px] font-semibold text-carbon transition-colors
+            duration-500 ease-glide hover:bg-lime-soft disabled:cursor-not-allowed
+            disabled:bg-carbon-hi disabled:text-slate">
+          {busyDiscovering ? (
+            <>
+              <Loader2 className="size-4 animate-spin" strokeWidth={2} aria-hidden="true" />
+              Requesting quotes…
+            </>
+          ) : (
+            <>
+              Refresh quotes
+              <ArrowRight className="size-4 transition-transform duration-500 ease-glide
+                group-hover:translate-x-1" strokeWidth={2} aria-hidden="true" />
+            </>
+          )}
         </button>
-      </div>
 
-      {showMakerLine ? (
-        <div className="hint rfq-indicator">{makerCount} maker{makerCount === 1 ? '' : 's'} found</div>
-      ) : null}
-
-      {retryNote ? <div className="hint">{retryNote}</div> : null}
-
-      {showEmptyMakers ? (
-        <div className="empty">
-          <div>No makers registered</div>
-          <div className="hint">No makers are registered for this pair yet on the registry. Try a different pair.</div>
-        </div>
-      ) : null}
-
-      {showEmptyQuotes ? (
-        <div className="empty">
-          <div>No quotes available</div>
-          <div className="hint">No registered maker responded in time. Refresh quotes to try again, or pick a different pair.</div>
-        </div>
-      ) : null}
-
-      {visibleQuotes.length > 0 && !settled ? (
-        <div className="rfq-quotes">
-          {visibleQuotes.map((q, i) => {
-            const countdown = fmtCountdown(q.order.expiry, nowSeconds);
-            const expired = countdown === 'Expired';
-            const label = expired ? 'Expired' : `Expires in ${countdown}`;
-            return (
-              <div key={q.authEntry}
-                className={i === selectedIndex ? 'order rfq-row is-selected' : 'order rfq-row'}
-                onClick={() => setSelectedKey(q.authEntry)}>
-                <div className="legbox">
-                  <div className="legbox__k">You receive</div>
-                  <div className="legbox__v">{q.order.makerAmount} <span className="legbox__t">{tokenLabel(buyToken)}</span></div>
-                </div>
-                <div className="order__meta">
-                  <span className={expired ? 'sig rfq-countdown is-expired' : 'sig rfq-countdown'}>{label}</span>
-                </div>
-              </div>
-            );
-          })}
-          <div className="hint">Fee is paid by the maker — you receive the full quoted amount.</div>
-          <div className="order__actions">
-            <button type="button" id="rfqAcceptBtn" className={busySettling ? 'btn btn--gold is-busy' : 'btn btn--gold'}
-              disabled={busySettling || visibleQuotes.length === 0} onClick={() => void accept()}>
-              {busySettling ? <span className="btn__orb" aria-hidden="true"><span className="spin" /></span> : 'Accept quote'}
-            </button>
+        {showMakerLine ? (
+          <div className="mt-4 flex items-center gap-2 font-grotesk text-[13px] text-slate">
+            <span className="size-1.5 rounded-full bg-lime" aria-hidden="true" />
+            {makerCount} maker{makerCount === 1 ? '' : 's'} found
           </div>
-          {settleErr ? <div className="settle__err">{settleErr}</div> : null}
-        </div>
-      ) : null}
+        ) : null}
+      </section>
 
-      {settled ? (
-        <div className="settle">
-          <div className="settle__title">On-chain settlement</div>
-          <div className="stepper">
-            <div className="stepper__step is-done is-final">
-              <span className="stepper__dot">✓</span>
-              <span className="stepper__label">Settled</span>
-            </div>
-          </div>
-          <div className="settle__msg">
-            <a href={`${EXPLORER}/tx/${settled.hash}`} target="_blank" rel="noopener noreferrer">
-              View transaction ({trunc(settled.hash)}) ↗
-            </a>
-          </div>
-          {!settled.event ? (
-            <div className="settle__err">Settled, but the SwapExecuted event could not be confirmed.</div>
+      <section className="rounded-card border border-carbon-line bg-carbon-card/50 p-6">
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="font-grotesk text-[15px] font-medium text-snow">Quotes</h2>
+          {visibleQuotes.length > 0 && !settled ? (
+            <span className="font-grotesk text-[12px] uppercase tracking-[0.14em] text-slate">
+              Ranked by price
+            </span>
           ) : null}
         </div>
-      ) : null}
+
+        {retryNote ? <Note>{retryNote}</Note> : null}
+
+        {showEmptyMakers ? (
+          <Empty title="No makers registered"
+            body="No makers are registered for this pair yet on the registry. Try a different pair." />
+        ) : null}
+
+        {showEmptyQuotes ? (
+          <Empty title="No quotes available"
+            body="No registered maker responded in time. Refresh quotes to try again, or pick a different pair." />
+        ) : null}
+
+        {visibleQuotes.length === 0 && !settled && !showEmptyMakers && !showEmptyQuotes ? (
+          <Empty title="Nothing quoted yet"
+            body="Set an amount and request quotes. Every quote you see here is signed by its maker and settles exactly as shown." />
+        ) : null}
+
+        {visibleQuotes.length > 0 && !settled ? (
+          <>
+            <div className="mt-5 flex flex-col gap-2">
+              {visibleQuotes.map((q, i) => {
+                const countdown = fmtCountdown(q.order.expiry, nowSeconds);
+                const expired = countdown === 'Expired';
+                const chosen = i === selectedIndex;
+                return (
+                  <button type="button" key={q.authEntry} onClick={() => setSelectedKey(q.authEntry)}
+                    aria-pressed={chosen}
+                    className={`flex items-center justify-between gap-4 rounded-well border p-4
+                      text-left transition-colors duration-500 ease-glide
+                      ${chosen
+                        ? 'border-lime/35 bg-carbon-deep'
+                        : 'border-carbon-line bg-carbon-deep/40 hover:bg-carbon-deep/70'}`}>
+                    <span>
+                      <span className="block font-grotesk text-[12px] uppercase
+                        tracking-[0.14em] text-slate">You receive</span>
+                      <span className="mt-1.5 block font-grotesk text-[20px] font-medium
+                        tabular-nums text-snow">
+                        {q.order.makerAmount}
+                        <span className="ml-2 text-[14px] text-ash">{tokenLabel(buyToken)}</span>
+                      </span>
+                    </span>
+
+                    <span className="flex items-center gap-2.5">
+                      <span className={`font-grotesk text-[12px] tabular-nums
+                        ${expired ? 'text-bad' : 'text-slate'}`}>
+                        {expired ? 'Expired' : countdown}
+                      </span>
+                      <span className={`flex size-5 items-center justify-center rounded-full border
+                        transition-colors duration-500 ease-glide
+                        ${chosen ? 'border-lime bg-lime text-carbon' : 'border-carbon-line text-transparent'}`}>
+                        <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="mt-4 font-grotesk text-[13px] text-slate">
+              Fee is paid by the maker — you receive the full quoted amount.
+            </p>
+
+            <button type="button" id="rfqAcceptBtn"
+              disabled={busySettling || visibleQuotes.length === 0} onClick={() => void accept()}
+              className="group mt-5 flex w-full items-center justify-center gap-2.5 rounded-well
+                bg-lime py-3.5 font-grotesk text-[15px] font-semibold text-carbon transition-colors
+                duration-500 ease-glide hover:bg-lime-soft disabled:cursor-not-allowed
+                disabled:bg-carbon-hi disabled:text-slate">
+              {busySettling ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" strokeWidth={2} aria-hidden="true" />
+                  Settling…
+                </>
+              ) : (
+                <>
+                  Accept quote
+                  <ArrowRight className="size-4 transition-transform duration-500 ease-glide
+                    group-hover:translate-x-1" strokeWidth={2} aria-hidden="true" />
+                </>
+              )}
+            </button>
+
+            {settleErr ? <Note tone="bad">{settleErr}</Note> : null}
+          </>
+        ) : null}
+
+        {settled ? (
+          <div className="mt-5 rounded-well border border-lime/25 bg-carbon-deep/60 p-5">
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-6 items-center justify-center rounded-full bg-lime
+                text-carbon">
+                <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+              </span>
+              <span className="font-grotesk text-[15px] font-medium text-snow">
+                Settled on-chain
+              </span>
+            </div>
+
+            <a href={`${EXPLORER}/tx/${settled.hash}`} target="_blank" rel="noopener noreferrer"
+              className="group mt-4 inline-flex items-center gap-2 font-mono text-[13px] text-ash
+                transition-colors duration-500 ease-glide hover:text-lime">
+              {trunc(settled.hash)}
+              <ExternalLink className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+            </a>
+
+            {!settled.event ? (
+              <Note tone="bad">Settled, but the SwapExecuted event could not be confirmed.</Note>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

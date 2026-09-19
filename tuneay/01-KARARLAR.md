@@ -402,6 +402,40 @@ bütün öğe birkaç piksel aşağı oturuyor — tuttun.
 `lg` kırılımında bölüm oranı da değişti (`0.9/1.1` → `0.82/1.18`, gap 20→14):
 1024px'de sayı sütunları track'i 82px'e eziyordu.
 
+### Desk carbon/lime'a geçti (altıncı revizyon)
+
+**Tek panel.** New offer / Incoming / Sent kalktı; kalan RFQ. Protokol ürünün
+kendisi, üç başka odaya kapı açan bir nav bunun tersini söylüyor.
+`Ticket`, `OfferList`, `BroadcastList`, `PairsPanel` **silinmedi** — `src/ui`'da
+duruyor ve derleniyor, sadece hiçbir yerden import edilmiyor (tree-shake).
+*Göstermeyi bırakmak* ile *silmek* ayrı kararlar.
+
+Bununla birlikte kabuğun Supabase abonelikleri de gitti (`useOrders`,
+`useBroadcasts`). ⚠️ Ama paket hâlâ `@supabase/supabase-js` taşıyor, çünkü
+RfqPanel kendi importlarıyla getiriyor — onu tamamen dışarıda tutan giriş
+`RfqDemo.tsx` ve `tools/build-rfq-demo.mjs` bunu test ediyor. Bu o değil.
+
+**Tam sayfa, iki sütun.** Panel dar tek sütundu ve ikiden fazla maker cevap
+verince cevap kıvrımın altına düşüyordu. Şimdi sol = istek, sağ = gelen
+teklifler; istek ekranda kalıyor, ki teklifleri ona karşı okuyorsun.
+
+**Nav:** marka · Testnet · bakiyeler (gerçek token işaretleriyle) ··· cüzdan.
+**Disconnect adresin yanında bir ikon**, arkasında etiketli bir buton değil:
+adres *üzerinde* işlem yapıyor, dolayısıyla ona ait. Erişilebilir adı ve
+tooltip'i var; bardaki tek kırmızıya çalan şey ve kendini hover'da ilan ediyor.
+
+⚠️ **`public/styles.css` hâlâ yükleniyor** (RfqPanel dışındaki paylaşılan
+bileşenler ve RfqDemo için). Attribute seçicisiyle yazılmış `input[type="text"]`
+kuralı, sade bir utility sınıfını **specificity'de yeniyor** — tutar alanı bu
+yüzden eski temanın soluk dolgusuyla render oluyordu. O alandaki `!` bu yüzden
+taşıyıcı.
+
+**Dokunulmayanlar:** `src/ui/Gate.tsx`, `BalanceStrip.tsx`, `TokenSelect.tsx` ve
+`RfqDemo.tsx`. Hepsi RfqDemo ile paylaşılıyor; o deploy eski stil sayfasını
+bilerek taşıyor, dolayısıyla yerinde yeniden stillemek bu dalın sahip olmadığı
+bir yayını boyardı. Desk kendi `Balances`, `WalletChip`, `DeskGate` ve
+`TokenPicker`'ını yerelde çiziyor.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".
