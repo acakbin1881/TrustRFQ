@@ -557,12 +557,13 @@ birlikte yolun yarısı, satır kutusundan ancak kısmen çıkmış hâlde geçi
 hâl "geçişin bir ânı" değil "tasarım" olarak okunacak kadar uzun kalıyor.
 Maskesiz aynı üç özellik aynı işi görüyor, kırpılacak kenar yok.
 
-**Tipografi animasyonları artık webfont'u bekliyor.** Font gelmeden başlarsa
-satır yedek yüzle animasyonlanıp Space Grotesk inince yeniden diziliyordu —
-okurun altındaki bu zıplama ikinci ve daha çirkin bir animasyon gibi okunuyor.
-`main.tsx` `document.fonts.ready`'yi bekleyip `<html>`'e `.tr-fonts` ekliyor.
-⚠️ **900ms tavan asıl yarısı:** yüklenmeyen bir font (engellenmiş, çevrimdışı,
-yavaş CDN) bütün girişi götürmemeli. Hangisi önce olursa.
+**Webfont kapısı denendi ve GERİ ALINDI.** Fikir şuydu: font gelmeden
+başlayan satır yedek yüzle animasyonlanıp Space Grotesk inince yeniden
+diziliyor. Doğru teşhis, yanlış ilaç:
+⚠️ `animation-play-state: paused` + `fill-mode: both` ile duraklatılan durum
+**ilk anahtar karedir** — yani `opacity: 0`. Sayfa yavaş bağlantıda yüzlerce
+ms bomboş durup sonra her şeyi aynı anda getiriyordu. Hareket hâlindeki bir
+satırdaki küçük yeniden dizilme neredeyse görünmez; boş sayfa değil.
 
 **Desk kademesi okuma sırasına göre:** çubuk → cümle → sol panel → sağ panel
 (0 / 150 / 300 / 420ms). İşin yapılış sırası da bu. Nav bilerek animasyonsuz:
@@ -605,6 +606,27 @@ dürüst olan ikincisi.
 
 Kontrast bilerek düşük: içinde durduğu panelle yarışan bir skeleton, beklemeyi
 olaya çevirir.
+
+### Açılış ikinci geçiş
+
+**Blur alanla ölçeklenir.** Bir metin satırında "odağa gelme" gibi okunan
+`blur(9px)`, 500px genişliğinde bir panelde **lekelenmiş bir levha** gibi
+okunuyor. Paneller artık 3px blur, 10px yol, 700ms. Sayfa kurulurmuş gibi
+değil, zaten oradaymış da yetişiyormuş gibi gelmeli.
+
+**Kademe kısaldı:** 0 / 70 / 150 / 230ms. Öncesi 420ms'ye kadar gidiyordu ve
+sayfa geçit töreni yapıyordu.
+
+**Boş durum kutusu kalktı.** Kenarlıklı bir panelin içindeki kesikli
+dikdörtgen, çerçeve içinde çerçeve — ve ekranın **içinde hiçbir şey olmayan**
+bölgesine en belirgin çizgiyi çiziyordu. Ortalanmış tipografi aynı şeyi
+söylüyor, çizgi eklemeden.
+
+**Her panel kendini tarif ediyor.** Sol paneldeki alt başlık aslında sağdaki
+panelin içeriğini anlatıyordu ("Firm, signed, and yours to accept or leave").
+Sol artık "Set an amount. Every registered maker gets asked.", sağ o cümleyi
+devraldı ve "Ranked by price" etiketi oraya katıldı — satır sayısı azaldı,
+simetri oturdu.
 
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 

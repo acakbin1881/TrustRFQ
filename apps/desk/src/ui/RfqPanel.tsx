@@ -130,9 +130,12 @@ function QuoteSkeleton({ index }: { index: number }) {
  *  because an empty panel that only says "empty" makes the reader guess
  *  whether they did something wrong. */
 function Empty({ title, body }: { title: string; body: string }) {
+  // No box. A dashed rectangle inside a bordered panel is a frame around a
+  // frame, and it draws a hard edge around the one region that has nothing in
+  // it — the emptiest part of the screen ends up the most outlined. Centred
+  // type in the panel's own space says the same thing and adds no lines.
   return (
-    <div className="mt-5 rounded-well border border-dashed border-carbon-line
-      bg-carbon-deep/30 px-5 py-8 text-center">
+    <div className="flex min-h-[9rem] flex-col items-center justify-center px-4 text-center">
       <div className="font-grotesk text-[15px] font-medium text-ash">{title}</div>
       <p className="mx-auto mt-2 max-w-xs font-grotesk text-[13px] leading-relaxed text-slate">
         {body}
@@ -392,10 +395,10 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
           replied. Side by side, the request stays on screen while the quotes
           arrive — and that is the thing you are comparing them against. */}
       <section className="tr-panel-in rounded-card border border-carbon-line bg-carbon-card/40
-        p-7 backdrop-blur-2xl" style={{ '--tr-lag': '300ms' } as React.CSSProperties}>
+        p-7 backdrop-blur-2xl" style={{ '--tr-lag': '150ms' } as React.CSSProperties}>
         <h2 className="font-grotesk text-[15px] font-medium text-snow">Request a quote</h2>
         <p className="mt-1.5 font-grotesk text-[13px] text-slate">
-          Firm, signed, and yours to accept or leave.
+          Set an amount. Every registered maker gets asked.
         </p>
 
         <label htmlFor="rfqAmount" className="mt-7 block font-grotesk text-[13px] text-slate">
@@ -473,13 +476,13 @@ export function RfqPanel({ address, balances }: RfqPanelProps) {
       </section>
 
       <section className="tr-panel-in rounded-card border border-carbon-line bg-carbon-card/40
-        p-7 backdrop-blur-2xl" style={{ '--tr-lag': '420ms' } as React.CSSProperties}>
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="font-grotesk text-[15px] font-medium text-snow">Quotes</h2>
-          {visibleQuotes.length > 0 && !settled ? (
-            <span className="font-grotesk text-[13px] text-slate">Ranked by price</span>
-          ) : null}
-        </div>
+        p-7 backdrop-blur-2xl" style={{ '--tr-lag': '230ms' } as React.CSSProperties}>
+        {/* the subtitle carries what the "Ranked by price" tag used to say, so
+            the panel describes itself whether or not it has rows in it */}
+        <h2 className="font-grotesk text-[15px] font-medium text-snow">Quotes</h2>
+        <p className="mt-1.5 font-grotesk text-[13px] text-slate">
+          Firm, signed, ranked by price — yours to accept or leave.
+        </p>
 
         {retryNote ? <Note>{retryNote}</Note> : null}
 

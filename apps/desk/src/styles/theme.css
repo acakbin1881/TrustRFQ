@@ -352,20 +352,20 @@ body:where(.tr-dark) {
    Unmasked, the same three properties do the same job with nothing to cut
    against: it rises, resolves, and at no point is it a fragment. */
 @keyframes tr-line-in {
-  from { transform: translateY(26px); filter: blur(10px); opacity: 0; }
+  from { transform: translateY(18px); filter: blur(5px); opacity: 0; }
   to   { transform: translateY(0); filter: blur(0); opacity: 1; }
 }
 
 :root.tr-motion .tr-line {
-  animation: tr-line-in 1250ms var(--ease-glide) var(--tr-lag, 0ms) both;
+  animation: tr-line-in 900ms var(--ease-glide) var(--tr-lag, 0ms) both;
 }
 
-/* Text animations wait for the webfont. Started before it lands, the line
-   animates in its fallback face and then re-lays out under the reader when
-   Space Grotesk arrives — the jump reads as a second, uglier animation.
-   src/main.tsx adds .tr-fonts once fonts are ready, or after 900ms, whichever
-   comes first: a font that never loads must not cost us the whole entrance. */
-:root.tr-motion:not(.tr-fonts) .tr-line { animation-play-state: paused; }
+/* NO FONT GATE. An earlier pass paused these until the webfont landed, to
+   avoid the line animating in the fallback face and re-laying out underneath
+   the reader. The cure was worse: with `both` fill-mode the paused state is
+   the FIRST keyframe, so the page sat blank — up to 900ms of empty carbon on
+   a slow connection — and then everything arrived at once. A small reflow on
+   a line that is already moving is nearly invisible; a blank page is not. */
 
 @media (prefers-reduced-motion: reduce) {
   :root.tr-motion .tr-line { animation: none; }
@@ -624,17 +624,20 @@ body:where(.tr-dark) {
 /* The desk's panels arrive once, on mount — there is no scroll here to reveal
    them against, and a panel that waits for an observer on a page that never
    scrolls simply never appears. */
+/* Panels are large surfaces, and blur scales with area: what reads as focus
+   pulling on a line of type reads as a smeared sheet at 500px wide. Barely any
+   blur here, short travel, and a quicker settle — the page should feel like it
+   was already there and is catching up, not like it is being assembled. */
 @keyframes tr-panel-in {
-  from { opacity: 0; transform: translateY(18px); filter: blur(9px); }
+  from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
   to   { opacity: 1; transform: none; filter: blur(0); }
 }
 .tr-panel-in {
-  animation: tr-panel-in 980ms var(--ease-glide) both;
+  animation: tr-panel-in 700ms var(--ease-glide) both;
   animation-delay: var(--tr-lag, 0ms);
 }
 
-/* Same webfont gate as the headline — the desk's panels are mostly type. */
-:root:not(.tr-fonts) .tr-panel-in { animation-play-state: paused; }
+
 
 @media (prefers-reduced-motion: reduce) {
   .tr-panel-in { animation: none; }

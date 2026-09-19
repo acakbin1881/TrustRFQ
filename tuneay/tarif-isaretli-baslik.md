@@ -253,12 +253,15 @@ Hepsi bu projede bizzat yaşandı.
    civarı bir kaydırma gerekir; değeri gözle ayarla, hesapla değil.
 6. **Hover'da pasif animasyonu iptal etme, duraklat.** İptal edersen sıfıra
    zıplar; duraklatırsan olduğu yerde kalır ve devir teslim pürüzsüz olur.
-7. **Tipografi animasyonlarını webfont'a kapıla.** Font gelmeden başlarsa satır
-   yedek yüzle animasyonlanır, sonra asıl font inince yeniden dizilir — okurun
-   altında zıplar ve bu ikinci, daha çirkin bir animasyon gibi okunur.
-   `document.fonts.ready` beklenir, **ama bir tavanla**: yüklenmeyen bir font
-   bütün girişi götürmemeli. 900ms iyi bir tavan; yedek yüzle animasyon,
-   animasyonsuzluktan iyidir.
+7. **Webfont'u bekleme — ya da bekleyeceksen başlangıç durumunu görünür yap.**
+   (Bu madde de değişti: önce beklemek tavsiye ediliyordu, sonra sahada
+   geri alındı.) Mantık şuydu: font gelmeden başlarsa satır yedek yüzle
+   animasyonlanır ve asıl font inince yeniden dizilir. Doğru ama ilacı
+   hastalıktan kötü: `animation-play-state: paused` + `fill-mode: both` ile
+   duraklatılan durum **ilk anahtar karedir**, yani `opacity: 0`. Sayfa,
+   yavaş bir bağlantıda yüzlerce ms boyunca **bomboş** durur ve sonra her şey
+   aynı anda gelir. Hareket hâlindeki bir satırdaki küçük yeniden dizilme
+   neredeyse görünmez; boş sayfa değil.
 8. **`prefers-reduced-motion` yalnızca "animasyon yok" demek değildir.**
    Gizli/eğik/soluk başlangıç durumlarını da **geri almalısın**, yoksa hareketi
    kapatan kullanıcı yarı görünmez bir ikonla kalır.
