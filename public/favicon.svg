@@ -1,8 +1,10 @@
+<!-- TrustRFQ's mark. The geometry is OWNED BY src/brand/mark.tsx: the seal is a
+     superellipse (n=5) rather than a rounded rect, and the glyph below is that
+     module's GLYPH_MICRO, because a favicon is only ever read at 16-32px. These
+     two path strings must stay byte-identical to SEAL and GLYPH_MICRO there.
+     A static asset cannot reach the theme tokens, so the two colours are the
+     literal values of --color-lime and --color-carbon from src/styles/theme.css. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#0B0B0E"/>
-  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" fill="none" stroke="#E5B567" stroke-opacity="0.25"/>
-  <path d="M20 21 C26 13.5, 38 13.5, 44 21" fill="none" stroke="#E5B567" stroke-width="3" stroke-linecap="round"/>
-  <path d="M44 43 C38 50.5, 26 50.5, 20 43" fill="none" stroke="#E5B567" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="15" cy="32" r="7" fill="#E5B567"/>
-  <circle cx="49" cy="32" r="7" fill="none" stroke="#E5B567" stroke-width="3"/>
+  <path d="M22.6 0H41.4C60.5 0 64 3.5 64 22.6V41.4C64 60.5 60.5 64 41.4 64H22.6C3.5 64 0 60.5 0 41.4V22.6C0 3.5 3.5 0 22.6 0Z" fill="#D2FF3A"/>
+  <path d="M22 14H31L26 31H17ZM38 14H47L42 31H33ZM17 39H47V48H17Z" fill="#101310"/>
 </svg>

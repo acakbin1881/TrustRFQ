@@ -271,6 +271,29 @@ XLM yüzü çekiliyor, USDC yüzü geliyor. Çapraz geçiş "iki resim" der, dö
 Her yüz okunacak kadar duruyor (`tr-flip`'te %40/%90 bekleme), yoksa fırıldak
 gibi okunur.
 
+**Derinlik üç düzlemde.** Tek boyutta, eşit aralıklı dört disk köşelere
+yapıştırılmış dekor gibi okunuyordu. Mesafe verilince alan oluyor:
+
+| Düzlem | Boyut | Efekt | Sürüklenme |
+|--------|-------|-------|------------|
+| near | 80px | net, tam opak | 15s (en hızlı) |
+| mid | 56px | `blur(2px)`, %70 | 19s |
+| far | 44px | `blur(5px)`, %45 | 26s (en yavaş) |
+
+Yakın olan en hızlı sürükleniyor — parallax: sana yakın şeyler daha çok
+hareket eder. Bu mercek davranışı olduğu için göz açıklama istemeden kabul
+ediyor.
+
+**Konum dört köşe değil, iki küme.** Başlık `max-w-3xl` ile sınırlı; nesneler
+onun bıraktığı iki yan boşlukta toplanıyor, her tarafta bir yakın nesne ve
+ardına düşen daha küçük, daha bulanık yoldaşları. Göz uzaktan bir grup
+okuyor, eşit aralıklı bir ikon halkası değil. Bütün x değerleri 1440'ta metin
+sütununun başladığı ~%23'ün dışında.
+
+**Kendi mührümüz disk almıyor.** `BrandMark` zaten bir mühür; mührü diskin
+içine koymak çerçeve içinde çerçeve olurdu. Diskin çapında çiziliyor, böylece
+çevresindekilerle aynı boyut ritminde duruyor.
+
 **Giriş hareketi:** nesneler kayarak değil, **odağa gelerek** yerleşiyor
 (`tr-settle`: scale + blur birlikte çözülüyor). Sayfanın geri kalanındaki
 reveal ile aynı dil.

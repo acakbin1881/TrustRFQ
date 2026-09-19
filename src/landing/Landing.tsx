@@ -22,13 +22,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Anchor, ArrowDown, ArrowRight, ArrowLeftRight, CheckCheck, Cpu, ExternalLink,
-  EyeOff, Fingerprint, FlaskConical, Minus, PenLine, Plus, Wallet, Zap,
+  EyeOff, Fingerprint, FlaskConical, Minus, PenLine, Plus, ShieldCheck,
+  TrendingDown, Wallet, Zap,
   type LucideIcon,
 } from 'lucide-react';
 // The real marks — Stellar's and Circle's own SVGs (@web3icons/react, MIT).
 // Never redraw these: a desk that approximates the asset it settles in reads
 // as a mockup of itself.
 import { NetworkStellar, TokenUSDC, TokenXLM } from '@web3icons/react';
+import { BrandMark } from '../brand/mark';
 import { deskPath } from '../routes/sections';
 import {
   COMPARISON, CTA, FAQ, FOOTER, GUARANTEES, HEADINGS, HERO, HERO_TICKET, LADDER,
@@ -50,6 +52,7 @@ const ICONS: Record<IconKey, LucideIcon> = {
   anchor: Anchor, hidden: EyeOff, atomic: Zap,
   sign: PenLine, countersign: CheckCheck, fill: ArrowLeftRight,
   wallet: Wallet, contract: Cpu, signature: Fingerprint, testnet: FlaskConical,
+  slippage: TrendingDown, shield: ShieldCheck,
 };
 
 function Icon({ name, className = 'size-5' }: { name: IconKey; className?: string }) {
@@ -59,27 +62,37 @@ function Icon({ name, className = 'size-5' }: { name: IconKey; className?: strin
 
 /* ------------------------------------------------------------------ atoms */
 
-function Mark({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <path d="M20 21 C26 13.5, 38 13.5, 44 21" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-      <path d="M44 43 C38 50.5, 26 50.5, 20 43" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-      <circle cx="15" cy="32" r="8" fill="currentColor" />
-      <circle cx="49" cy="32" r="8" stroke="currentColor" strokeWidth="5" />
-    </svg>
-  );
-}
-
 /** A label that swaps for a second one on hover: the first leaves upward, the
  *  second arrives from below. Both stay in the DOM inside a clipped box sized
  *  by the first, so the button never changes width under the cursor. */
 function SwapLabel({ idle, hover }: { idle: string; hover: string }) {
   return (
-    <span className="relative grid overflow-hidden">
+    <span className="relative grid overflow-hidden whitespace-nowrap">
       <span className="col-start-1 row-start-1 transition-transform duration-500 ease-glide
         group-hover:-translate-y-[130%]">{idle}</span>
       <span aria-hidden="true" className="col-start-1 row-start-1 translate-y-[130%]
         transition-transform duration-500 ease-glide group-hover:translate-y-0">{hover}</span>
+    </span>
+  );
+}
+
+/** SwapLabel's glyph twin. The section's own icon leaves upward and an arrow
+ *  arrives from below, so a nav item says WHAT at rest and WHERE under the
+ *  cursor. The word itself never moves: swapping the LABEL the way the button
+ *  does would take the link's name away at the exact moment you are pointing
+ *  at it. The box is sized and clipped, so neither glyph can reflow the row.
+ *
+ *  GATED AT lg, AND IT HAS TO BE. The glyph costs ~20px a link, and the bar has
+ *  no such room at md: the three labels and the button all wrapped to two lines
+ *  and the pill doubled in height. Between md and lg the nav is text-only,
+ *  exactly as it was before the glyph existed. */
+function SwapGlyph({ name }: { name: IconKey }) {
+  return (
+    <span className="relative hidden size-4 overflow-hidden lg:grid">
+      <Icon name={name} className="col-start-1 row-start-1 size-4 transition-transform
+        duration-500 ease-glide group-hover:-translate-y-[130%]" />
+      <ArrowDown className="col-start-1 row-start-1 size-4 translate-y-[130%] transition-transform
+        duration-500 ease-glide group-hover:translate-y-0" strokeWidth={1.5} aria-hidden="true" />
     </span>
   );
 }
@@ -96,23 +109,6 @@ function LimeButton({ to, idle, hover, className = '' }: {
       <ArrowRight className="size-4 transition-transform duration-500 ease-glide
         group-hover:translate-x-1" strokeWidth={2} aria-hidden="true" />
     </Link>
-  );
-}
-
-/** The primary action with its network badge riding on it. Testnet qualifies
- *  the ACTION, so it belongs on the button rather than beside the nav links,
- *  where it read as a third navigation item. */
-function DeskAction() {
-  return (
-    <span className="relative inline-block">
-      <span className="pointer-events-none absolute -top-2 right-3 z-10 flex items-center gap-1
-        rounded-pill border border-carbon-line bg-carbon px-2 py-[3px] font-grotesk text-[10px]
-        font-medium uppercase tracking-[0.12em] text-lime">
-        <span className="size-1 rounded-full bg-lime" aria-hidden="true" />
-        Testnet
-      </span>
-      <LimeButton to={DESK} idle="Open the desk" hover="Start trading" />
-    </span>
   );
 }
 
@@ -160,21 +156,23 @@ function Nav() {
           ? 'max-w-5xl border border-carbon-line bg-carbon/75 backdrop-blur-2xl'
           : 'max-w-6xl border border-transparent bg-transparent'}`}>
         <Link to="/" className="flex items-center gap-2 font-grotesk text-[17px] font-semibold text-snow">
-          <span className="text-lime"><Mark /></span>
+          <BrandMark className="text-lime" />
           TrustRFQ
         </Link>
 
         <nav className="ml-4 hidden items-center gap-1 md:flex">
           {NAV_LINKS.map((l) => (
             <a key={l.href} href={l.href}
-              className="rounded-pill px-3.5 py-2 font-grotesk text-[14px] text-ash
-                transition-colors duration-500 ease-glide hover:bg-carbon-hi hover:text-snow">
+              className="group flex items-center gap-2 whitespace-nowrap rounded-pill px-3.5
+                py-2 font-grotesk text-[14px] text-ash transition-colors duration-500
+                ease-glide hover:bg-carbon-hi hover:text-snow">
+              <SwapGlyph name={l.icon} />
               {l.label}
             </a>
           ))}
         </nav>
 
-        <div className="ml-auto"><DeskAction /></div>
+        <div className="ml-auto"><LimeButton to={DESK} idle="Open the desk" hover="Start trading" /></div>
       </header>
     </div>
   );
@@ -182,21 +180,51 @@ function Nav() {
 
 /* ------------------------------------------------------------------- hero */
 
-/** A token mark on a carbon disc. The marks are the real ones; the disc is
- *  ours, so the brand SVG is never modified — only framed. */
-function TokenDisc({ mark, size = 'md', className = '' }: {
-  mark: 'xlm' | 'usdc' | 'stellar'; size?: 'sm' | 'md' | 'lg'; className?: string;
+/**
+ * The objects around the hero, on three depth planes.
+ *
+ * Depth is the whole trick. Four discs at one size, evenly spaced around the
+ * headline, read as decoration stuck to the corners. Give them distance —
+ * near ones large, sharp and opaque; far ones small, blurred and dim, drifting
+ * more slowly — and they read as a field the headline sits inside. That is
+ * lens behaviour, so the eye accepts it without being told.
+ *
+ * `near` also drifts fastest. Parallax: things close to you move more.
+ */
+type Depth = 'near' | 'mid' | 'far';
+
+const DEPTH: Record<Depth, {
+  box: string; px: number; glyph: number; skin: string; dur: string;
+}> = {
+  near: { box: 'size-20', px: 80, glyph: 38, skin: 'opacity-100', dur: '15s' },
+  mid: { box: 'size-14', px: 56, glyph: 26, skin: 'opacity-70 blur-[2px]', dur: '19s' },
+  far: { box: 'size-11', px: 44, glyph: 20, skin: 'opacity-45 blur-[5px]', dur: '26s' },
+};
+
+/** A real mark on a carbon disc. The mark is Stellar's or Circle's own SVG and
+ *  is never modified — the disc is ours, and it only frames. */
+function TokenDisc({ mark, depth, accent = false }: {
+  mark: 'xlm' | 'usdc' | 'stellar'; depth: Depth; accent?: boolean;
 }) {
-  const box = { sm: 'size-12', md: 'size-16', lg: 'size-20' }[size];
-  const glyph = { sm: 22, md: 30, lg: 38 }[size];
-  const Mark = { xlm: TokenXLM, usdc: TokenUSDC, stellar: NetworkStellar }[mark];
+  const d = DEPTH[depth];
+  const M = { xlm: TokenXLM, usdc: TokenUSDC, stellar: NetworkStellar }[mark];
 
   return (
-    <span className={`flex ${box} items-center justify-center rounded-full border
-      border-carbon-line bg-carbon-card/80 backdrop-blur-xl ${className}`}>
-      <Mark size={glyph} variant="mono" className="text-snow" />
+    <span className={`flex ${d.box} items-center justify-center rounded-full border
+      ${accent ? 'border-lime/25' : 'border-carbon-line'} bg-carbon-card/80 backdrop-blur-xl
+      ${d.skin}`}>
+      <M size={d.glyph} variant="mono" className={accent ? 'text-lime' : 'text-snow'} />
     </span>
   );
+}
+
+/** Our own mark among the assets — the one object here that is not a token.
+ *  It gets NO disc: the mark is already a seal (src/brand/mark.tsx), and a seal
+ *  inside a disc is a frame around a frame. Drawn at the disc diameter instead,
+ *  so it sits on the same size rhythm as everything around it. */
+function BrandDisc({ depth }: { depth: Depth }) {
+  const d = DEPTH[depth];
+  return <BrandMark size={d.px} className={`text-lime ${d.skin}`} />;
 }
 
 /**
@@ -204,20 +232,20 @@ function TokenDisc({ mark, size = 'md', className = '' }: {
  *
  * A cross-fade would say "two pictures". A rotation says "the same coin, the
  * other side" — which is exactly the trade this desk settles. Each face rests
- * long enough to be read before it turns (see tr-flip in theme.css), so it
- * reads as an exchange rather than a spinner.
+ * long enough to be read before it turns (the holds in tr-flip), so it reads
+ * as an exchange rather than a spinner.
  */
-function SwapDisc({ className = '' }: { className?: string }) {
+function SwapDisc() {
+  const face = `absolute inset-0 flex items-center justify-center rounded-full
+    bg-carbon-card/80 backdrop-blur-xl tr-flip-face`;
   return (
-    <span className={`tr-flip-stage ${className}`} aria-hidden="true">
-      <span className="tr-flip-coin relative block size-20">
-        <span className="tr-flip-face absolute inset-0 flex items-center justify-center
-          rounded-full border border-carbon-line bg-carbon-card/80 backdrop-blur-xl">
-          <TokenXLM size={38} variant="mono" className="text-snow" />
+    <span className="tr-flip-stage" aria-hidden="true">
+      <span className="tr-flip-coin relative block size-24">
+        <span className={`${face} border border-carbon-line`}>
+          <TokenXLM size={44} variant="mono" className="text-snow" />
         </span>
-        <span className="tr-flip-face tr-flip-face--back absolute inset-0 flex items-center
-          justify-center rounded-full border border-lime/25 bg-carbon-card/80 backdrop-blur-xl">
-          <TokenUSDC size={38} variant="mono" className="text-lime" />
+        <span className={`${face} tr-flip-face--back border border-lime/30`}>
+          <TokenUSDC size={44} variant="mono" className="text-lime" />
         </span>
       </span>
     </span>
@@ -225,32 +253,48 @@ function SwapDisc({ className = '' }: { className?: string }) {
 }
 
 /**
- * The objects around the hero.
+ * Placement.
  *
- * Three real marks and one turning coin, placed off the text column so they
- * frame the headline instead of competing with it. They drift on long,
- * deliberately out-of-phase cycles — in phase they pulse together and stop
- * reading as separate objects. Hidden below lg: at that width they would
- * either crowd the headline or sit in the margin doing nothing.
+ * Not four corners. The marks cluster in the two side margins the headline
+ * leaves free (it is capped at max-w-3xl), each side holding one near object
+ * and its smaller, blurrier companions — so the eye reads a group at a
+ * distance rather than a ring of evenly spaced icons. Every x sits outside
+ * ~23% on a 1440 viewport, which is where the text column starts.
+ *
+ * Hidden below lg: at that width these would either crowd the headline or sit
+ * in a margin that no longer exists.
  */
-function HeroObjects() {
-  const items = [
-    { el: <TokenDisc mark="xlm" size="lg" />, pos: 'left-[4%] top-[18%]',
-      vars: { '--tr-dx': '10px', '--tr-dy': '-18px', '--tr-tilt': '-8deg', '--tr-dur': '16s', '--tr-lag': '0s' } },
-    { el: <SwapDisc />, pos: 'right-[6%] top-[12%]',
-      vars: { '--tr-dx': '-12px', '--tr-dy': '16px', '--tr-tilt': '6deg', '--tr-dur': '19s', '--tr-lag': '1.2s' } },
-    { el: <TokenDisc mark="stellar" size="md" />, pos: 'left-[12%] bottom-[14%]',
-      vars: { '--tr-dx': '14px', '--tr-dy': '12px', '--tr-tilt': '10deg', '--tr-dur': '21s', '--tr-lag': '0.6s' } },
-    { el: <TokenDisc mark="usdc" size="sm" />, pos: 'right-[13%] bottom-[20%]',
-      vars: { '--tr-dx': '-9px', '--tr-dy': '-15px', '--tr-tilt': '-5deg', '--tr-dur': '17s', '--tr-lag': '1.8s' } },
-  ];
+const OBJECTS: { pos: string; depth: Depth; node: React.ReactNode; drift: React.CSSProperties }[] = [
+  // left cluster — the near XLM anchors it, two quieter marks fall away behind
+  { pos: 'left-[6%] top-[20%]', depth: 'near', node: <TokenDisc mark="xlm" depth="near" />,
+    drift: { '--tr-dx': '12px', '--tr-dy': '-20px', '--tr-tilt': '-7deg' } as React.CSSProperties },
+  { pos: 'left-[17%] top-[49%]', depth: 'mid', node: <TokenDisc mark="stellar" depth="mid" />,
+    drift: { '--tr-dx': '-9px', '--tr-dy': '14px', '--tr-tilt': '9deg' } as React.CSSProperties },
+  { pos: 'left-[3%] top-[68%]', depth: 'far', node: <BrandDisc depth="far" />,
+    drift: { '--tr-dx': '10px', '--tr-dy': '10px', '--tr-tilt': '-4deg' } as React.CSSProperties },
 
+  // right cluster — the turning coin is the loudest object on the page, so it
+  // sits opposite the headline's first line rather than beside the ticket
+  { pos: 'right-[7%] top-[15%]', depth: 'near', node: <SwapDisc />,
+    drift: { '--tr-dx': '-14px', '--tr-dy': '18px', '--tr-tilt': '5deg' } as React.CSSProperties },
+  { pos: 'right-[18%] top-[45%]', depth: 'mid', node: <TokenDisc mark="usdc" depth="mid" accent />,
+    drift: { '--tr-dx': '11px', '--tr-dy': '-13px', '--tr-tilt': '-8deg' } as React.CSSProperties },
+  { pos: 'right-[4%] top-[71%]', depth: 'far', node: <TokenDisc mark="xlm" depth="far" />,
+    drift: { '--tr-dx': '-8px', '--tr-dy': '-11px', '--tr-tilt': '6deg' } as React.CSSProperties },
+];
+
+function HeroObjects() {
   return (
     <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
-      {items.map((it, i) => (
-        <div key={it.pos} className={`absolute ${it.pos}`}>
-          <div className="tr-settle" style={{ '--tr-lag': `${300 + i * 140}ms` } as React.CSSProperties}>
-            <div className="tr-drift" style={it.vars as React.CSSProperties}>{it.el}</div>
+      {OBJECTS.map((o, i) => (
+        <div key={o.pos} className={`absolute ${o.pos}`}>
+          {/* settle in, then drift forever — two wrappers so the arrival is not
+              interrupted by the loop, and the loop does not restart the arrival */}
+          <div className="tr-settle" style={{ '--tr-lag': `${260 + i * 130}ms` } as React.CSSProperties}>
+            <div className="tr-drift"
+              style={{ ...o.drift, '--tr-dur': DEPTH[o.depth].dur, '--tr-lag': `${i * 1.4}s` } as React.CSSProperties}>
+              {o.node}
+            </div>
           </div>
         </div>
       ))}
@@ -730,8 +774,9 @@ function CallToAction() {
           {CTA.sub}
         </p>
         <div className="mt-10 flex justify-center">
-          {/* no Testnet badge here: the nav carries it, and the line above
-              already says "Connect a Testnet wallet" */}
+          {/* no Testnet badge on this button: the line above it already says
+              "Connect a Testnet wallet", and the hero's ticket footnote names
+              the network for anyone arriving at the top */}
           <LimeButton to={DESK} idle={CTA.button} hover="Connect a wallet" />
         </div>
       </div>
@@ -746,7 +791,7 @@ function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col gap-10 md:flex-row md:items-start md:justify-between">
         <div>
           <Link to="/" className="flex items-center gap-2 font-grotesk text-[17px] font-semibold text-snow">
-            <span className="text-lime"><Mark /></span>
+            <BrandMark className="text-lime" />
             TrustRFQ
           </Link>
           <p className="mt-3 font-grotesk text-[14px] text-slate">{FOOTER.tagline}</p>

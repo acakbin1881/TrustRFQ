@@ -16,10 +16,15 @@ export interface TwoToneHeading {
   rest: string[];
 }
 
+// The icon is the section's SUBJECT, not decoration. It is what the glyph
+// morphs out of on hover (Landing.tsx's SwapGlyph), so a vague pick reads as a
+// random pictogram instead of a name for the place the link is about to take
+// you: slippage is the cost the Why section counts, the swap arrows are the
+// mechanism, the shield is what Security spends four cards proving.
 export const NAV_LINKS = [
-  { href: '#why', label: 'Why OTC' },
-  { href: '#how', label: 'How it works' },
-  { href: '#security', label: 'Security' },
+  { href: '#why', label: 'Why OTC', icon: 'slippage' },
+  { href: '#how', label: 'How it works', icon: 'fill' },
+  { href: '#security', label: 'Security', icon: 'shield' },
 ] as const;
 
 export const HERO = {
@@ -94,7 +99,10 @@ export type Rung = (typeof LADDER)['rungs'][number];
 export const HERO_TICKET = {
   send: { label: 'You send', amount: '250,000', token: 'XLM' },
   receive: { label: 'You receive', amount: '62,500', token: 'USDC' },
-  footnote: 'Signed by both wallets · settles in one transaction',
+  // Carries the network too. The nav badge and the hero pill both went, and
+  // without this line the landing never says it is Testnet — which is the one
+  // fact a counterparty must not have to hunt for.
+  footnote: 'Both wallets sign · one transaction · Stellar Testnet',
 } as const;
 
 export const SOLUTION = [
@@ -154,7 +162,8 @@ export const GUARANTEES = [
 export type IconKey =
   | 'anchor' | 'hidden' | 'atomic'
   | 'sign' | 'countersign' | 'fill'
-  | 'wallet' | 'contract' | 'signature' | 'testnet';
+  | 'wallet' | 'contract' | 'signature' | 'testnet'
+  | 'slippage' | 'shield';
 
 export const HEADINGS = {
   problem: {
