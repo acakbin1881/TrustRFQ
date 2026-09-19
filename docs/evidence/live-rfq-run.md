@@ -209,6 +209,62 @@ this repository. This run also discharges the real-browser + real-Freighter-exte
 originally named in Plan 03-02's Task 3 `how-to-verify` and deferred from there to this plan (see
 `deferred-items.md`'s "03-02 Task 3" entry) — that item is now closed, not merely deferred again.
 
+## The post-merge production check (D-07)
+
+D-07's gate was answered `merge-after-production-check` (human decision, 2026-09-14): the merge of
+`feat/rfq-milestone` into `main` was authorised **on the condition** that one live settle then ran
+against the production URL itself, with its hash recorded here. The merge landed as `2f3706f` and
+auto-deployed production on 2026-09-16; this section closes that condition.
+
+**Date:** 2026-09-16
+**Desk deployment URL used:** `https://trustrfq.vercel.app/otc` — the production URL, not a preview
+**Driver:** `tools/e2e/rfq-driver.mjs` LIVE mode (mock Freighter wallet), both directions
+**Warm-up:** 344 ms · **makers discovered:** 7 · **quote rows rendered:** 1 per direction
+
+| Direction | Transaction hash | Horizon | Deltas |
+|---|---|---|---|
+| XLM → USDC | `95db66486ca6596b351e9d571094dfd362a2f6b8268d9c1efa5133ed86e818cf` | `successful: true`, ledger `4707571`, `2026-09-16T12:24:02Z` | 5/5 exact |
+| USDC → XLM | `c1d10c5e365864dd68af993d58bee96b346db8a9dbec9f75fecc38340354c7fd` | `successful: true`, ledger `4707573`, `2026-09-16T12:24:12Z` | 5/5 exact |
+
+Production's served CSP was read directly from the response headers and carries the maker origin
+(`connect-src … https://trustrfq-maker-server.vercel.app`), so the CSP-01 change survived the merge
+into the production deployment rather than only existing on the branch preview.
+
+The run's `cspViolations` array is non-empty (12 entries) and, exactly as in every earlier run,
+every entry is a dead or orphaned `rfq_registry` URL (`127.0.0.1:4610`, `localhost:4174/4175/4180`)
+being blocked by the allow-list. **None is the maker's own origin.** This is the interpretation
+approved by the human at Plan 03-02's Task 3 checkpoint, applied here unchanged.
+
+One operational note worth recording, because it cost three failed runs before being understood: a
+first attempt against production died mid-run with a bare `fetch failed`, and a later run of
+`tools/e2e/rfq-demo-check.mjs` failed three times at the quote step with the panel reporting
+"No registered maker responded in time" — while the same maker, asked directly by `curl` for the
+same taker account, answered a valid signed quote in under a second. The cause was neither the
+maker nor the deploy: this machine idle-sleeps mid-run and suspends the browser's network
+(`net::ERR_NETWORK_IO_SUSPENDED` in the page console). Long headless runs on macOS must be wrapped
+in `caffeinate -i -s`. Suspect that before suspecting the maker.
+
+## The standalone RFQ demo deploy
+
+The same RFQ lane is also published on its own, as a single-page deploy with no landing page and no
+OTC/broadcast sections: **`https://trustrfqdemo.vercel.app`** (Vercel project `trustrfqdemo`,
+separate from the desk's `trustrfq` project; source entry `rfq.html` → `src/RfqDemo.tsx`, built by
+`npm run build:rfq-demo`).
+
+Because that shell drops the desk's order/broadcast subscriptions, its bundle never reaches a
+database client, and it therefore ships a **tighter CSP with no Supabase origin at all**
+(`connect-src 'self' <rpc> <horizon> <maker>`). `tools/build-rfq-demo.mjs` asserts that property at
+build time rather than assuming it, alongside single-page-ness, no inline script, and no dangling
+asset reference.
+
+Verified end-to-end against the deployed origin by `tools/e2e/rfq-demo-check.mjs`: registry
+discovery (7 makers), a real maker quote, and a real settlement — transaction
+`4b3dc78dfa1712c641553e31c6434663570b569c529340efd7c6e8cbad86037f`, independently confirmed on
+Horizon (`successful: true`, ledger `4707805`, `2026-09-16T12:43:32Z`). The check also asserts the
+RFQ panel's computed `max-width` is `560px`, which proves `public/intent.css`'s
+`[data-panel="rfq"]` rules are actually applying — the silent-failure mode a renamed `data-panel`
+would otherwise produce.
+
 ## Accepted gaps
 
 | Gap | Reason / disposition |
@@ -267,3 +323,7 @@ Numbered and literal. Run in order after a Testnet reset:
 - This record states plainly which two transactions used the automated driver's mock Freighter
   wallet (Direction 1, Direction 2) and which one used a real Freighter extension (the manual run,
   `6ed3a2c699155546aeaf8284fc124c6c7739a68e6f56d66358029d0209382fe7`).
+- The three transactions added after the merge (two in the post-merge production check, one in the
+  standalone demo check) all used a mock Freighter wallet; only the manual run above used a real
+  extension. Every hash in this file was independently confirmed against Horizon at the time it was
+  written, not copied from a driver's own claim of success.

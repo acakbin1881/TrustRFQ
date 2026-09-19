@@ -26,7 +26,10 @@ struct Setup<'a> {
     tb: token::Client<'a>,
 }
 
-fn make_token<'a>(env: &Env, admin: &Address) -> (Address, token::Client<'a>, token::StellarAssetClient<'a>) {
+fn make_token<'a>(
+    env: &Env,
+    admin: &Address,
+) -> (Address, token::Client<'a>, token::StellarAssetClient<'a>) {
     let sac = env.register_stellar_asset_contract_v2(admin.clone());
     let addr = sac.address();
     (
@@ -57,7 +60,17 @@ fn setup<'a>(maker_amount: i128, taker_amount: i128) -> Setup<'a> {
     ta_admin.mint(&maker, &maker_amount);
     tb_admin.mint(&taker, &taker_amount);
 
-    Setup { env, client, contract_id, maker, taker, token_a, token_b, ta, tb }
+    Setup {
+        env,
+        client,
+        contract_id,
+        maker,
+        taker,
+        token_a,
+        token_b,
+        ta,
+        tb,
+    }
 }
 
 fn order_id(env: &Env, n: u8) -> BytesN<32> {
@@ -70,7 +83,14 @@ fn fill_swaps_both_legs() {
     let exp = s.env.ledger().timestamp() + 3600;
 
     s.client.fill(
-        &s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &exp, &order_id(&s.env, 1),
+        &s.maker,
+        &s.taker,
+        &s.token_a,
+        &s.token_b,
+        &100,
+        &250,
+        &exp,
+        &order_id(&s.env, 1),
     );
 
     assert_eq!(s.ta.balance(&s.maker), 0);
@@ -85,9 +105,13 @@ fn fill_is_not_replayable() {
     let exp = s.env.ledger().timestamp() + 3600;
     let id = order_id(&s.env, 1);
 
-    s.client.fill(&s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &exp, &id);
+    s.client.fill(
+        &s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &exp, &id,
+    );
     // second attempt with the same order id must fail
-    let again = s.client.try_fill(&s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &exp, &id);
+    let again = s.client.try_fill(
+        &s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &exp, &id,
+    );
     assert!(again.is_err());
 }
 
@@ -98,7 +122,14 @@ fn fill_rejects_expired_order() {
     let past = 9_000u64;
 
     let r = s.client.try_fill(
-        &s.maker, &s.taker, &s.token_a, &s.token_b, &100, &250, &past, &order_id(&s.env, 2),
+        &s.maker,
+        &s.taker,
+        &s.token_a,
+        &s.token_b,
+        &100,
+        &250,
+        &past,
+        &order_id(&s.env, 2),
     );
     assert!(r.is_err());
     // no funds moved
@@ -112,7 +143,14 @@ fn fill_rejects_zero_amount() {
     let exp = s.env.ledger().timestamp() + 3600;
 
     let r = s.client.try_fill(
-        &s.maker, &s.taker, &s.token_a, &s.token_b, &0, &250, &exp, &order_id(&s.env, 3),
+        &s.maker,
+        &s.taker,
+        &s.token_a,
+        &s.token_b,
+        &0,
+        &250,
+        &exp,
+        &order_id(&s.env, 3),
     );
     assert!(r.is_err());
 }
@@ -140,26 +178,49 @@ fn fill_with_scoped_auth_succeeds() {
     let id = order_id(&s.env, 4);
 
     let fill_args: Vec<Val> = (
-        s.maker.clone(), s.taker.clone(), s.token_a.clone(), s.token_b.clone(),
-        100i128, 250i128, exp, id.clone(),
-    ).into_val(&s.env);
+        s.maker.clone(),
+        s.taker.clone(),
+        s.token_a.clone(),
+        s.token_b.clone(),
+        100i128,
+        250i128,
+        exp,
+        id.clone(),
+    )
+        .into_val(&s.env);
     let maker_transfer = [MockAuthInvoke {
-        contract: &s.token_a, fn_name: "transfer",
-        args: (s.maker.clone(), s.taker.clone(), 100i128).into_val(&s.env), sub_invokes: &[],
+        contract: &s.token_a,
+        fn_name: "transfer",
+        args: (s.maker.clone(), s.taker.clone(), 100i128).into_val(&s.env),
+        sub_invokes: &[],
     }];
     let taker_transfer = [MockAuthInvoke {
-        contract: &s.token_b, fn_name: "transfer",
-        args: (s.taker.clone(), s.maker.clone(), 250i128).into_val(&s.env), sub_invokes: &[],
+        contract: &s.token_b,
+        fn_name: "transfer",
+        args: (s.taker.clone(), s.maker.clone(), 250i128).into_val(&s.env),
+        sub_invokes: &[],
     }];
     let maker_root = MockAuthInvoke {
-        contract: &s.contract_id, fn_name: "fill", args: fill_args.clone(), sub_invokes: &maker_transfer,
+        contract: &s.contract_id,
+        fn_name: "fill",
+        args: fill_args.clone(),
+        sub_invokes: &maker_transfer,
     };
     let taker_root = MockAuthInvoke {
-        contract: &s.contract_id, fn_name: "fill", args: fill_args.clone(), sub_invokes: &taker_transfer,
+        contract: &s.contract_id,
+        fn_name: "fill",
+        args: fill_args.clone(),
+        sub_invokes: &taker_transfer,
     };
     let auths = [
-        MockAuth { address: &s.maker, invoke: &maker_root },
-        MockAuth { address: &s.taker, invoke: &taker_root },
+        MockAuth {
+            address: &s.maker,
+            invoke: &maker_root,
+        },
+        MockAuth {
+            address: &s.taker,
+            invoke: &taker_root,
+        },
     ];
 
     s.client.mock_auths(&auths).fill(
@@ -171,26 +232,33 @@ fn fill_with_scoped_auth_succeeds() {
     // each carrying only their own `transfer` leg as a sub-invocation. This is the
     // on-ledger equivalent of the two off-chain-signed auth entries `fill` carries.
     // Must run before any further contract call (e.g. `balance`) resets env.auths().
-    let root_authz = |token: &Address, from: &Address, to: &Address, amount: i128| AuthorizedInvocation {
-        function: AuthorizedFunction::Contract((
-            s.contract_id.clone(),
-            symbol_short!("fill"),
-            fill_args.clone(),
-        )),
-        sub_invocations: std::vec![AuthorizedInvocation {
+    let root_authz =
+        |token: &Address, from: &Address, to: &Address, amount: i128| AuthorizedInvocation {
             function: AuthorizedFunction::Contract((
-                token.clone(),
-                symbol_short!("transfer"),
-                (from.clone(), to.clone(), amount).into_val(&s.env),
+                s.contract_id.clone(),
+                symbol_short!("fill"),
+                fill_args.clone(),
             )),
-            sub_invocations: std::vec![],
-        }],
-    };
+            sub_invocations: std::vec![AuthorizedInvocation {
+                function: AuthorizedFunction::Contract((
+                    token.clone(),
+                    symbol_short!("transfer"),
+                    (from.clone(), to.clone(), amount).into_val(&s.env),
+                )),
+                sub_invocations: std::vec![],
+            }],
+        };
     assert_eq!(
         s.env.auths(),
         std::vec![
-            (s.maker.clone(), root_authz(&s.token_a, &s.maker, &s.taker, 100)),
-            (s.taker.clone(), root_authz(&s.token_b, &s.taker, &s.maker, 250)),
+            (
+                s.maker.clone(),
+                root_authz(&s.token_a, &s.maker, &s.taker, 100)
+            ),
+            (
+                s.taker.clone(),
+                root_authz(&s.token_b, &s.taker, &s.maker, 250)
+            ),
         ],
     );
 
@@ -206,26 +274,49 @@ fn fill_rejects_amount_tampering() {
 
     // Both parties authorize ONLY the honest 100 <-> 250 terms.
     let fill_args: Vec<Val> = (
-        s.maker.clone(), s.taker.clone(), s.token_a.clone(), s.token_b.clone(),
-        100i128, 250i128, exp, id.clone(),
-    ).into_val(&s.env);
+        s.maker.clone(),
+        s.taker.clone(),
+        s.token_a.clone(),
+        s.token_b.clone(),
+        100i128,
+        250i128,
+        exp,
+        id.clone(),
+    )
+        .into_val(&s.env);
     let maker_transfer = [MockAuthInvoke {
-        contract: &s.token_a, fn_name: "transfer",
-        args: (s.maker.clone(), s.taker.clone(), 100i128).into_val(&s.env), sub_invokes: &[],
+        contract: &s.token_a,
+        fn_name: "transfer",
+        args: (s.maker.clone(), s.taker.clone(), 100i128).into_val(&s.env),
+        sub_invokes: &[],
     }];
     let taker_transfer = [MockAuthInvoke {
-        contract: &s.token_b, fn_name: "transfer",
-        args: (s.taker.clone(), s.maker.clone(), 250i128).into_val(&s.env), sub_invokes: &[],
+        contract: &s.token_b,
+        fn_name: "transfer",
+        args: (s.taker.clone(), s.maker.clone(), 250i128).into_val(&s.env),
+        sub_invokes: &[],
     }];
     let maker_root = MockAuthInvoke {
-        contract: &s.contract_id, fn_name: "fill", args: fill_args.clone(), sub_invokes: &maker_transfer,
+        contract: &s.contract_id,
+        fn_name: "fill",
+        args: fill_args.clone(),
+        sub_invokes: &maker_transfer,
     };
     let taker_root = MockAuthInvoke {
-        contract: &s.contract_id, fn_name: "fill", args: fill_args, sub_invokes: &taker_transfer,
+        contract: &s.contract_id,
+        fn_name: "fill",
+        args: fill_args,
+        sub_invokes: &taker_transfer,
     };
     let auths = [
-        MockAuth { address: &s.maker, invoke: &maker_root },
-        MockAuth { address: &s.taker, invoke: &taker_root },
+        MockAuth {
+            address: &s.maker,
+            invoke: &maker_root,
+        },
+        MockAuth {
+            address: &s.taker,
+            invoke: &taker_root,
+        },
     ];
 
     // Attacker submits a fill that under-pays the taker leg (250 -> 1). The

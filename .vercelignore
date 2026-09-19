@@ -1,6 +1,7 @@
-# Vercel builds the frontend (npm run build → dist/). Exclude everything the
-# build doesn't need so the upload stays small (the Rust build dir alone is
-# ~400MB). NOTE: fixtures/ must ship — canonical.test.ts imports it and tsc
+# Vercel builds the desk (npm run build -> apps/desk/dist). Exclude everything the
+# build does not need so the upload stays small (the Rust build dir alone is
+# ~400MB). NOTE: apps/desk/fixtures/ and packages/sdk must ship: the desk
+# imports the SDK source and canonical.test.ts imports the fixture, and tsc
 # runs as part of the build.
 contracts/
 target/
@@ -10,14 +11,14 @@ target/
 .gsd/
 skills-lock.json
 *.log
-dist/
+apps/desk/dist/
+apps/desk/dist-rfq/
 
 # Dev-only: measurement tools, E2E drivers, vector-capture harness, vanilla
 # reference implementation, design specs.
 tools/
 docs/
 
-# Belt-and-braces: local tooling config, gitignored, so a Git-based deploy never
-# sees it. A `vercel` CLI deploy from this directory is governed by THIS file
-# rather than .gitignore, so it is listed here too.
+# Local tooling config, gitignored, listed here too so a CLI deploy from this
+# directory never sees it either.
 .mcp.json

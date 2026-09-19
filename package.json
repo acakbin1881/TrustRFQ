@@ -2,40 +2,38 @@
   "name": "trustrfq",
   "private": true,
   "type": "module",
+  "description": "A signed-quote RFQ protocol for Stellar: Soroban settlement contracts, a stake-gated maker registry, a taker SDK and a reference desk.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acakbin1881/TrustRFQ.git"
+  },
+  "homepage": "https://trustrfq.vercel.app",
+  "keywords": ["stellar", "soroban", "rfq", "defi", "otc", "market-making"],
   "engines": {
     "node": ">=20.19"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit",
-    "preview": "vite preview",
+    "dev": "npm run dev -w apps/desk",
+    "build": "npm run build -w apps/desk",
+    "preview": "npm run preview -w apps/desk",
+    "typecheck": "tsc -p packages/sdk --noEmit && tsc -p apps/desk --noEmit",
     "test": "vitest run",
-    "check:bundle": "node tools/bundle-check-driver.mjs",
-    "check:dev": "node tools/dev-smoke.mjs",
-    "capture": "node tools/capture-server.mjs",
+    "build:rfq-demo": "node tools/build-rfq-demo.mjs",
+    "check:bundle": "node tools/checks/bundle-check-driver.mjs",
+    "check:dev": "node tools/checks/dev-smoke.mjs",
+    "capture": "node tools/checks/capture-server.mjs",
     "e2e:census": "node tools/e2e/run-all.mjs",
     "e2e:rfq": "node tools/e2e/run-all.mjs --lane rfq",
     "e2e:rfq:live": "node tools/e2e/rfq-driver.mjs"
   },
-  "dependencies": {
-    "@creit.tech/stellar-wallets-kit": "1.9.5",
-    "@stellar/stellar-sdk": "^16.0.1",
-    "@supabase/supabase-js": "^2.110.2",
-    "@web3icons/react": "^4.1.22",
-    "buffer": "^6.0.3",
-    "lucide-react": "^1.47.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-router": "^8.4.0"
-  },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.3",
+    "@stellar/stellar-sdk": "^16.0.1",
     "playwright-core": "^1.60.0",
-    "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.1.4",
     "vitest": "^4.1.10"

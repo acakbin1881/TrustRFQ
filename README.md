@@ -223,7 +223,7 @@ typed in [`src/config.ts`](src/config.ts).
 | Contract | Address | Notes |
 |---|---|---|
 | **`rfq_swap`** | `CCNP7626WIJVWVTBPLPG6QM77TY6JBU42D4PYONUFTDEPIIW6ZFJQIDT` | Settlement, fee 10 bps maker-paid. Deployed 2026-08-18. |
-| **`rfq_registry`** | `CBA43RFMQBPBHVQENUZK5OMTE2MRC3BLHFKA7FWXUHNIQ2GSORUNIU5G` | Maker discovery. Deployed and initialized 2026-08-26. |
+| **`rfq_registry`** | `CBEFE7JY3PT5XF6CT3BMWF5RGPNUBGHKWPUDD3KLFZBLXFE3RPIDRLL3` | Maker discovery. Redeployed and re-initialized 2026-09-16 (same wasm `3450546a…`), carrying exactly one registered maker. |
 | **`otc_swap`** | `CCAPYEWHYSGORPUOC7FBSIRBIWSJJSPJOIWPJNEZLGDXUWJVWV7MTKBJ` | Earlier settlement contract, retiring into `rfq_swap`. Deployed bytecode matches source (wasm `83f60b85…`). |
 | **Reflector oracle** | `CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63` | Advisory fair price only, never on the signed path. |
 
@@ -258,7 +258,7 @@ TrustRFQ/
 │   └── tradesize/              # Mainnet trade-size distribution
 ├── docs/
 │   ├── migrations/             # Supabase SQL: base schema, then intent layer
-│   └── superpowers/specs/      # Dated design specs; 2026-08-17 is the adopted RFQ architecture
+│   └── specs/                  # Dated design specs; 2026-08-17 is the adopted RFQ architecture
 └── vercel.json                 # Build, rewrites, CSP + security headers
 ```
 
@@ -336,7 +336,7 @@ in its own repository, and the first live maker quoting real size on Testnet.
 - [ ] `swap_any` open orders, an events indexer, Sign-In-With-Stellar for per-wallet RLS
 - [ ] External audit, then Mainnet
 
-Design record: [`docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md`](docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md),
+Design record: [`docs/specs/2026-08-17-rfq-protocol-architecture-design.md`](docs/specs/2026-08-17-rfq-protocol-architecture-design.md),
 with the 2026-08-19 single-contract amendment at the top. Earlier specs in the same folder are
 historical.
 

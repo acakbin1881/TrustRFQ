@@ -2,7 +2,7 @@
 //! RFQ settlement contract: an AirSwap RFQ port to Soroban.
 //!
 //! Deliberately **asymmetric**, and this is the whole design (see
-//! `docs/superpowers/specs/2026-08-17-rfq-protocol-architecture-design.md` §4):
+//! `docs/specs/2026-08-17-rfq-protocol-architecture-design.md` §4):
 //!
 //! - The **maker** quotes off-chain and pre-signs a detached
 //!   `SorobanAuthorizationEntry` scoped with `require_auth_for_args` over every
@@ -259,7 +259,7 @@ impl RfqSwap {
         if fee > 0 {
             token::Client::new(&env, &order.maker_token).transfer(
                 &order.maker,
-                &fee_collector(&env),
+                fee_collector(&env),
                 &fee,
             );
         }
@@ -378,10 +378,12 @@ fn is_paused(env: &Env) -> bool {
 }
 
 fn cancelled(env: &Env, maker: &Address, order_id: u64) -> bool {
-    env.storage().temporary().has(&DataKey::Cancelled(CancelKey {
-        maker: maker.clone(),
-        order_id,
-    }))
+    env.storage()
+        .temporary()
+        .has(&DataKey::Cancelled(CancelKey {
+            maker: maker.clone(),
+            order_id,
+        }))
 }
 
 fn require_admin(env: &Env) {

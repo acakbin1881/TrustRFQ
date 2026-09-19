@@ -147,7 +147,8 @@ fn fill_token_list<'a>(s: &Setup<'a>, token: &Address, n: u32) -> std::vec::Vec<
     let mut makers = std::vec::Vec::new();
     for i in 0..n {
         let m = register_new_maker(s, 1, &std::format!("https://fill{}.example/quote", i));
-        s.client.add_tokens(&m, &soroban_sdk::vec![&s.env, token.clone()]);
+        s.client
+            .add_tokens(&m, &soroban_sdk::vec![&s.env, token.clone()]);
         makers.push(m);
     }
     makers
@@ -196,7 +197,13 @@ fn initialize_rejects_non_positive_costs() {
     let client = RfqRegistryClient::new(&env, &contract_id);
 
     assert_eq!(
-        client.try_initialize(&admin, &stake_token, &0, &PER_TOKEN_COST, &MAX_MAKERS_PER_TOKEN),
+        client.try_initialize(
+            &admin,
+            &stake_token,
+            &0,
+            &PER_TOKEN_COST,
+            &MAX_MAKERS_PER_TOKEN
+        ),
         Err(Ok(Error::InvalidCost))
     );
     assert_eq!(
@@ -204,12 +211,24 @@ fn initialize_rejects_non_positive_costs() {
         Err(Ok(Error::InvalidCost))
     );
     assert_eq!(
-        client.try_initialize(&admin, &stake_token, &-1, &PER_TOKEN_COST, &MAX_MAKERS_PER_TOKEN),
+        client.try_initialize(
+            &admin,
+            &stake_token,
+            &-1,
+            &PER_TOKEN_COST,
+            &MAX_MAKERS_PER_TOKEN
+        ),
         Err(Ok(Error::InvalidCost))
     );
 
     // Still uninitialized: a valid call now succeeds.
-    client.initialize(&admin, &stake_token, &BASE_COST, &PER_TOKEN_COST, &MAX_MAKERS_PER_TOKEN);
+    client.initialize(
+        &admin,
+        &stake_token,
+        &BASE_COST,
+        &PER_TOKEN_COST,
+        &MAX_MAKERS_PER_TOKEN,
+    );
     assert_eq!(client.get_config().base_cost, BASE_COST);
 }
 
@@ -432,10 +451,7 @@ fn eject_refunds_full_stake_and_removes_entry() {
 #[test]
 fn eject_rejects_unregistered() {
     let s = setup();
-    assert_eq!(
-        s.client.try_eject(&s.maker),
-        Err(Ok(Error::NotRegistered))
-    );
+    assert_eq!(s.client.try_eject(&s.maker), Err(Ok(Error::NotRegistered)));
 }
 
 #[test]
@@ -466,7 +482,10 @@ fn token_addr(env: &Env) -> Address {
 fn register_new_maker<'a>(s: &Setup<'a>, n_tokens: u32, url: &str) -> Address {
     let maker = Address::generate(&s.env);
     let st_admin = token::StellarAssetClient::new(&s.env, &s.stake_token);
-    st_admin.mint(&maker, &(BASE_COST + PER_TOKEN_COST * (n_tokens as i128) + PER_TOKEN_COST));
+    st_admin.mint(
+        &maker,
+        &(BASE_COST + PER_TOKEN_COST * (n_tokens as i128) + PER_TOKEN_COST),
+    );
     s.client.set_url(&maker, &url_str(&s.env, url));
     maker
 }
@@ -474,17 +493,22 @@ fn register_new_maker<'a>(s: &Setup<'a>, n_tokens: u32, url: &str) -> Address {
 #[test]
 fn add_tokens_stakes_and_lists_maker() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t1 = token_addr(&s.env);
     let t2 = token_addr(&s.env);
 
     let maker_before = s.st.balance(&s.maker);
     let contract_before = s.st.balance(&s.contract_id);
 
-    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone(), t2.clone()]);
+    s.client
+        .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone(), t2.clone()]);
 
     assert_eq!(s.st.balance(&s.maker), maker_before - PER_TOKEN_COST * 2);
-    assert_eq!(s.st.balance(&s.contract_id), contract_before + PER_TOKEN_COST * 2);
+    assert_eq!(
+        s.st.balance(&s.contract_id),
+        contract_before + PER_TOKEN_COST * 2
+    );
 
     let cfg = s.client.get_maker(&s.maker);
     assert_eq!(cfg.tokens.len(), 2);
@@ -508,11 +532,15 @@ fn get_urls_for_token_empty_for_unregistered_token() {
 #[test]
 fn add_tokens_rejects_duplicate_in_existing_list() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t1 = token_addr(&s.env);
-    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
+    s.client
+        .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
 
-    let r = s.client.try_add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
+    let r = s
+        .client
+        .try_add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
     assert_eq!(r, Err(Ok(Error::TokenAlreadyAdded)));
 
     // No funds moved and no extra entry created by the rejected call.
@@ -523,7 +551,8 @@ fn add_tokens_rejects_duplicate_in_existing_list() {
 #[test]
 fn add_tokens_rejects_intra_call_duplicate() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t1 = token_addr(&s.env);
 
     let r = s
@@ -539,7 +568,8 @@ fn add_tokens_rejects_intra_call_duplicate() {
 #[test]
 fn add_tokens_rejects_empty_input() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let empty: soroban_sdk::Vec<Address> = soroban_sdk::vec![&s.env];
     assert_eq!(
         s.client.try_add_tokens(&s.maker, &empty),
@@ -567,17 +597,23 @@ fn add_tokens_and_remove_tokens_reject_unregistered() {
 #[test]
 fn remove_tokens_refunds_and_delists() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t1 = token_addr(&s.env);
-    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
+    s.client
+        .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
 
     let maker_before = s.st.balance(&s.maker);
     let contract_before = s.st.balance(&s.contract_id);
 
-    s.client.remove_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
+    s.client
+        .remove_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
 
     assert_eq!(s.st.balance(&s.maker), maker_before + PER_TOKEN_COST);
-    assert_eq!(s.st.balance(&s.contract_id), contract_before - PER_TOKEN_COST);
+    assert_eq!(
+        s.st.balance(&s.contract_id),
+        contract_before - PER_TOKEN_COST
+    );
 
     let cfg = s.client.get_maker(&s.maker);
     assert!(cfg.tokens.is_empty());
@@ -591,7 +627,8 @@ fn remove_tokens_refunds_and_delists() {
 #[test]
 fn remove_tokens_rejects_token_not_in_list_and_refunds_nothing() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t1 = token_addr(&s.env);
 
     let contract_before = s.st.balance(&s.contract_id);
@@ -605,7 +642,8 @@ fn remove_tokens_rejects_token_not_in_list_and_refunds_nothing() {
 #[test]
 fn remove_tokens_rejects_empty_input() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let empty: soroban_sdk::Vec<Address> = soroban_sdk::vec![&s.env];
     assert_eq!(
         s.client.try_remove_tokens(&s.maker, &empty),
@@ -616,7 +654,8 @@ fn remove_tokens_rejects_empty_input() {
 #[test]
 fn eject_delists_from_every_token_and_refunds_full_stake() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t1 = token_addr(&s.env);
     let t2 = token_addr(&s.env);
     s.client
@@ -643,16 +682,20 @@ fn remove_from_middle_preserves_order() {
     let t = token_addr(&s.env);
 
     let m1 = register_new_maker(&s, 1, "https://m1.example/quote");
-    s.client.add_tokens(&m1, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .add_tokens(&m1, &soroban_sdk::vec![&s.env, t.clone()]);
     let m2 = register_new_maker(&s, 1, "https://m2.example/quote");
-    s.client.add_tokens(&m2, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .add_tokens(&m2, &soroban_sdk::vec![&s.env, t.clone()]);
     let m3 = register_new_maker(&s, 1, "https://m3.example/quote");
-    s.client.add_tokens(&m3, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .add_tokens(&m3, &soroban_sdk::vec![&s.env, t.clone()]);
 
     let before = s.client.get_urls_for_token(&t);
     assert_eq!(before.len(), 3);
 
-    s.client.remove_tokens(&m2, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .remove_tokens(&m2, &soroban_sdk::vec![&s.env, t.clone()]);
 
     let after = s.client.get_urls_for_token(&t);
     assert_eq!(after.len(), 2);
@@ -663,10 +706,12 @@ fn remove_from_middle_preserves_order() {
 #[test]
 fn failing_multi_token_add_tokens_leaves_state_untouched() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t1 = token_addr(&s.env);
     // Already-added token makes the SECOND element of the next call fail.
-    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
+    s.client
+        .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t1.clone()]);
 
     let t_new = token_addr(&s.env);
     let cfg_before = s.client.get_maker(&s.maker);
@@ -674,9 +719,10 @@ fn failing_multi_token_add_tokens_leaves_state_untouched() {
     let maker_before = s.st.balance(&s.maker);
 
     // t_new is fine, t1 is already added -> the whole call must roll back.
-    let r = s
-        .client
-        .try_add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t_new.clone(), t1.clone()]);
+    let r = s.client.try_add_tokens(
+        &s.maker,
+        &soroban_sdk::vec![&s.env, t_new.clone(), t1.clone()],
+    );
     assert_eq!(r, Err(Ok(Error::TokenAlreadyAdded)));
 
     let cfg_after = s.client.get_maker(&s.maker);
@@ -697,20 +743,23 @@ fn failing_multi_token_add_tokens_leaves_state_untouched() {
 #[test]
 fn add_protocols_and_remove_protocols_move_no_stake() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
 
     let maker_before = s.st.balance(&s.maker);
     let contract_before = s.st.balance(&s.contract_id);
     let staked_before = s.client.get_maker(&s.maker).staked;
 
-    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32, 2u32]);
+    s.client
+        .add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32, 2u32]);
     let cfg = s.client.get_maker(&s.maker);
     assert_eq!(cfg.protocols.len(), 2);
     assert_eq!(cfg.staked, staked_before);
     assert_eq!(s.st.balance(&s.maker), maker_before);
     assert_eq!(s.st.balance(&s.contract_id), contract_before);
 
-    s.client.remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
+    s.client
+        .remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
     let cfg = s.client.get_maker(&s.maker);
     assert_eq!(cfg.protocols.len(), 1);
     assert_eq!(cfg.protocols.get(0).unwrap(), 2u32);
@@ -723,8 +772,10 @@ fn add_protocols_and_remove_protocols_move_no_stake() {
 #[test]
 fn add_protocols_rejects_duplicate_and_intra_call_duplicate() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
-    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
 
     let r = s
         .client
@@ -743,7 +794,8 @@ fn add_protocols_rejects_duplicate_and_intra_call_duplicate() {
 #[test]
 fn remove_protocols_rejects_not_present() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let r = s
         .client
         .try_remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 9u32]);
@@ -753,7 +805,8 @@ fn remove_protocols_rejects_not_present() {
 #[test]
 fn protocols_reject_empty_input_and_unregistered() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let empty: soroban_sdk::Vec<u32> = soroban_sdk::vec![&s.env];
     assert_eq!(
         s.client.try_add_protocols(&s.maker, &empty),
@@ -780,14 +833,15 @@ fn protocols_reject_empty_input_and_unregistered() {
 #[test]
 fn add_protocols_caps_at_eight_per_maker() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
-    let seven: soroban_sdk::Vec<u32> =
-        soroban_sdk::vec![&s.env, 1, 2, 3, 4, 5, 6, 7];
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    let seven: soroban_sdk::Vec<u32> = soroban_sdk::vec![&s.env, 1, 2, 3, 4, 5, 6, 7];
     s.client.add_protocols(&s.maker, &seven);
     assert_eq!(s.client.get_maker(&s.maker).protocols.len(), 7);
 
     // 7 -> 8 succeeds.
-    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 8u32]);
+    s.client
+        .add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 8u32]);
     assert_eq!(s.client.get_maker(&s.maker).protocols.len(), 8);
 
     // 8 -> 9th rejected.
@@ -801,11 +855,13 @@ fn add_protocols_caps_at_eight_per_maker() {
 #[test]
 fn remove_protocols_preserves_order_of_survivors() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     s.client
         .add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32, 2u32, 3u32]);
 
-    s.client.remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 2u32]);
+    s.client
+        .remove_protocols(&s.maker, &soroban_sdk::vec![&s.env, 2u32]);
 
     let cfg = s.client.get_maker(&s.maker);
     assert_eq!(cfg.protocols.len(), 2);
@@ -820,7 +876,8 @@ fn get_urls_for_token_resolves_twenty_makers_in_insertion_order() {
     let mut makers = std::vec::Vec::new();
     for i in 0..20 {
         let m = register_new_maker(&s, 1, &std::format!("https://m{}.example/quote", i));
-        s.client.add_tokens(&m, &soroban_sdk::vec![&s.env, t.clone()]);
+        s.client
+            .add_tokens(&m, &soroban_sdk::vec![&s.env, t.clone()]);
         makers.push(m);
     }
 
@@ -867,27 +924,31 @@ fn per_token_cap_accepts_exactly_one_more_at_cap_minus_one() {
     fill_token_list(&s, &t, 2);
 
     let third = register_new_maker(&s, 1, "https://third.example/quote");
-    s.client.add_tokens(&third, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .add_tokens(&third, &soroban_sdk::vec![&s.env, t.clone()]);
     assert_eq!(s.client.get_urls_for_token(&t).len(), 3);
 }
 
 #[test]
 fn per_maker_cap_rejects_the_33rd_token_and_accepts_the_32nd() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
 
     let mut tokens = std::vec::Vec::new();
     for _ in 0..31 {
         tokens.push(token_addr(&s.env));
     }
     for t in tokens.iter() {
-        s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
+        s.client
+            .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
     }
     assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 31);
 
     // 31 -> 32nd succeeds.
     let t32 = token_addr(&s.env);
-    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t32.clone()]);
+    s.client
+        .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t32.clone()]);
     assert_eq!(s.client.get_maker(&s.maker).tokens.len(), 32);
 
     // 32 -> 33rd rejected.
@@ -902,7 +963,8 @@ fn per_maker_cap_rejects_the_33rd_token_and_accepts_the_32nd() {
 #[test]
 fn per_maker_cap_rejects_a_batch_that_would_cross_the_boundary() {
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
 
     for _ in 0..30 {
         let t = token_addr(&s.env);
@@ -943,7 +1005,8 @@ fn caps_are_independent_maker_at_own_cap_rejected_even_with_empty_token_lists() 
     // A maker at its own 32-token cap is rejected even when every target
     // Token(t) list is completely empty (a generous, unfilled cap).
     let s = setup_with_cap(100);
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     for _ in 0..32 {
         let t = token_addr(&s.env);
         s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t]);
@@ -992,7 +1055,8 @@ fn maker_at_or_above_lowered_cap_can_still_remove_and_eject() {
     let makers = fill_token_list(&s, &t, 3);
     let m1 = makers.first().unwrap();
 
-    s.client.remove_tokens(m1, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .remove_tokens(m1, &soroban_sdk::vec![&s.env, t.clone()]);
     assert_eq!(s.client.get_urls_for_token(&t).len(), 2);
 
     let m2 = makers.get(1).unwrap();
@@ -1066,7 +1130,10 @@ fn set_max_makers_per_token_rejects_zero_and_changes_nothing() {
         s.client.try_set_max_makers_per_token(&0),
         Err(Ok(Error::InvalidCap))
     );
-    assert_eq!(s.client.get_config().max_makers_per_token, MAX_MAKERS_PER_TOKEN);
+    assert_eq!(
+        s.client.get_config().max_makers_per_token,
+        MAX_MAKERS_PER_TOKEN
+    );
 }
 
 #[test]
@@ -1130,7 +1197,8 @@ fn raising_base_cost_does_not_change_an_existing_makers_refund() {
     // never a recomputation from the current cost, so the ORIGINAL amount
     // paid comes back even after the admin doubles the price.
     let s = setup();
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let maker_before_retune = s.st.balance(&s.maker);
 
     s.client.set_costs(&(BASE_COST * 2), &PER_TOKEN_COST);
@@ -1175,21 +1243,23 @@ fn lowering_live_cap_does_not_evict_but_blocks_new_additions() {
     // remove_tokens and eject both succeed with correct refunds.
     let m0 = makers.first().unwrap();
     let m0_before = s.st.balance(m0);
-    s.client.remove_tokens(m0, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .remove_tokens(m0, &soroban_sdk::vec![&s.env, t.clone()]);
     assert_eq!(s.st.balance(m0), m0_before + PER_TOKEN_COST);
     assert_eq!(s.client.get_urls_for_token(&t).len(), 2);
 
     let m1 = makers.get(1).unwrap();
-    let m1_before = s.st.balance(&m1);
-    let m1_staked = s.client.get_maker(&m1).staked;
-    s.client.eject(&m1);
-    assert_eq!(s.st.balance(&m1), m1_before + m1_staked);
+    let m1_before = s.st.balance(m1);
+    let m1_staked = s.client.get_maker(m1).staked;
+    s.client.eject(m1);
+    assert_eq!(s.st.balance(m1), m1_before + m1_staked);
     assert_eq!(s.client.get_urls_for_token(&t).len(), 1);
 
     let m2 = makers.get(2).unwrap();
-    let m2_before = s.st.balance(&m2);
-    s.client.remove_tokens(&m2, &soroban_sdk::vec![&s.env, t.clone()]);
-    assert_eq!(s.st.balance(&m2), m2_before + PER_TOKEN_COST);
+    let m2_before = s.st.balance(m2);
+    s.client
+        .remove_tokens(m2, &soroban_sdk::vec![&s.env, t.clone()]);
+    assert_eq!(s.st.balance(m2), m2_before + PER_TOKEN_COST);
     assert_eq!(s.client.get_urls_for_token(&t).len(), 0);
 }
 
@@ -1210,10 +1280,13 @@ fn maker_facing_mutations_reject_non_maker_auth() {
     // Register real state behind every call: an unregistered maker would
     // fail every one of these with NotRegistered regardless of who signs,
     // which would prove nothing about the auth check.
-    s.client.set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
+    s.client
+        .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t = token_addr(&s.env);
-    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
-    s.client.add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
+    s.client
+        .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .add_protocols(&s.maker, &soroban_sdk::vec![&s.env, 1u32]);
 
     let url2 = url_str(&s.env, "https://maker.example/quote-v2");
     let tokens_vec = soroban_sdk::vec![&s.env, t.clone()];
@@ -1549,9 +1622,9 @@ fn archived_persistent_entry_auto_restores_on_read() {
         .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let key = DataKey::Maker(s.maker.clone());
 
-    let ttl_before = s
-        .env
-        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+    let ttl_before = s.env.as_contract(&s.contract_id, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
 
     // Push the ledger sequence past the entry's live-until point.
     s.env.ledger().with_mut(|li| {
@@ -1572,9 +1645,9 @@ fn ttl_bumps_on_maker_write_after_ledger_advance() {
         .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let key = DataKey::Maker(s.maker.clone());
 
-    let ttl_after_first_write = s
-        .env
-        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+    let ttl_after_first_write = s.env.as_contract(&s.contract_id, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
     assert_eq!(ttl_after_first_write, crate::PERSISTENT_TTL_EXTEND_TO);
 
     // Advance until only a sliver of TTL remains -- well under the bump
@@ -1583,18 +1656,18 @@ fn ttl_bumps_on_maker_write_after_ledger_advance() {
     s.env.ledger().with_mut(|li| {
         li.sequence_number += ttl_after_first_write - 100;
     });
-    let ttl_before_second_write = s
-        .env
-        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+    let ttl_before_second_write = s.env.as_contract(&s.contract_id, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
     assert!(ttl_before_second_write < crate::PERSISTENT_TTL_THRESHOLD);
 
     // A second write on the same maker (a url change) must bump the TTL.
     let url2 = url_str(&s.env, "https://maker.example/quote-v2");
     s.client.set_url(&s.maker, &url2);
 
-    let ttl_after_second_write = s
-        .env
-        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&key));
+    let ttl_after_second_write = s.env.as_contract(&s.contract_id, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
     assert!(ttl_after_second_write > ttl_before_second_write);
 }
 
@@ -1604,20 +1677,21 @@ fn ttl_bumps_on_token_write_after_ledger_advance() {
     s.client
         .set_url(&s.maker, &url_str(&s.env, "https://maker.example/quote"));
     let t = token_addr(&s.env);
-    s.client.add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
+    s.client
+        .add_tokens(&s.maker, &soroban_sdk::vec![&s.env, t.clone()]);
     let token_key = DataKey::Token(t.clone());
 
-    let ttl_after_first_write = s
-        .env
-        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&token_key));
+    let ttl_after_first_write = s.env.as_contract(&s.contract_id, || {
+        s.env.storage().persistent().get_ttl(&token_key)
+    });
     assert_eq!(ttl_after_first_write, crate::PERSISTENT_TTL_EXTEND_TO);
 
     s.env.ledger().with_mut(|li| {
         li.sequence_number += ttl_after_first_write - 100;
     });
-    let ttl_before_second_write = s
-        .env
-        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&token_key));
+    let ttl_before_second_write = s.env.as_contract(&s.contract_id, || {
+        s.env.storage().persistent().get_ttl(&token_key)
+    });
     assert!(ttl_before_second_write < crate::PERSISTENT_TTL_THRESHOLD);
 
     // A SECOND, different maker adding the same token writes `Token(t)` again.
@@ -1625,9 +1699,9 @@ fn ttl_bumps_on_token_write_after_ledger_advance() {
     s.client
         .add_tokens(&second_maker, &soroban_sdk::vec![&s.env, t.clone()]);
 
-    let ttl_after_second_write = s
-        .env
-        .as_contract(&s.contract_id, || s.env.storage().persistent().get_ttl(&token_key));
+    let ttl_after_second_write = s.env.as_contract(&s.contract_id, || {
+        s.env.storage().persistent().get_ttl(&token_key)
+    });
     assert!(ttl_after_second_write > ttl_before_second_write);
 }
 

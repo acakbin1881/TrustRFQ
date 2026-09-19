@@ -1,0 +1,7 @@
+# The channel that reproduces the deployed contract bytecode. otc_swap.wasm
+# built with this toolchain hashes to 83f60b85..., the value the deployed
+# contract carries; CI checks it on every push.
+[toolchain]
+channel = "1.96.1"
+targets = ["wasm32v1-none"]
+components = ["rustfmt", "clippy"]
