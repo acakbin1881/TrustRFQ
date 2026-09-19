@@ -245,6 +245,36 @@ bunların doğrulanabilir olması.
 yazı. SSS bir an bunu yayınladı. `theme.css` artık `:where(.tr-dark) button`
 ile preflight'ın bu parçasını landing kapsamında yapıyor.
 
+### Nesneler ve gerçek marka varlıkları (üçüncü revizyon)
+
+**Kural: marka varlığı asla yeniden çizilmez.** Sattığı varlığın logosunu kendi
+yorumuyla çizen bir masa, kendi maketi gibi okunur. XLM, USDC ve Stellar
+işaretleri `@web3icons/react` (MIT) üzerinden geliyor — Stellar'ın ve Circle'ın
+kendi SVG'leri. Bizim olan sadece altlarındaki disk; logoya dokunulmuyor,
+yalnızca çerçeveleniyor.
+
+**Kaldırılanlar:**
+- Hero'daki `XLM / USDC · live on Stellar Testnet` pili — hazır bileşen gibi
+  duruyordu ve Testnet bilgisi zaten nav rozetinde.
+- Kayan iddia şeridi (ticker) — ritim içindi, o işi artık hero'daki nesneler
+  yapıyor.
+
+**Hero nesneleri:** üç gerçek işaret + bir dönen madeni para, metin sütununun
+dışında konumlanmış — başlığı çerçeveliyorlar, onunla yarışmıyorlar. Her biri
+kendi uzun döngüsünde ve **kasıtlı olarak faz dışı** sürükleniyor; aynı fazda
+birlikte nabız atıp tek bir mekanizma gibi okunuyorlar. `lg` altında
+gizleniyorlar: o genişlikte ya başlığı sıkıştırır ya da kenarda boş dururlar.
+
+**Morph = madeni para çevirme.** `SwapDisc` gerçek bir Y ekseninde dönüyor:
+XLM yüzü çekiliyor, USDC yüzü geliyor. Çapraz geçiş "iki resim" der, dönüş
+"aynı paranın öbür yüzü" der — ki bu masanın yaptığı takasın ta kendisi.
+Her yüz okunacak kadar duruyor (`tr-flip`'te %40/%90 bekleme), yoksa fırıldak
+gibi okunur.
+
+**Giriş hareketi:** nesneler kayarak değil, **odağa gelerek** yerleşiyor
+(`tr-settle`: scale + blur birlikte çözülüyor). Sayfanın geri kalanındaki
+reveal ile aynı dil.
+
 ### Şu an nerede
 
 Landing bu dille yeniden yapıldı. **Desk henüz eski açık temada** — token

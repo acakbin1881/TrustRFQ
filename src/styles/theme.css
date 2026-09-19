@@ -240,27 +240,6 @@ body:where(.tr-dark) {
    this page is the layout, the sequencing and what the sections actually say.
    ========================================================================== */
 
-/* The claim strip under the hero. Two identical runs of the list sit side by
-   side and the track slides exactly one run's width, so the loop closes on a
-   seam nobody can see. Width comes from the content, so adding a claim needs
-   no arithmetic here. */
-@keyframes tr-marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-.tr-marquee-track {
-  animation: tr-marquee 34s linear infinite;
-}
-
-/* Hovering the strip pauses it — a reader who stops to read should not have
-   the words walk away from them. */
-.tr-marquee:hover .tr-marquee-track { animation-play-state: paused; }
-
-@media (prefers-reduced-motion: reduce) {
-  .tr-marquee-track { animation: none; }
-}
-
 /* The FAQ's answer panel. Height is animated through grid-template-rows, which
    transitions cleanly from 0fr to 1fr — max-height guesswork would either clip
    a long answer or leave dead space after a short one. */
@@ -287,4 +266,61 @@ body:where(.tr-dark) {
 
 @media (prefers-reduced-motion: reduce) {
   [class*="tr-panel"] { animation: none !important; }
+}
+
+/* ==========================================================================
+   Token objects
+   ==========================================================================
+   The marks are the real ones — Stellar's and Circle's own SVGs, shipped by
+   @web3icons/react (MIT). Nothing here is redrawn or approximated: a trading
+   desk that draws its own version of the asset it settles reads as a mockup.
+   ========================================================================== */
+
+/* Each disc drifts on its own long cycle. The offsets are set per element so
+   no two are ever in phase — in phase they pulse together and read as one
+   mechanism rather than objects at rest. */
+@keyframes tr-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--tr-tilt, 0deg)); }
+  50%      { transform: translate3d(var(--tr-dx, 0), var(--tr-dy, -14px), 0)
+                        rotate(calc(var(--tr-tilt, 0deg) + var(--tr-turn, 2deg))); }
+}
+
+.tr-drift {
+  animation: tr-drift var(--tr-dur, 14s) ease-in-out var(--tr-lag, 0s) infinite;
+}
+
+/* The swap disc: one face turns away, the other arrives, on a real Y axis.
+   A cross-fade would say "two pictures"; a rotation says "the same coin,
+   the other side" — which is the trade this desk does. The 40%/90% holds are
+   what keep it from reading as a spinner: each face rests long enough to be
+   read before it turns. */
+@keyframes tr-flip {
+  0%, 40%   { transform: rotateY(0deg); }
+  50%, 90%  { transform: rotateY(180deg); }
+  100%      { transform: rotateY(360deg); }
+}
+
+.tr-flip-stage { perspective: 600px; }
+.tr-flip-coin {
+  transform-style: preserve-3d;
+  animation: tr-flip 7s var(--ease-glide) infinite;
+}
+.tr-flip-face { backface-visibility: hidden; }
+.tr-flip-face--back { transform: rotateY(180deg); }
+
+/* Objects arrive by resolving into place rather than sliding: scale and blur
+   settle together, which reads as focus pulling rather than motion. */
+@keyframes tr-settle {
+  from { opacity: 0; transform: scale(0.82); filter: blur(10px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+
+.tr-settle {
+  animation: tr-settle 1100ms var(--ease-glide) both;
+  animation-delay: var(--tr-lag, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-drift, .tr-flip-coin, .tr-settle { animation: none; }
+  .tr-settle { opacity: 1; }
 }

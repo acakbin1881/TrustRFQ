@@ -25,10 +25,14 @@ import {
   EyeOff, Fingerprint, FlaskConical, Minus, PenLine, Plus, Wallet, Zap,
   type LucideIcon,
 } from 'lucide-react';
+// The real marks — Stellar's and Circle's own SVGs (@web3icons/react, MIT).
+// Never redraw these: a desk that approximates the asset it settles in reads
+// as a mockup of itself.
+import { NetworkStellar, TokenUSDC, TokenXLM } from '@web3icons/react';
 import { deskPath } from '../routes/sections';
 import {
   COMPARISON, CTA, FAQ, FOOTER, GUARANTEES, HEADINGS, HERO, HERO_TICKET, LADDER,
-  NAV_LINKS, PROOF, SOLUTION, STEPS, TICKER,
+  NAV_LINKS, PROOF, SOLUTION, STEPS,
   type IconKey, type ProofRun, type Rung, type TwoToneHeading,
 } from './content';
 import { useCarbonCanvas, useCountUp, useReveal, useScrolled } from './motion';
@@ -178,6 +182,82 @@ function Nav() {
 
 /* ------------------------------------------------------------------- hero */
 
+/** A token mark on a carbon disc. The marks are the real ones; the disc is
+ *  ours, so the brand SVG is never modified — only framed. */
+function TokenDisc({ mark, size = 'md', className = '' }: {
+  mark: 'xlm' | 'usdc' | 'stellar'; size?: 'sm' | 'md' | 'lg'; className?: string;
+}) {
+  const box = { sm: 'size-12', md: 'size-16', lg: 'size-20' }[size];
+  const glyph = { sm: 22, md: 30, lg: 38 }[size];
+  const Mark = { xlm: TokenXLM, usdc: TokenUSDC, stellar: NetworkStellar }[mark];
+
+  return (
+    <span className={`flex ${box} items-center justify-center rounded-full border
+      border-carbon-line bg-carbon-card/80 backdrop-blur-xl ${className}`}>
+      <Mark size={glyph} variant="mono" className="text-snow" />
+    </span>
+  );
+}
+
+/**
+ * The swap disc: XLM turns away, USDC arrives, on a real Y axis.
+ *
+ * A cross-fade would say "two pictures". A rotation says "the same coin, the
+ * other side" — which is exactly the trade this desk settles. Each face rests
+ * long enough to be read before it turns (see tr-flip in theme.css), so it
+ * reads as an exchange rather than a spinner.
+ */
+function SwapDisc({ className = '' }: { className?: string }) {
+  return (
+    <span className={`tr-flip-stage ${className}`} aria-hidden="true">
+      <span className="tr-flip-coin relative block size-20">
+        <span className="tr-flip-face absolute inset-0 flex items-center justify-center
+          rounded-full border border-carbon-line bg-carbon-card/80 backdrop-blur-xl">
+          <TokenXLM size={38} variant="mono" className="text-snow" />
+        </span>
+        <span className="tr-flip-face tr-flip-face--back absolute inset-0 flex items-center
+          justify-center rounded-full border border-lime/25 bg-carbon-card/80 backdrop-blur-xl">
+          <TokenUSDC size={38} variant="mono" className="text-lime" />
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The objects around the hero.
+ *
+ * Three real marks and one turning coin, placed off the text column so they
+ * frame the headline instead of competing with it. They drift on long,
+ * deliberately out-of-phase cycles — in phase they pulse together and stop
+ * reading as separate objects. Hidden below lg: at that width they would
+ * either crowd the headline or sit in the margin doing nothing.
+ */
+function HeroObjects() {
+  const items = [
+    { el: <TokenDisc mark="xlm" size="lg" />, pos: 'left-[4%] top-[18%]',
+      vars: { '--tr-dx': '10px', '--tr-dy': '-18px', '--tr-tilt': '-8deg', '--tr-dur': '16s', '--tr-lag': '0s' } },
+    { el: <SwapDisc />, pos: 'right-[6%] top-[12%]',
+      vars: { '--tr-dx': '-12px', '--tr-dy': '16px', '--tr-tilt': '6deg', '--tr-dur': '19s', '--tr-lag': '1.2s' } },
+    { el: <TokenDisc mark="stellar" size="md" />, pos: 'left-[12%] bottom-[14%]',
+      vars: { '--tr-dx': '14px', '--tr-dy': '12px', '--tr-tilt': '10deg', '--tr-dur': '21s', '--tr-lag': '0.6s' } },
+    { el: <TokenDisc mark="usdc" size="sm" />, pos: 'right-[13%] bottom-[20%]',
+      vars: { '--tr-dx': '-9px', '--tr-dy': '-15px', '--tr-tilt': '-5deg', '--tr-dur': '17s', '--tr-lag': '1.8s' } },
+  ];
+
+  return (
+    <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
+      {items.map((it, i) => (
+        <div key={it.pos} className={`absolute ${it.pos}`}>
+          <div className="tr-settle" style={{ '--tr-lag': `${300 + i * 140}ms` } as React.CSSProperties}>
+            <div className="tr-drift" style={it.vars as React.CSSProperties}>{it.el}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TicketPreview() {
   const leg = (l: { label: string; amount: string; token: string }, tone: string) => (
     <div className="rounded-well bg-carbon-deep/70 p-5 text-left">
@@ -186,8 +266,15 @@ function TicketPreview() {
         <span className={`font-grotesk text-[30px] font-medium tabular-nums tracking-tight ${tone}`}>
           {l.amount}
         </span>
-        <span className="rounded-pill border border-carbon-line bg-carbon-card px-3 py-1.5
-          font-grotesk text-[14px] font-medium text-snow">{l.token}</span>
+        <span className="flex items-center gap-2 rounded-pill border border-carbon-line
+          bg-carbon-card py-1.5 pl-1.5 pr-3.5 font-grotesk text-[14px] font-medium text-snow">
+          <span className="flex size-6 items-center justify-center rounded-full bg-carbon-deep">
+            {l.token === 'XLM'
+              ? <TokenXLM size={14} variant="mono" className="text-snow" />
+              : <TokenUSDC size={14} variant="mono" className="text-lime" />}
+          </span>
+          {l.token}
+        </span>
       </div>
     </div>
   );
@@ -225,53 +312,18 @@ function TicketPreview() {
 
 function Hero() {
   return (
-    <section className="px-6 pb-20 pt-36 md:pt-44">
-      <div className="mx-auto max-w-3xl text-center">
-        <div className="tr-reveal inline-block" style={delay(0)}>
-          <span className="inline-flex items-center gap-2.5 rounded-pill border border-carbon-line
-            bg-carbon-card/50 px-4 py-2 font-grotesk text-[13px] text-ash">
-            <span className="size-1.5 rounded-full bg-lime" aria-hidden="true" />
-            <strong className="font-medium text-snow">{HERO.pill.strong}</strong>
-            {HERO.pill.rest}
-          </span>
-        </div>
+    <section className="relative overflow-hidden px-6 pb-20 pt-36 md:pt-44">
+      <HeroObjects />
 
-        <h1 className="tr-reveal mt-7 font-grotesk text-[clamp(2.5rem,6vw,4.25rem)] font-medium
-          leading-[1.04] tracking-[-0.03em]" style={delay(80)}>
+      <div className="relative mx-auto max-w-3xl text-center">
+        <h1 className="tr-reveal font-grotesk text-[clamp(2.5rem,6vw,4.25rem)] font-medium
+          leading-[1.04] tracking-[-0.03em]" style={delay(0)}>
           <TwoTone heading={HERO.heading} />
         </h1>
 
-        <div className="tr-reveal mt-10" style={delay(160)}><TicketPreview /></div>
+        <div className="tr-reveal mt-11" style={delay(120)}><TicketPreview /></div>
       </div>
     </section>
-  );
-}
-
-/** The claim strip. Two identical runs slide as one track; the loop closes on
- *  a seam you cannot see. Hovering pauses it — a reader who stops to read
- *  should not have the words walk away. */
-function Ticker() {
-  const run = (key: string) => (
-    <ul key={key} className="flex shrink-0 items-center" aria-hidden={key === 'b'}>
-      {TICKER.map((claim) => (
-        <li key={claim} className="flex items-center gap-8 whitespace-nowrap px-8
-          font-grotesk text-[14px] uppercase tracking-[0.14em] text-slate">
-          {claim}
-          <span className="size-1 rounded-full bg-lime/50" aria-hidden="true" />
-        </li>
-      ))}
-    </ul>
-  );
-
-  return (
-    <div className="tr-marquee relative overflow-hidden border-y border-carbon-line py-5">
-      <div className="tr-marquee-track flex w-max">{run('a')}{run('b')}</div>
-      {/* the strip has to dissolve at both edges, or the loop reads as a belt */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r
-        from-carbon to-transparent" aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l
-        from-carbon to-transparent" aria-hidden="true" />
-    </div>
   );
 }
 
@@ -741,7 +793,6 @@ export default function Landing() {
     <div ref={scopeRef} className="min-h-screen bg-carbon font-grotesk antialiased">
       <Nav />
       <Hero />
-      <Ticker />
       <main>
         <Problem />
         <Difference />

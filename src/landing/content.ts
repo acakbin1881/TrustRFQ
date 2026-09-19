@@ -23,19 +23,10 @@ export const NAV_LINKS = [
 ] as const;
 
 export const HERO = {
-  pill: {
-    marks: ['XLM', 'USDC'],
-    strong: 'XLM / USDC',
-    rest: ' · live on Stellar Testnet',
-  },
   heading: {
     lead: 'Move institutional',
     rest: ['size. Keep the price', 'you agreed on.'],
   } satisfies TwoToneHeading,
-  ctas: {
-    primary: 'Open the desk',
-    secondary: { label: 'See how it works', href: '#how' },
-  },
 } as const;
 
 /** The hero's signature element: one deal, as three signed tickets. */
@@ -198,17 +189,6 @@ export const FOOTER = {
 /* ==========================================================================
    Sections added in the differentiation pass
    ========================================================================== */
-
-/** The strip under the hero. Short, flat claims — it is a rhythm device, not a
- *  place to explain anything. */
-export const TICKER = [
-  'Non-custodial',
-  'Atomic settlement',
-  'Signature-bound',
-  'Zero slippage',
-  'No intent leak',
-  'Live on Stellar Testnet',
-] as const;
 
 /** Order book vs desk, claim by claim. The left column is not a straw man —
  *  every line of it is true of an on-chain order book working correctly. That
