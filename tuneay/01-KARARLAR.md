@@ -347,6 +347,29 @@ damganın inişi gibi.
 - Çizgi başlığın descender payının içinde yaşıyor — maske onu bu yüzden
   kesmiyor.
 
+### Bölümlerin hover dili (beşinci revizyon)
+
+Başlıktaki üç işaretin dili bir rütbe aşağıda bölümlere taşındı. Kural: **ne
+hover alır, neden alır.**
+
+| Öğe | Ne yapıyor | Hover'ı neden var |
+|-----|-----------|-------------------|
+| Solution kartı | okunur, tıklanmaz | **onay**: üstünden lime bir çizgi geçer, ikon büyür, numara lime olur |
+| Security kartı | okunur, tıklanmaz | aynı dil ama **daha sessiz** — garanti bir olgudur, bakınca gösteri yapmaz |
+| Difference satırı | sol-sağ karşılaştırılır | **navigasyon**: iki hücre birlikte aydınlanır, satır tek bant olur |
+| Merdiven satırı | okunur | satır vurgusu + bar tam lime'a çıkar |
+
+**Difference satırı neden farklı:** orada solu sağa karşı okuyorsun ve satırı
+kaybetmek argümanı kaybetmek demek. O yüzden hover dekor değil, yön bulma.
+
+**Kart ikonları pasifte nefes alıyor** (`tr-breathe`), başlıktakilerden daha
+küçük genlikle — ekranda aynı anda birkaç tane var ve toplamları titreşime
+dönüşmemeli. `nth-child` ile kademeli gecikme: üçlü bir raf asla aynı anda
+nabız atmıyor. Hover'da duruyor, niyetli hareket kareyi devralıyor.
+
+**Hiçbiri parlamıyor.** İmlecin altında açan bir ışık bildirim gibi okunur;
+bunlar cevap.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

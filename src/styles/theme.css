@@ -476,3 +476,47 @@ body:where(.tr-dark) {
 @media (prefers-reduced-motion: reduce) {
   .tr-idle-coin, .tr-idle-cursor, .tr-idle-seal { animation: none; }
 }
+
+/* ==========================================================================
+   Sections: hover and idle
+   ==========================================================================
+   The same three ideas as the headline marks, applied one rank down.
+
+   WHAT GETS A HOVER, AND WHY. A card is read, not clicked, so its hover is an
+   acknowledgement — the surface lifts, its icon answers, and a hairline draws
+   across the top. A comparison ROW is different: you are reading left against
+   right, and losing your place costs you the argument. There the hover is
+   navigational, so both cells light together and the row reads as one band.
+
+   Nothing here glows. A bloom under the cursor reads as a notification; these
+   are answers.
+   ========================================================================== */
+
+/* The card's version of the headline's rule: a hairline wiping in from the
+   left, fading out before the right edge so it never reads as a border. */
+.tr-edge {
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 760ms var(--ease-glide);
+}
+.group:hover .tr-edge { transform: scaleX(1); }
+
+/* Card icons breathe while idle, the way the headline's marks do — smaller
+   still, because there are several on screen at once and they must not add up
+   to a flicker. Paused on hover so the deliberate gesture owns the frame. */
+@keyframes tr-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1.5px); }
+}
+.tr-breathe { animation: tr-breathe 6s ease-in-out infinite; }
+.group:hover .tr-breathe { animation-play-state: paused; }
+
+/* Stagger the shelf: each card's idle sits a beat behind the one before it,
+   so a row of three never pulses in unison. */
+.tr-breathe:nth-child(3n + 2) { animation-delay: -2s; }
+.tr-breathe:nth-child(3n) { animation-delay: -4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-breathe { animation: none; }
+  .tr-edge { transition: none; }
+}

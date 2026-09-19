@@ -544,12 +544,13 @@ function LadderRow({ rung, index }: { rung: Rung; index: number }) {
   const loss = useCountUp(rung.lossValue);
 
   return (
-    <div className="tr-reveal grid grid-cols-[auto_1fr_auto] items-center gap-5 border-t
-      border-carbon-line py-5 first:border-t-0" style={delay(index * 90)}>
+    <div className="tr-reveal group -mx-3 grid grid-cols-[auto_1fr_auto] items-center gap-5
+      rounded-well border-t border-carbon-line px-3 py-5 transition-colors duration-500
+      ease-glide first:border-t-0 hover:bg-carbon-deep/40" style={delay(index * 90)}>
       <span className="w-16 font-grotesk text-[15px] font-medium text-snow">{rung.size}</span>
       <span className="relative h-1.5 overflow-hidden rounded-pill bg-carbon-deep">
-        <span className="absolute inset-y-0 left-0 rounded-pill bg-lime/70"
-          style={{ width: rung.width, transition: 'width 1400ms var(--ease-glide)' }} />
+        <span className="absolute inset-y-0 left-0 rounded-pill bg-lime/70 group-hover:bg-lime"
+          style={{ width: rung.width, transition: 'width 1400ms var(--ease-glide), background-color 500ms var(--ease-glide)' }} />
       </span>
       <span className="flex items-baseline justify-end gap-3 text-right">
         <span ref={pct.ref as React.Ref<HTMLSpanElement>}
@@ -629,15 +630,24 @@ function Difference() {
 
         {COMPARISON.rows.map((row, i) => (
           <div key={row.topic}
-            className={`grid md:grid-cols-2 ${i > 0 ? 'border-t border-carbon-line' : ''}`}>
-            <div className="p-6 md:pr-10">
-              <div className="font-grotesk text-[12px] uppercase tracking-[0.14em] text-slate">
+            className={`group grid md:grid-cols-2 ${i > 0 ? 'border-t border-carbon-line' : ''}`}>
+            {/* Both cells light together. You are reading left against right,
+                and losing the row costs you the comparison — so the hover is
+                navigation here, not decoration. */}
+            <div className="p-6 transition-colors duration-500 ease-glide
+              group-hover:bg-carbon-card/40 md:pr-10">
+              <div className="font-grotesk text-[12px] uppercase tracking-[0.14em] text-slate
+                transition-colors duration-500 ease-glide group-hover:text-ash">
                 {row.topic}
               </div>
               <p className="mt-3 font-grotesk text-[15px] leading-relaxed text-ash">{row.left}</p>
             </div>
-            <div className="border-t border-carbon-line bg-carbon-card/40 p-6
+            <div className="relative border-t border-carbon-line bg-carbon-card/40 p-6
+              transition-colors duration-500 ease-glide group-hover:bg-carbon-hi/60
               md:border-l md:border-t-0">
+              {/* an accent edge on the answering side only */}
+              <span className="tr-edge absolute inset-y-0 left-0 hidden w-px origin-top bg-lime/40
+                md:block" aria-hidden="true" />
               <div className="font-grotesk text-[12px] uppercase tracking-[0.14em] text-lime
                 md:invisible" aria-hidden="true">{row.topic}</div>
               <p className="mt-3 font-grotesk text-[15px] leading-relaxed text-snow md:mt-0">
@@ -825,15 +835,26 @@ function Solution() {
       <div className="mt-12 grid gap-4 md:grid-cols-3">
         {SOLUTION.map((c, i) => (
           <div key={c.num} style={delay(120 + i * 90)}
-            className="tr-reveal group rounded-card border border-carbon-line bg-carbon-card/50 p-7
-              transition-colors duration-700 ease-glide hover:bg-carbon-hi/70">
+            className="tr-reveal group relative overflow-hidden rounded-card border
+              border-carbon-line bg-carbon-card/50 p-7 transition-colors duration-700 ease-glide
+              hover:border-lime/20 hover:bg-carbon-hi/70">
+            {/* the card's version of the headline's rule: a hairline wiping in
+                from the left and fading before the right edge, so it never
+                reads as a border that was simply switched on */}
+            <span className="tr-edge absolute inset-x-0 top-0 block h-px bg-gradient-to-r
+              from-lime/70 via-lime/20 to-transparent" aria-hidden="true" />
+
             <div className="flex items-center justify-between">
               <span className="flex size-11 items-center justify-center rounded-well border
                 border-carbon-line bg-carbon-deep/60 text-lime transition-colors duration-700
-                ease-glide group-hover:bg-carbon-deep">
-                <Icon name={c.icon} />
+                ease-glide group-hover:border-lime/25 group-hover:bg-carbon-deep">
+                <span className="tr-breathe block transition-transform duration-700 ease-glide
+                  group-hover:scale-110">
+                  <Icon name={c.icon} />
+                </span>
               </span>
-              <span className="font-grotesk text-[13px] tabular-nums text-slate">{c.num}</span>
+              <span className="font-grotesk text-[13px] tabular-nums text-slate transition-colors
+                duration-700 ease-glide group-hover:text-lime">{c.num}</span>
             </div>
             <h3 className="mt-6 font-grotesk text-[19px] font-medium tracking-[-0.01em] text-snow">
               {c.title}
@@ -861,10 +882,16 @@ function Security() {
         <div className="grid gap-4 sm:grid-cols-2">
           {GUARANTEES.map((g, i) => (
             <div key={g.name} style={delay(100 + i * 70)}
-              className="tr-reveal rounded-card border border-carbon-line bg-carbon-card/50 p-6
-                transition-colors duration-700 ease-glide hover:bg-carbon-hi/70">
+              className="tr-reveal group rounded-card border border-carbon-line bg-carbon-card/50
+                p-6 transition-colors duration-700 ease-glide hover:border-lime/15
+                hover:bg-carbon-hi/70">
+              {/* quieter than the solution cards: a guarantee is a fact, and a
+                  fact does not need to perform when you look at it */}
               <div className="flex items-start gap-3.5">
-                <span className="mt-0.5 text-lime"><Icon name={g.icon} className="size-[18px]" /></span>
+                <span className="tr-breathe mt-0.5 block text-lime transition-transform
+                  duration-700 ease-glide group-hover:scale-110">
+                  <Icon name={g.icon} className="size-[18px]" />
+                </span>
                 <div>
                   <h3 className="font-grotesk text-[16px] font-medium text-snow">{g.name}</h3>
                   <p className="mt-2 font-grotesk text-[14px] leading-relaxed text-ash">{g.desc}</p>
