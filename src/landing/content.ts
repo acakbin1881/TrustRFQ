@@ -81,15 +81,29 @@ export const DEAL_CHIPS = [
 
 export type DealChip = (typeof DEAL_CHIPS)[number];
 
-/** The problem section's ladder. `width` is the bar's track share, not the pct. */
+/** The problem section's ladder.
+ *  `width` is the bar's share of the track, not the percentage it reports.
+ *  The numeric twins (pctValue, lossValue) exist so the figures can count up
+ *  on arrival — the string is what a reader sees, the number is what animates.
+ */
 export const LADDER = {
   title: 'What it costs to move the block',
   axis: { from: '0%', to: '60%' },
   rungs: [
-    { size: '$250K', width: '17%', pct: '~10%', loss: '~$25K lost' },
-    { size: '$1M', width: '50%', pct: '~30%', loss: '~$300K lost' },
-    { size: '$2M', width: '67%', pct: '~40%', loss: '~$800K lost' },
+    { size: '$250K', width: '17%', pct: '~10%', pctValue: 10, loss: '~$25K lost', lossValue: 25, lossUnit: 'K' },
+    { size: '$1M', width: '50%', pct: '~30%', pctValue: 30, loss: '~$300K lost', lossValue: 300, lossUnit: 'K' },
+    { size: '$2M', width: '67%', pct: '~40%', pctValue: 40, loss: '~$800K lost', lossValue: 800, lossUnit: 'K' },
   ],
+} as const;
+
+export type Rung = (typeof LADDER)['rungs'][number];
+
+/** The hero's ticket, shown as the desk would fill it. Not interactive — it is
+ *  a picture of the product, and the product is one click away. */
+export const HERO_TICKET = {
+  send: { label: 'You send', amount: '250,000', token: 'XLM' },
+  receive: { label: 'You receive', amount: '62,500', token: 'USDC' },
+  footnote: 'Signed by both wallets · settles in one transaction',
 } as const;
 
 export const SOLUTION = [

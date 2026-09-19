@@ -119,14 +119,69 @@ Her adımda `npm test` (192) + `npm run typecheck` temiz olmadan commit yok.
 
 ---
 
-## K-05 · Yeni görsel dil ⏳
+## K-05 · Görsel dil: Carbon & Lime ✅
 
-Yapı oturduktan sonra karar verilecek. Şu an netleşen tek şey: `styles.css`'teki token
-**isimleri** korunacak (sözleşme), **değerleri** serbest. Yani yeni görsel dil, token
-değerlerini değiştirerek ve yeni ekranları Tailwind ile yazarak gelecek.
+**Karar.** Koyu karbon zemin + tek lime aksan, Space Grotesk, Apple tarzı
+yerleşen hareket. Referans: Uniswap (app.uniswap.org) — hem Mobbin arşivinden
+hem canlı siteden incelendi.
 
-Görsel dil kararına girdi olacak bugünkü sorunlar:
-- RFQ paneli diğer üç panelle aynı dili konuşmuyor
-- `stellar-wallets-kit`'in cüzdan modalı koyu temalı, uygulamaya hiç uymuyor
-- Incoming'in boş durumu dengesiz (dar sol sütun + geniş boş kutu)
-- Boş durumlar genel olarak zayıf: tek satır gri yazı
+### Palet
+
+| Token | Değer | Ne için |
+|-------|-------|---------|
+| `--color-carbon` | `#101310` | zemin |
+| `--color-carbon-deep` | `#0A0C0A` | kuyular, iç alanlar |
+| `--color-carbon-card` | `#171B16` | varsayılan kart |
+| `--color-carbon-hi` | `#1E231D` | hover, kart üstü kart |
+| `--color-carbon-line` | `#252B24` | iki karbon arası saç teli |
+| `--color-lime` | `#D2FF3A` | **tek aksan** |
+| `--color-snow` | `#F2F5EF` | başlıklar |
+| `--color-ash` | `#A8AFA4` | gövde metni |
+| `--color-slate` | `#8A9186` | etiketler, en sessiz kademe |
+
+**Lime bir kuraldır, süs değil.** Ekranda *eyleme geçen* tek şeyi işaretler:
+birincil aksiyon, canlı rakam, içinde bulunulan adım. Dekoratif kullanılırsa
+sinyal olmaktan çıkar. Lime karbon üzerinde ~14:1 — yani lime bir **zemindir**
+(üstüne koyu metin), küçük puntoda metin rengi değil.
+
+### Uniswap'ten alınan yapı
+
+- Hero ürünü **anlatmaz, gösterir**: sayfanın merkezinde dolu bir bilet durur.
+- Arkada bulanık renk alanları, fareyle yavaşça sürüklenir.
+- Altındaki her şey karbon üzerinde kart ızgarası.
+- Rakamlar geldiklerinde sayarak yerleşir.
+
+Uniswap'ten alınmayan: onların her kartı kendi renginde. Bizde tek aksan —
+daha disiplinli ve lime'ın anlamını korur.
+
+### Hareket
+
+İki eğri yetiyor:
+- `--ease-glide` `cubic-bezier(0.16, 1, 0.3, 1)` — hızlı çıkış, uzun yavaşlayan
+  kuyruk, taşma yok. Kuyruk karakterin kendisi; kısaltılırsa sayfa "snap"
+  etmeye başlar.
+- `--ease-spring` `cubic-bezier(0.34, 1.56, 0.64, 1)` — tıklamaya cevap veren
+  kontroller için, az miktarda taşma.
+
+Açılış hareketi **blur içerir**: içerik kayarak değil, **odağa gelerek** belirir
+(`blur(6px) → 0`, 900ms). Sakin duran şey bu.
+
+### Uygulama notları (sessizce kıran türden)
+
+- **Tailwind utilities bilerek katmansız.** `public/styles.css` HTML'den
+  `<link>` ile geliyor, yani katmansız yazar CSS'i — ve cascade'de katman
+  sırası specificity'den ÖNCE gelir. Utilities `layer(utilities)` içindeyken
+  `styles.css`'in sade `a { color: inherit }` kuralı `text-carbon`'u eziyordu
+  ve her lime butonun yazısı görünmez render oluyordu.
+- **Preflight kapalı** olduğu için tarayıcı varsayılanları yaşıyor: link altı
+  çizgisi, liste işaretleri. `theme.css` bunları `:where(.tr-dark)` altında
+  sıfırlıyor.
+- **Landing `<body>`'yi devralır** (`tr-dark`). Kapsayıcının arka planı scroll
+  bounce'ı ve son bölümden sonrasını kaplamaz; gövdeninki kaplar. Unmount'ta
+  bırakılıyor, yoksa desk siyah sayfayı miras alıyor.
+
+### Şu an nerede
+
+Landing bu dille yeniden yapıldı. **Desk henüz eski açık temada** — token
+isimleri sözleşme olduğu için oraya geçiş ayrı ve dikkatli bir adım (bkz. K-02).
+Bugün ikisi aynı belgeyi paylaşıyor ve birbirine hiç karışmıyor; doğrulandı.
