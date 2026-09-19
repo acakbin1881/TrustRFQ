@@ -18,9 +18,9 @@
 // are shared with RfqDemo, which ships the old stylesheet on purpose, so
 // restyling them in place would repaint a deploy this branch does not own.
 
-import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router';
-import { ArrowRight, LogOut, Wallet } from 'lucide-react';
+import { ArrowRight, Check, Copy, LogOut, Wallet } from 'lucide-react';
 import { TokenUSDC, TokenXLM } from '@web3icons/react';
 import type { BalanceMap } from './core/balances';
 import { trunc } from './core/tokens';
@@ -39,64 +39,133 @@ const DESK = '/desk';
 
 /* ---------------------------------------------------------------- chrome */
 
-/** Balances, as the bar shows them: the mark, then the figure. Local to this
- *  shell — src/ui/BalanceStrip.tsx stays on the old stylesheet for RfqDemo. */
-function Balances({ balances, loading }: { balances: BalanceMap | null; loading: boolean }) {
-  if (loading || !balances) {
-    return (
-      <span className="font-grotesk text-[13px] text-slate" aria-live="polite">
-        Loading balances…
-      </span>
-    );
-  }
+/**
+ * Everything about the connected wallet, behind one control.
+ *
+ * The bar used to print the address, both balances and a Disconnect button in
+ * a row: four things competing with the panel that is the actual work. One
+ * disc opens all of it instead, which is the shape every wallet-bearing app
+ * has converged on because identity is reference material, not a task.
+ *
+ * Closed is a STYLE, not an unmount (see .tr-pop): an unmounted popover cannot
+ * animate out, and half a transition reads worse than none.
+ */
+function WalletMenu({ address, balances, loading, onDisconnect }: {
+  address: string;
+  balances: BalanceMap | null;
+  loading: boolean;
+  onDisconnect: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const copyTimer = useRef<number | undefined>(undefined);
+
+  // Close on an outside click or Escape. Both listeners are only attached
+  // while open — a page-wide keydown handler that lives forever is how a panel
+  // starts eating other components' shortcuts.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => () => window.clearTimeout(copyTimer.current), []);
+
+  const copy = useCallback(() => {
+    void navigator.clipboard?.writeText(address).then(() => {
+      setCopied(true);
+      window.clearTimeout(copyTimer.current);
+      copyTimer.current = window.setTimeout(() => setCopied(false), 1600);
+    });
+  }, [address]);
 
   const rows = [
-    { code: 'XLM', Mark: TokenXLM, amount: balances.XLM },
-    { code: 'USDC', Mark: TokenUSDC, amount: balances.USDC },
+    { code: 'XLM', Mark: TokenXLM, amount: balances?.XLM, accent: false },
+    { code: 'USDC', Mark: TokenUSDC, amount: balances?.USDC, accent: true },
   ];
 
   return (
-    <span className="flex items-center gap-4">
-      {rows.map(({ code, Mark, amount }) => (
-        <span key={code} className="flex items-center gap-2">
-          <span className="flex size-5 items-center justify-center rounded-full bg-carbon-card">
-            <Mark size={12} variant="mono" className="text-snow" />
-          </span>
-          <span className="font-grotesk text-[13px] tabular-nums text-ash">
-            {amount ?? '—'}
-          </span>
-          <span className="font-grotesk text-[12px] text-slate">{code}</span>
+    <div ref={wrapRef} className="relative">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        aria-expanded={open} aria-haspopup="dialog" aria-label="Wallet"
+        className={`flex items-center gap-2.5 rounded-pill border py-1.5 pl-2 pr-3.5
+          transition-colors duration-500 ease-glide
+          ${open ? 'border-lime/30 bg-carbon-hi' : 'border-carbon-line bg-carbon-card/60 hover:bg-carbon-hi'}`}>
+        {/* the disc is the identity: a steady lime dot, not an avatar we would
+            have to invent for an address that has no picture */}
+        <span className="flex size-7 items-center justify-center rounded-full bg-carbon-deep">
+          <span className="size-2 rounded-full bg-lime" aria-hidden="true" />
         </span>
-      ))}
-    </span>
-  );
-}
-
-/**
- * The connected identity, and the one control that ends it.
- *
- * Disconnect is an icon button beside the address rather than a labelled
- * button after it: it acts ON the address, so it belongs to it. It keeps an
- * accessible name and a tooltip, and it is the only red-adjacent affordance in
- * the bar — hover is where it declares itself, so a mis-click is unlikely and
- * a deliberate one is one move.
- */
-function WalletChip({ address, onDisconnect }: { address: string; onDisconnect: () => void }) {
-  return (
-    <span className="flex items-center gap-1 rounded-pill border border-carbon-line
-      bg-carbon-card/60 py-1.5 pl-3.5 pr-1.5">
-      <span className="size-1.5 rounded-full bg-lime" aria-hidden="true" />
-      <span className="ml-1.5 font-mono text-[13px] text-ash">{trunc(address)}</span>
-      <button type="button" onClick={onDisconnect} title="Disconnect wallet"
-        aria-label="Disconnect wallet"
-        className="ml-1.5 flex size-7 items-center justify-center rounded-full text-slate
-          transition-colors duration-500 ease-glide hover:bg-carbon-hi hover:text-bad">
-        <LogOut className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+        <span className="font-mono text-[13px] text-ash">{trunc(address)}</span>
       </button>
-    </span>
+
+      <div data-open={open} role="dialog" aria-label="Wallet details"
+        className="tr-pop absolute right-0 top-[calc(100%+10px)] z-50 w-72 rounded-card
+          border border-carbon-line bg-carbon-card/90 p-4 backdrop-blur-2xl">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-grotesk text-[12px] uppercase tracking-[0.14em] text-slate">
+            Connected
+          </span>
+          <span className="flex items-center gap-1.5 font-grotesk text-[11px] uppercase
+            tracking-[0.12em] text-lime">
+            <span className="size-1 rounded-full bg-lime" aria-hidden="true" />
+            Testnet
+          </span>
+        </div>
+
+        <button type="button" onClick={copy}
+          className="group mt-3 flex w-full items-center justify-between gap-3 rounded-well
+            border border-carbon-line bg-carbon-deep/60 px-3.5 py-3 text-left transition-colors
+            duration-500 ease-glide hover:bg-carbon-deep">
+          <span className="truncate font-mono text-[13px] text-snow">{trunc(address)}</span>
+          <span className="text-slate transition-colors duration-500 ease-glide
+            group-hover:text-lime">
+            {copied
+              ? <Check className="size-3.5" strokeWidth={2} aria-hidden="true" />
+              : <Copy className="size-3.5" strokeWidth={1.5} aria-hidden="true" />}
+          </span>
+        </button>
+
+        <div className="mt-4 flex flex-col gap-2.5">
+          {rows.map(({ code, Mark, amount, accent }) => (
+            <div key={code} className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2.5">
+                <span className="flex size-6 items-center justify-center rounded-full bg-carbon-deep">
+                  <Mark size={13} variant="mono" className={accent ? 'text-lime' : 'text-snow'} />
+                </span>
+                <span className="font-grotesk text-[13px] text-ash">{code}</span>
+              </span>
+              <span className="font-grotesk text-[13px] tabular-nums text-snow">
+                {loading || !balances ? '—' : amount ?? '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" onClick={() => { setOpen(false); onDisconnect(); }}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-well border
+            border-carbon-line py-2.5 font-grotesk text-[13px] text-ash transition-colors
+            duration-500 ease-glide hover:border-bad/30 hover:text-bad">
+          <LogOut className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+          Disconnect
+        </button>
+      </div>
+    </div>
   );
 }
 
+/** Brand on the left, wallet on the right, nothing between them. The network
+ *  badge moved inside the wallet popover: it qualifies the connection, and it
+ *  was the third pill in a bar that only has two jobs. */
 function DeskNav({ address, balances, loading, onDisconnect }: {
   address: string | null;
   balances: BalanceMap | null;
@@ -104,25 +173,19 @@ function DeskNav({ address, balances, loading, onDisconnect }: {
   onDisconnect: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-carbon-line bg-carbon/80 backdrop-blur-2xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-5 px-6">
+    <header className="sticky top-0 z-40 border-b border-carbon-line bg-carbon/70 backdrop-blur-2xl">
+      <div className="mx-auto flex h-16 max-w-5xl items-center px-6">
         <Link to="/" className="flex items-center gap-2 font-grotesk text-[16px]
           font-semibold text-snow">
           <BrandMark className="text-lime" />
           TrustRFQ
         </Link>
 
-        <span className="flex items-center gap-1.5 rounded-pill border border-carbon-line
-          px-2.5 py-1 font-grotesk text-[11px] uppercase tracking-[0.12em] text-lime">
-          <span className="size-1 rounded-full bg-lime" aria-hidden="true" />
-          Testnet
-        </span>
-
-        {/* balances sit with the network label: both say WHERE you are trading */}
-        {address ? <span className="hidden md:block"><Balances balances={balances} loading={loading} /></span> : null}
-
         <span className="ml-auto">
-          {address ? <WalletChip address={address} onDisconnect={onDisconnect} /> : null}
+          {address
+            ? <WalletMenu address={address} balances={balances} loading={loading}
+                onDisconnect={onDisconnect} />
+            : null}
         </span>
       </div>
     </header>
@@ -133,7 +196,7 @@ function DeskNav({ address, balances, loading, onDisconnect }: {
  *  RfqDemo ships it against the old stylesheet. */
 function DeskGate({ onConnect }: { onConnect: () => void }) {
   return (
-    <div className="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
+    <div className="tr-panel-in mx-auto flex max-w-lg flex-col items-center text-center">
       <span className="flex size-14 items-center justify-center rounded-well border
         border-carbon-line bg-carbon-card text-lime">
         <Wallet className="size-6" strokeWidth={1.4} aria-hidden="true" />
@@ -186,10 +249,17 @@ function Desk() {
     <div className="min-h-screen bg-carbon font-grotesk antialiased">
       <DeskNav address={address} balances={balances} loading={loading} onDisconnect={disconnect} />
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        {address
-          ? <RfqPanel address={address} balances={balances} />
-          : <DeskGate onConnect={() => void handleConnect()} />}
+      {/* The work sits in the middle of the page, not at the top of it. A
+          single panel pinned under the bar leaves a column of dead carbon
+          below it; centred, the page reads as one composition at any height.
+          min-h is the viewport minus the 4rem bar, so the centring is of the
+          space actually left over. */}
+      <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center px-6 py-12">
+        <div className="w-full">
+          {address
+            ? <RfqPanel address={address} balances={balances} />
+            : <DeskGate onConnect={() => void handleConnect()} />}
+        </div>
       </main>
     </div>
   );

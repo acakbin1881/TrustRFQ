@@ -436,6 +436,30 @@ bilerek taşıyor, dolayısıyla yerinde yeniden stillemek bu dalın sahip olmad
 bir yayını boyardı. Desk kendi `Balances`, `WalletChip`, `DeskGate` ve
 `TokenPicker`'ını yerelde çiziyor.
 
+### Desk kompozisyonu ve cüzdan menüsü (yedinci revizyon)
+
+**Kimlik tek kontrolün arkasında.** Bar; adresi, iki bakiyeyi ve Disconnect
+butonunu yan yana basıyordu — asıl iş olan panelle yarışan dört şey. Artık tek
+bir disk var ve taşıdığı her şey altında açılıyor. Testnet rozeti de oraya
+girdi: bağlantıyı niteliyor, ve yalnızca iki işi olan bir barda üçüncü pildi.
+
+⚠️ **Kapalı hâl bir stil, unmount değil.** Unmount edilmiş bir popover dışarı
+animasyon yapamaz, yarım kalan bir geçiş hiç olmamasından kötü okunur. Açılış
+kendi üst kenarından, `scale(0.96)` + blur ile geliyor — kontrolün içinden
+açılıyormuş gibi, sayfaya uçarak girmiş gibi değil.
+
+Dinleyiciler **yalnızca açıkken** bağlı: sürekli yaşayan sayfa geneli bir
+keydown, bir panelin başka bileşenlerin kısayollarını yemeye başlamasının yolu.
+
+**Sayfa ortalandı.** Barın altına çivilenmiş tek panel, altında ölü bir karbon
+sütunu bırakıyordu. `min-h-[calc(100vh-4rem)]` — yani gerçekten artakalan
+alanın ortası — ile sayfa her yükseklikte tek bir kompozisyon olarak okunuyor.
+Genişlik `max-w-6xl` → `max-w-5xl`.
+
+**Paneller cam ve bir kez geliyor.** `tr-panel-in` mount'ta çalışıyor, scroll
+gözlemcisiyle değil: burada kaydırılacak bir sayfa yok ve observer bekleyen bir
+panel hiç belirmezdi.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".

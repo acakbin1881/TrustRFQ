@@ -562,3 +562,55 @@ body:where(.tr-dark) {
     var(--color-carbon-line) 33.333%
   );
 }
+
+/* ==========================================================================
+   The wallet popover
+   ==========================================================================
+   Identity moved out of the bar and behind one control. The bar used to print
+   the address, both balances and a Disconnect button in a row — four things
+   competing with the panel that is the actual work. Now it is one disc, and
+   everything it holds opens under it.
+
+   It arrives from ABOVE its own top edge (translate + scale from 0.96), so it
+   reads as unfolding out of the control rather than flying in from the page.
+   Closing runs the same way in reverse, which is why the closed state is a
+   real style rather than an unmount: an unmount cannot be animated out.
+   ========================================================================== */
+.tr-pop {
+  transform-origin: top right;
+  transition:
+    opacity 320ms var(--ease-glide),
+    transform 320ms var(--ease-glide),
+    filter 320ms var(--ease-glide);
+}
+.tr-pop[data-open='false'] {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.96);
+  filter: blur(6px);
+}
+.tr-pop[data-open='true'] {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-pop { transition: none; }
+}
+
+/* The desk's panels arrive once, on mount — there is no scroll here to reveal
+   them against, and a panel that waits for an observer on a page that never
+   scrolls simply never appears. */
+@keyframes tr-panel-in {
+  from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+.tr-panel-in {
+  animation: tr-panel-in 820ms var(--ease-glide) both;
+  animation-delay: var(--tr-lag, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-panel-in { animation: none; }
+}
