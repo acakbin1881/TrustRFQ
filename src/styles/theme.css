@@ -436,3 +436,43 @@ body:where(.tr-dark) {
   .tr-drag, .tr-mark-cursor, .tr-mark-seal { transition: none; }
   .tr-mark-seal { transform: none; opacity: 1; }
 }
+
+/* --- idle: the marks breathe while nobody is pointing at them --------------
+   TWO LAYERS, and that is the whole trick. The idle animation and the hover
+   transition both want `transform`, and on one element the animation wins
+   outright — the hover would simply never render. So idle lives on an OUTER
+   wrapper and hover on the inner one, and the browser composes them.
+
+   Amplitudes are tiny on purpose: a headline is read, not watched. If you can
+   point at the movement while reading the sentence, it is too much. Each has
+   its own period so they never sync into a pulse. */
+
+@keyframes tr-idle-coin {
+  0%, 100% { transform: rotateY(0deg); }
+  50%      { transform: rotateY(7deg); }
+}
+@keyframes tr-idle-cursor {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(0.03em, -0.05em); }
+}
+@keyframes tr-idle-seal {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(2.5deg); }
+}
+
+.tr-idle-coin { animation: tr-idle-coin 9s ease-in-out infinite; }
+.tr-idle-cursor { animation: tr-idle-cursor 5.5s ease-in-out infinite; }
+.tr-idle-seal { animation: tr-idle-seal 7.5s ease-in-out infinite; }
+
+/* Hovering hands the word over to the deliberate gesture: idle pauses where
+   it stands rather than snapping to zero, so there is no jump at the handover. */
+.tr-mark:hover .tr-idle-coin,
+.tr-mark:hover .tr-idle-cursor,
+.tr-mark:hover .tr-idle-seal,
+.tr-mark:focus-visible .tr-idle-coin,
+.tr-mark:focus-visible .tr-idle-cursor,
+.tr-mark:focus-visible .tr-idle-seal { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-idle-coin, .tr-idle-cursor, .tr-idle-seal { animation: none; }
+}

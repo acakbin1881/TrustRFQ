@@ -370,12 +370,16 @@ function MarkCoin() {
   return (
     <span className="relative ml-[0.2em] inline-block align-[-0.1em]"
       style={{ width: '0.72em', height: '0.72em', perspective: '400px' }} aria-hidden="true">
-      <span className="tr-mark-coin relative block size-full">
-        <span className={`${face} border border-carbon-line`}>
-          <TokenXLM size={64} variant="mono" className="size-[58%] text-snow" />
-        </span>
-        <span className={`${face} tr-flip-face--back border border-lime/40`}>
-          <TokenUSDC size={64} variant="mono" className="size-[58%] text-lime" />
+      {/* idle outside, hover inside: both want `transform`, and on one element
+          the animation would win outright and the hover would never render */}
+      <span className="tr-idle-coin block size-full">
+        <span className="tr-mark-coin relative block size-full">
+          <span className={`${face} border border-carbon-line`}>
+            <TokenXLM size={64} variant="mono" className="size-[58%] text-snow" />
+          </span>
+          <span className={`${face} tr-flip-face--back border border-lime/40`}>
+            <TokenUSDC size={64} variant="mono" className="size-[58%] text-lime" />
+          </span>
         </span>
       </span>
     </span>
@@ -418,10 +422,12 @@ function MarkedWord({ word, kind }: { word: string; kind: 'coin' | 'cursor' | 's
     return (
       <span tabIndex={0} className={`${shell} group/mark`}>
         <span className="tr-drag inline-block text-snow">{word}</span>
-        <MousePointer2
-          className="tr-mark-cursor ml-[0.12em] inline-block size-[0.42em] align-[0.34em]
-            fill-current text-slate group-hover/mark:text-lime"
-          strokeWidth={1.5} aria-hidden="true" />
+        <span className="tr-idle-cursor ml-[0.12em] inline-block align-[0.34em]">
+          <MousePointer2
+            className="tr-mark-cursor block size-[0.42em] fill-current text-slate
+              group-hover/mark:text-lime"
+            strokeWidth={1.5} aria-hidden="true" />
+        </span>
       </span>
     );
   }
@@ -429,10 +435,11 @@ function MarkedWord({ word, kind }: { word: string; kind: 'coin' | 'cursor' | 's
   return (
     <span tabIndex={0} className={`${shell} group/mark`}>
       {word}
-      <BadgeCheck
-        className="tr-mark-seal ml-[0.16em] inline-block size-[0.52em] align-[0.02em]
-          text-slate group-hover/mark:text-lime"
-        strokeWidth={1.5} aria-hidden="true" />
+      <span className="tr-idle-seal ml-[0.16em] inline-block align-[0.02em]">
+        <BadgeCheck
+          className="tr-mark-seal block size-[0.52em] text-slate group-hover/mark:text-lime"
+          strokeWidth={1.5} aria-hidden="true" />
+      </span>
     </span>
   );
 }

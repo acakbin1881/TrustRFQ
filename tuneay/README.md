@@ -14,6 +14,7 @@ bozmamak üzerine kurulu.
 | [00-DURUM.md](00-DURUM.md) | Devraldığımız yapının analizi: sayfalar, stil sistemleri, kısıtlar, çakışma riski |
 | [01-KARARLAR.md](01-KARARLAR.md) | Mimari kararlar (ADR). Her karar: bağlam → seçenekler → karar → sonuç |
 | [02-PLAN.md](02-PLAN.md) | Kararların uygulama sırası ve her adımın doğrulama ölçütü |
+| [tarif-isaretli-baslik.md](tarif-isaretli-baslik.md) | **Taşınabilir tarif:** hero başlığındaki işaretli kelime + ikon tekniği. Kendi başına yeterli, başka projeye kopyalanabilir |
 
 ## Çalışma kuralları (bu dal için)
 
