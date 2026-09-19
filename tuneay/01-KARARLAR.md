@@ -298,6 +298,34 @@ içine koymak çerçeve içinde çerçeve olurdu. Diskin çapında çiziliyor, b
 (`tr-settle`: scale + blur birlikte çözülüyor). Sayfanın geri kalanındaki
 reveal ile aynı dil.
 
+### Başlık ve kaydırma işareti (dördüncü revizyon)
+
+**Başlık satır satır kendi maskesinden çıkıyor.** Kelime kelime değil: bu
+puntoda kelime bazlı kademe, metni yazan bir makine gibi okunuyor. Satır ise
+cümlenin gerçekten yazıldığı birim — okuyucu tek seferde bütün bir cümlecik
+alıyor. 0 / 130 / 260ms kademe, 1150ms `--ease-glide`, blur ile.
+
+⚠️ **Maskenin descender payı taşıyıcı.** "you agreed on." içindeki y ve g
+taban çizgisinin altına iniyor; düz bir `overflow: hidden` onları kesiyor.
+`pb-[0.16em]` payı açıyor, `-mb-[0.16em]` aynı payı düzenden geri alıyor —
+satır aralığı maske hiç yokmuş gibi kalıyor.
+
+Bu bilerek `.tr-reveal` **değil**: o bir observer bekliyor, bu başlık ise
+sayfa açılırken zaten ekranda. Mount'ta çalışıyor.
+
+**Kaydırma işareti ok değil, akış.** Ok "kaydır" der; saç teli boyunca aşağı
+düşen bir iz, sayfanın kıvrımın altında devam ettiğini gösterir — aynı bilgi,
+emir kipi olmadan. Bir bağlantı, yani tıklanınca da çalışıyor.
+
+### Masada kalanlar (kullanıcı bu turda seçmedi)
+
+- **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".
+  Gerçek veri, dinamik import ile ilk boyamayı geciktirmeden. Landing paketi
+  ~12KB → ~45KB (gzip).
+- **Bilet canlansın**: rakamlar sayarak dolsun + maker/taker imza mühürleri.
+  Sıfır paket maliyeti.
+- **Son mutabakat kanıtı**: Evidence'daki tx satırını hero'ya taşımak.
+
 ### Şu an nerede
 
 Landing bu dille yeniden yapıldı. **Desk henüz eski açık temada** — token

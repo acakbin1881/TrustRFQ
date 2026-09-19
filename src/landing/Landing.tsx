@@ -354,18 +354,72 @@ function TicketPreview() {
   );
 }
 
+/**
+ * The hero headline, rising line by line out of its own masks.
+ *
+ * Line-level rather than word-level: at this size a word stagger reads as a
+ * machine typing it out, while a line is the unit the sentence is written in,
+ * so the reader receives a whole clause at a time.
+ *
+ * The mask needs room for descenders — the y and g in "you agreed on." sit
+ * below the baseline and a plain overflow:hidden slices them. The padding
+ * opens that room and the negative margin takes it back out of the layout, so
+ * the line spacing is exactly what it was before the mask existed.
+ *
+ * This is deliberately NOT .tr-reveal: that one waits for an observer, and
+ * this headline is above the fold on arrival. It animates on mount.
+ */
+function HeroHeadline() {
+  const lines = [
+    { text: HERO.heading.lead, tone: 'text-snow' },
+    ...HERO.heading.rest.map((text) => ({ text, tone: 'text-ash' })),
+  ];
+
+  return (
+    <h1 className="font-grotesk text-[clamp(2.5rem,6vw,4.25rem)] font-medium
+      leading-[1.04] tracking-[-0.03em]">
+      {lines.map((l, i) => (
+        <span key={l.text} className="block -mb-[0.16em] overflow-hidden pb-[0.16em]">
+          <span className={`tr-line block ${l.tone}`}
+            style={{ '--tr-lag': `${i * 130}ms` } as React.CSSProperties}>
+            {l.text}
+          </span>
+        </span>
+      ))}
+    </h1>
+  );
+}
+
+/** A trace running down a hairline. An arrow would tell you to scroll; a thing
+ *  falling past the fold shows the page continuing, which is the same
+ *  instruction without the imperative. It is a link, so it also works. */
+function ScrollCue() {
+  return (
+    <a href="#why" aria-label="Skip to why OTC"
+      className="group mx-auto mt-16 flex w-10 flex-col items-center gap-3">
+      <span className="relative block h-12 w-px overflow-hidden bg-carbon-line">
+        <span className="tr-trickle absolute inset-x-0 top-0 block h-4 bg-lime" aria-hidden="true" />
+      </span>
+      <span className="font-grotesk text-[11px] uppercase tracking-[0.18em] text-slate
+        transition-colors duration-500 ease-glide group-hover:text-ash">
+        Scroll
+      </span>
+    </a>
+  );
+}
+
 function Hero() {
   return (
     <section className="relative overflow-hidden px-6 pb-20 pt-36 md:pt-44">
       <HeroObjects />
 
       <div className="relative mx-auto max-w-3xl text-center">
-        <h1 className="tr-reveal font-grotesk text-[clamp(2.5rem,6vw,4.25rem)] font-medium
-          leading-[1.04] tracking-[-0.03em]" style={delay(0)}>
-          <TwoTone heading={HERO.heading} />
-        </h1>
+        <HeroHeadline />
 
-        <div className="tr-reveal mt-11" style={delay(120)}><TicketPreview /></div>
+        {/* the ticket follows the last line out rather than arriving with it */}
+        <div className="tr-reveal mt-11" style={delay(420)}><TicketPreview /></div>
+
+        <ScrollCue />
       </div>
     </section>
   );

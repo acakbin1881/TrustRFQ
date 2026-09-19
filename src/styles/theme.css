@@ -324,3 +324,45 @@ body:where(.tr-dark) {
   .tr-drift, .tr-flip-coin, .tr-settle { animation: none; }
   .tr-settle { opacity: 1; }
 }
+
+/* ==========================================================================
+   The headline
+   ==========================================================================
+   Each line rises out of its own mask, blurred, and resolves as it lands.
+   Line by line rather than word by word: at this size a word-level stagger
+   reads as a machine typing, while a line is the unit the sentence is
+   actually written in — the reader gets a whole clause at a time.
+
+   The masks are gated on .tr-motion, the class React only adds when it can
+   also take it off. Without it every line renders where it belongs, unmasked:
+   a headline that fails to animate must still be a headline.
+   ========================================================================== */
+
+@keyframes tr-line-in {
+  from { transform: translateY(112%); filter: blur(12px); opacity: 0; }
+  to   { transform: translateY(0); filter: blur(0); opacity: 1; }
+}
+
+:root.tr-motion .tr-line {
+  animation: tr-line-in 1150ms var(--ease-glide) var(--tr-lag, 0ms) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root.tr-motion .tr-line { animation: none; }
+}
+
+/* The scroll cue: a trace running down a hairline, not an arrow.
+   An arrow tells you to scroll; a thing falling down a line shows the page
+   continuing past the fold, which is the same instruction without the
+   imperative. Long gap between passes so it never nags. */
+@keyframes tr-trickle {
+  0%        { transform: translateY(-140%); opacity: 0; }
+  18%, 62%  { opacity: 1; }
+  100%      { transform: translateY(520%); opacity: 0; }
+}
+
+.tr-trickle { animation: tr-trickle 2600ms var(--ease-glide) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-trickle { animation: none; opacity: 0.6; }
+}
