@@ -20,7 +20,7 @@
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router';
-import { ArrowRight, Check, Copy, LogOut, PenLine, Radio, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Copy, LogOut, PenLine, Radio, Wallet } from 'lucide-react';
 import { MarkedPhrase } from './ui/MarkedPhrase';
 import { TrustBot } from './ui/TrustBot';
 import { TokenUSDC, TokenXLM } from '@web3icons/react';
@@ -341,6 +341,67 @@ function DeskRoute() {
 }
 
 /**
+ * Nothing at this address.
+ *
+ * It says which two places DO exist and links both, because the useful part of
+ * a 404 is the way out, not the number. It also names the likely cause: this
+ * desk had four section URLs until recently, and someone's saved link to
+ * /desk/incoming is exactly the kind of thing that lands here. Those still
+ * redirect (see the routes); anything further out arrives at this page.
+ */
+function NotFound() {
+  useDeskCanvas();
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-carbon px-6
+      font-grotesk antialiased">
+      <div className="tr-panel-in w-full max-w-lg text-center">
+        <Link to="/" aria-label="TrustRFQ home"
+          className="inline-flex size-12 items-center justify-center rounded-full
+            border border-carbon-line bg-carbon-card transition-colors duration-500
+            ease-glide hover:border-lime/25 hover:bg-carbon-hi">
+          <BrandMark size={20} className="text-lime" />
+        </Link>
+
+        <p className="mt-8 font-mono text-[13px] tracking-[0.2em] text-slate">404</p>
+
+        <h1 className="mt-4 font-grotesk text-[clamp(1.8rem,4vw,2.5rem)] font-medium
+          tracking-[-0.025em] text-snow">
+          Nothing at this address.
+        </h1>
+
+        <p className="mx-auto mt-4 max-w-sm font-grotesk text-[15px] leading-relaxed text-ash">
+          The page you asked for does not exist. If you saved a link to one of the
+          desk&apos;s old sections, the desk is a single panel now.
+        </p>
+
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <Link to="/desk"
+            className="group inline-flex items-center gap-2.5 rounded-pill bg-lime px-6 py-3
+              font-grotesk text-[15px] font-semibold text-carbon transition-colors
+              duration-500 ease-glide hover:bg-lime-soft">
+            Open the desk
+            <ArrowRight className="size-4 transition-transform duration-500 ease-glide
+              group-hover:translate-x-1" strokeWidth={2} aria-hidden="true" />
+          </Link>
+
+          <Link to="/"
+            className="group inline-flex items-center gap-2 rounded-pill border
+              border-carbon-line bg-carbon-card/50 px-6 py-3 font-grotesk text-[15px]
+              font-medium text-snow transition-colors duration-500 ease-glide
+              hover:bg-carbon-hi">
+            <ArrowLeft className="size-4 text-slate transition-all duration-500 ease-glide
+              group-hover:-translate-x-0.5 group-hover:text-lime" strokeWidth={1.5}
+              aria-hidden="true" />
+            Back to the landing
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Scroll to the top when the PAGE changes.
  *
  * The browser only restores scroll on a real document load, so without this
@@ -371,9 +432,11 @@ export default function App() {
                 that flashes for 30ms reads as a glitch */}
             <Route path="/" element={<Suspense fallback={null}><Landing /></Suspense>} />
             <Route path="/desk" element={<DeskRoute />} />
-            {/* the four-section URLs are gone; anything under /desk/* lands on
-                the one panel rather than 404ing a link somebody saved */}
-            <Route path="*" element={<Navigate to={DESK} replace />} />
+            {/* the four section URLs are gone, but people saved them: send
+                anything under /desk/* to the one panel rather than 404ing a
+                link that worked last week */}
+            <Route path="/desk/*" element={<Navigate to={DESK} replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </WalletProvider>
       </ToastProvider>

@@ -8,7 +8,8 @@
     { "source": "/hero", "destination": "/", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/desk/:path*", "destination": "/index.html" }
+    { "source": "/desk/:path*", "destination": "/index.html" },
+    { "source": "/((?!assets/|.*\\.[a-zA-Z0-9]+$).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

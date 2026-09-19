@@ -568,6 +568,25 @@ yavaş CDN) bütün girişi götürmemeli. Hangisi önce olursa.
 (0 / 150 / 300 / 420ms). İşin yapılış sırası da bu. Nav bilerek animasyonsuz:
 chrome anında orada olmalı, insan cüzdanını görmek ister.
 
+### 404
+
+Önceden bilinmeyen her yol `/desk`'e yönlendiriliyordu. Kayıtlı bölüm linkleri
+için doğruydu ama **yanlış yazılmış her adresi sessizce masaya götürmek**,
+insanı gitmek istediği yere gittiğine inandırıyor.
+
+Şimdi ikiye ayrılıyor:
+- `/desk/*` → `/desk` (geçen hafta çalışan linkler kırılmasın)
+- Diğer her şey → 404 sayfası
+
+Sayfa **çıkış yolunu** veriyor, rakamı değil: iki yer var ve ikisi de bağlantılı.
+Muhtemel sebebi de söylüyor — bu masanın yakın zamana kadar dört bölüm URL'i
+vardı ve birinin kayıtlı `/desk/incoming` linki tam olarak buraya düşecek
+türden bir şey.
+
+⚠️ `vercel.json`'a genel SPA fallback eklendi; uzantısı olan yolları ve
+`assets/` altını **hariç tutuyor**, yoksa eksik bir CSS dosyası 404 yerine
+`index.html` döner ve hata sessizce kaybolur.
+
 ### Masada kalanlar (kullanıcı bu turda seçmedi)
 
 - **Canlı Testnet nabzı**: Supabase'den "şu an N taker bu çifti izliyor".
